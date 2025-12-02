@@ -1,0 +1,71 @@
+<%- include('partials/header', { title: (typeof edge !== 'undefined' && edge ? 'Edit Edge' : 'Create Edge') + ' - Campus Navigation' }) %>
+
+<div class="page-header">
+    <h1><%= typeof edge !== 'undefined' && edge ? '✏️ Edit Edge' : '➕ Create Edge' %></h1>
+    <a href="/edges" class="btn-secondary">← Back to Edges</a>
+</div>
+
+<div class="form-container">
+    <form action="<%= typeof edge !== 'undefined' && edge ? '/edges/' + edge.id + '/edit' : '/edges/create' %>" method="POST" class="styled-form">
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="from_node_id">From Node *</label>
+                <select id="from_node_id" name="from_node_id" required>
+                    <option value="">Select a node...</option>
+                    <% nodes.forEach(function(node) { %>
+                        <option value="<%= node.id %>" <%= (typeof edge !== 'undefined' && edge && edge.from_node_id === node.id) ? 'selected' : '' %>>
+                            <%= node.name %> (<%= node.building || 'No building' %>)
+                        </option>
+                    <% }); %>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="to_node_id">To Node *</label>
+                <select id="to_node_id" name="to_node_id" required>
+                    <option value="">Select a node...</option>
+                    <% nodes.forEach(function(node) { %>
+                        <option value="<%= node.id %>" <%= (typeof edge !== 'undefined' && edge && edge.to_node_id === node.id) ? 'selected' : '' %>>
+                            <%= node.name %> (<%= node.building || 'No building' %>)
+                        </option>
+                    <% }); %>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="distance">Distance (meters)</label>
+                <input type="number" id="distance" name="distance" step="0.01" min="0" value="<%= typeof edge !== 'undefined' && edge ? (edge.distance || '') : '' %>">
+            </div>
+            <div class="form-group">
+                <label for="compass_angle">Compass Angle (0-360°)</label>
+                <input type="number" id="compass_angle" name="compass_angle" step="0.1" min="0" max="360" value="<%= typeof edge !== 'undefined' && edge ? (edge.compass_angle || '') : '' %>">
+                <p class="help-text">0° = North, 90° = East, 180° = South, 270° = West</p>
+            </div>
+        </div>
+
+        <div class="form-group checkbox-group">
+            <label>
+                <input type="checkbox" name="is_staircase" <%= (typeof edge !== 'undefined' && edge && edge.is_staircase) ? 'checked' : '' %>>
+                Is Staircase Connection
+            </label>
+            <p class="help-text">Check if this edge connects different floors via stairs</p>
+        </div>
+
+        <div class="form-group checkbox-group">
+            <label>
+                <input type="checkbox" name="bidirectional" checked>
+                Create Bidirectional Edge
+            </label>
+            <p class="help-text">Automatically creates a reverse edge with opposite compass angle</p>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary"><%= typeof edge !== 'undefined' && edge ? 'Update Edge' : 'Create Edge' %></button>
+            <a href="/edges" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<%- include('partials/footer') %>

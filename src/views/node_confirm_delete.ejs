@@ -1,0 +1,23 @@
+<%- include('partials/header', { title: 'Delete Node - Campus Navigation' }) %>
+
+<div class="confirm-delete">
+    <h1>⚠️ Delete Node</h1>
+    <div class="alert alert-warning">
+        <p>Are you sure you want to delete the node "<strong><%= node.name %></strong>"?</p>
+        <p>This action cannot be undone. All edges and annotations associated with this node will also be deleted.</p>
+    </div>
+    
+    <div class="node-details">
+        <p><strong>ID:</strong> <%= node.id %></p>
+        <p><strong>Building:</strong> <%= node.building || 'N/A' %></p>
+        <p><strong>Floor:</strong> <%= node.floor || 'N/A' %></p>
+        <p><strong>Type:</strong> <%= node.node_type %></p>
+    </div>
+
+    <form action="/nodes/<%= node.id %>/delete" method="POST" class="delete-form">
+        <button type="submit" class="btn-danger">Yes, Delete Node</button>
+        <a href="/nodes" class="btn-secondary">Cancel</a>
+    </form>
+</div>
+
+<%- include('partials/footer') %>

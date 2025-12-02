@@ -1,0 +1,24 @@
+<%- include('partials/header', { title: 'Delete Annotation - Campus Navigation' }) %>
+
+<div class="confirm-delete">
+    <h1>⚠️ Delete Annotation</h1>
+    <div class="alert alert-warning">
+        <p>Are you sure you want to delete the annotation "<strong><%= annotation.label %></strong>"?</p>
+        <p>This action cannot be undone.</p>
+    </div>
+    
+    <div class="annotation-details">
+        <p><strong>ID:</strong> <%= annotation.id %></p>
+        <p><strong>Label:</strong> <%= annotation.label %></p>
+        <p><strong>Node:</strong> <%= annotation.node ? annotation.node.name : 'Unknown' %></p>
+        <p><strong>Yaw:</strong> <%= annotation.yaw ? annotation.yaw.toFixed(2) + '°' : 'N/A' %></p>
+        <p><strong>Pitch:</strong> <%= annotation.pitch ? annotation.pitch.toFixed(2) + '°' : 'N/A' %></p>
+    </div>
+
+    <form action="/annotations/<%= annotation.id %>/delete" method="POST" class="delete-form">
+        <button type="submit" class="btn-danger">Yes, Delete Annotation</button>
+        <a href="/annotations" class="btn-secondary">Cancel</a>
+    </form>
+</div>
+
+<%- include('partials/footer') %>

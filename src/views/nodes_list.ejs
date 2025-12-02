@@ -1,0 +1,65 @@
+<%- include('partials/header', { title: 'Nodes - Campus Navigation' }) %>
+
+<div class="page-header">
+    <h1>📍 Nodes</h1>
+    <a href="/nodes/create" class="btn-primary">+ Add Node</a>
+</div>
+
+<% if (nodes.length === 0) { %>
+    <div class="empty-state">
+        <p>No nodes found. Create your first node to get started.</p>
+        <a href="/nodes/create" class="btn-primary">Create Node</a>
+    </div>
+<% } else { %>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Building</th>
+                    <th>Floor</th>
+                    <th>Type</th>
+                    <th>360° Image</th>
+                    <th>QR Code</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% nodes.forEach(function(node) { %>
+                    <tr>
+                        <td><%= node.id %></td>
+                        <td><strong><%= node.name %></strong></td>
+                        <td><%= node.building || '-' %></td>
+                        <td><%= node.floor || '-' %></td>
+                        <td>
+                            <span class="badge badge-<%= node.node_type %>">
+                                <%= node.node_type %>
+                            </span>
+                        </td>
+                        <td>
+                            <% if (node.image_360) { %>
+                                <span class="status-yes">✓ Yes</span>
+                            <% } else { %>
+                                <span class="status-no">✗ No</span>
+                            <% } %>
+                        </td>
+                        <td>
+                            <% if (node.qrcode) { %>
+                                <a href="<%= node.qrcode %>" target="_blank" class="btn-link">View QR</a>
+                            <% } else { %>
+                                <span class="status-no">Not generated</span>
+                            <% } %>
+                        </td>
+                        <td class="actions">
+                            <a href="/nodes/<%= node.id %>/edit" class="btn-sm btn-edit">Edit</a>
+                            <a href="/nodes/<%= node.id %>/delete" class="btn-sm btn-delete">Delete</a>
+                        </td>
+                    </tr>
+                <% }); %>
+            </tbody>
+        </table>
+    </div>
+<% } %>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header">
+                <a href="/" class="logo">🗺️ Campus Navigator</a>
+            </div>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="/">Dashboard</a></li>
+                <li><a href="/nodes">Nodes</a></li>
+                <li><a href="/edges">Edges</a></li>
+                <li><a href="/annotations">Annotations</a></li>
+                <li><a href="/map-viewer">Map Viewer</a></li>
+                <li><a href="/pathfinding" class="btn-primary">Test Pathfinding</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <% if (typeof messages !== 'undefined' && messages.length > 0) { %>
+            <div class="messages">
+                <% messages.forEach(function(msg) { %>
+                    <div class="alert alert-<%= msg.type %>">
+                        <%= msg.message %>
+                        <button class="close-btn" onclick="this.parentElement.remove()">×</button>
+                    </div>
+                <% }); %>
+            </div>
+        <% } %>

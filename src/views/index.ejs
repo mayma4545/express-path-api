@@ -1,0 +1,75 @@
+<%- include('partials/header', { title: 'Campus Navigation System' }) %>
+
+<div class="dashboard">
+    <h1>Campus Navigation System</h1>
+    <p class="subtitle">A* Pathfinding Algorithm with Compass Direction & 360° Panorama Support</p>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">📍</div>
+            <div class="stat-content">
+                <h3><%= total_nodes %></h3>
+                <p>Total Nodes</p>
+            </div>
+            <a href="/nodes" class="stat-link">View All →</a>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">🔗</div>
+            <div class="stat-content">
+                <h3><%= total_edges %></h3>
+                <p>Total Edges</p>
+            </div>
+            <a href="/edges" class="stat-link">View All →</a>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">🏷️</div>
+            <div class="stat-content">
+                <h3><%= total_annotations %></h3>
+                <p>Annotations</p>
+            </div>
+            <a href="/annotations" class="stat-link">View All →</a>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">🏢</div>
+            <div class="stat-content">
+                <h3><%= buildings.length %></h3>
+                <p>Buildings</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-cards">
+        <div class="action-card">
+            <h3>🧪 Test Pathfinding</h3>
+            <p>Try the A* pathfinding algorithm with compass directions and visualize routes between nodes.</p>
+            <a href="/pathfinding" class="btn-primary">Launch Test Page</a>
+        </div>
+
+        <div class="action-card">
+            <h3>➕ Quick Add</h3>
+            <p>Add new nodes, edges, or annotations to expand your campus map.</p>
+            <div class="btn-group">
+                <a href="/nodes/create" class="btn-secondary">Add Node</a>
+                <a href="/edges/create" class="btn-secondary">Add Edge</a>
+                <a href="/annotations/create" class="btn-secondary">Add Annotation</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-section">
+        <h2>Features</h2>
+        <ul class="features-list">
+            <li>✅ <strong>A* Pathfinding:</strong> Efficient shortest path algorithm with compass angle awareness</li>
+            <li>✅ <strong>Bidirectional Edges:</strong> Automatic reverse edge creation with compass angle calculation</li>
+            <li>✅ <strong>Staircase Detection:</strong> Special handling for vertical movement between floors</li>
+            <li>✅ <strong>360° Panoramas:</strong> Link panoramic images to nodes for immersive navigation</li>
+            <li>✅ <strong>Smart Annotations:</strong> Add labels with spherical coordinates (yaw/pitch) on 360° images</li>
+            <li>✅ <strong>Full CRUD:</strong> Complete create, read, update, delete operations for all entities</li>
+        </ul>
+    </div>
+</div>
+
+<%- include('partials/footer') %>

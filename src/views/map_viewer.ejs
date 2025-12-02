@@ -1,0 +1,32 @@
+<%- include('partials/header', { title: 'Map Viewer - Campus Navigation' }) %>
+
+<div class="map-viewer-page">
+    <h1>🗺️ Map Viewer</h1>
+    <p class="subtitle">Interactive campus map with node positions</p>
+
+    <% if (typeof campus_map !== 'undefined' && campus_map && campus_map.image) { %>
+        <div class="map-container" id="mapContainer">
+            <img id="mapImage" src="<%= campus_map.image %>" alt="Campus Map">
+            <div id="nodesOverlay" class="nodes-overlay">
+                <% if (typeof nodes !== 'undefined' && nodes) { %>
+                    <% nodes.forEach(function(node) { %>
+                        <% if (node.map_x && node.map_y) { %>
+                            <div class="map-node" 
+                                 style="left: <%= node.map_x %>%; top: <%= node.map_y %>%"
+                                 title="<%= node.name %>">
+                                <span class="node-label"><%= node.name %></span>
+                            </div>
+                        <% } %>
+                    <% }); %>
+                <% } %>
+            </div>
+        </div>
+    <% } else { %>
+        <div class="empty-state">
+            <p>No campus maps uploaded yet.</p>
+            <p>Upload a map through the admin interface to visualize node positions.</p>
+        </div>
+    <% } %>
+</div>
+
+<%- include('partials/footer') %>

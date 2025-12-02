@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Database
+*.sqlite3
+db.sqlite3
+
+# Environment
+.env
+.env.local
+
+# Media files (keep structure)
+media/360_images/*
+media/campus_maps/*
+media/qrcodes/*
+!media/360_images/.gitkeep
+!media/campus_maps/.gitkeep
+!media/qrcodes/.gitkeep
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Build
+dist/
+build/

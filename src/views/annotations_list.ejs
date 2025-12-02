@@ -1,0 +1,45 @@
+<%- include('partials/header', { title: 'Annotations - Campus Navigation' }) %>
+
+<div class="page-header">
+    <h1>🏷️ Annotations</h1>
+    <a href="/annotations/create" class="btn-primary">+ Add Annotation</a>
+</div>
+
+<% if (annotations.length === 0) { %>
+    <div class="empty-state">
+        <p>No annotations found. Create nodes first, then add annotations to them.</p>
+        <a href="/annotations/create" class="btn-primary">Create Annotation</a>
+    </div>
+<% } else { %>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Label</th>
+                    <th>Node</th>
+                    <th>Yaw</th>
+                    <th>Pitch</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% annotations.forEach(function(annotation) { %>
+                    <tr>
+                        <td><%= annotation.id %></td>
+                        <td><strong><%= annotation.label %></strong></td>
+                        <td><%= annotation.node ? annotation.node.name : 'Unknown' %></td>
+                        <td><%= annotation.yaw ? annotation.yaw.toFixed(2) : '-' %>°</td>
+                        <td><%= annotation.pitch ? annotation.pitch.toFixed(2) : '-' %>°</td>
+                        <td class="actions">
+                            <a href="/annotations/<%= annotation.id %>/edit" class="btn-sm btn-edit">Edit</a>
+                            <a href="/annotations/<%= annotation.id %>/delete" class="btn-sm btn-delete">Delete</a>
+                        </td>
+                    </tr>
+                <% }); %>
+            </tbody>
+        </table>
+    </div>
+<% } %>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,77 @@
+<%- include('partials/header', { title: (typeof node !== 'undefined' && node ? 'Edit Node' : 'Create Node') + ' - Campus Navigation' }) %>
+
+<div class="page-header">
+    <h1><%= typeof node !== 'undefined' && node ? '✏️ Edit Node' : '➕ Create Node' %></h1>
+    <a href="/nodes" class="btn-secondary">← Back to Nodes</a>
+</div>
+
+<div class="form-container">
+    <form action="<%= typeof node !== 'undefined' && node ? '/nodes/' + node.id + '/edit' : '/nodes/create' %>" method="POST" enctype="multipart/form-data" class="styled-form">
+        
+        <div class="form-group">
+            <label for="name">Node Name *</label>
+            <input type="text" id="name" name="name" value="<%= typeof node !== 'undefined' && node ? node.name : '' %>" required>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="building">Building</label>
+                <input type="text" id="building" name="building" value="<%= typeof node !== 'undefined' && node ? (node.building || '') : '' %>">
+            </div>
+            <div class="form-group">
+                <label for="floor">Floor</label>
+                <input type="text" id="floor" name="floor" value="<%= typeof node !== 'undefined' && node ? (node.floor || '') : '' %>">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="node_type">Node Type</label>
+            <select id="node_type" name="node_type">
+                <option value="hallway" <%= (typeof node !== 'undefined' && node && node.node_type === 'hallway') ? 'selected' : '' %>>Hallway</option>
+                <option value="room" <%= (typeof node !== 'undefined' && node && node.node_type === 'room') ? 'selected' : '' %>>Room</option>
+                <option value="entrance" <%= (typeof node !== 'undefined' && node && node.node_type === 'entrance') ? 'selected' : '' %>>Entrance</option>
+                <option value="staircase" <%= (typeof node !== 'undefined' && node && node.node_type === 'staircase') ? 'selected' : '' %>>Staircase</option>
+                <option value="elevator" <%= (typeof node !== 'undefined' && node && node.node_type === 'elevator') ? 'selected' : '' %>>Elevator</option>
+                <option value="landmark" <%= (typeof node !== 'undefined' && node && node.node_type === 'landmark') ? 'selected' : '' %>>Landmark</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" rows="3"><%= typeof node !== 'undefined' && node ? (node.description || '') : '' %></textarea>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="map_x">Map X Coordinate</label>
+                <input type="number" id="map_x" name="map_x" step="0.01" value="<%= typeof node !== 'undefined' && node ? (node.map_x || '') : '' %>">
+            </div>
+            <div class="form-group">
+                <label for="map_y">Map Y Coordinate</label>
+                <input type="number" id="map_y" name="map_y" step="0.01" value="<%= typeof node !== 'undefined' && node ? (node.map_y || '') : '' %>">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="image_360">360° Panorama Image</label>
+            <input type="file" id="image_360" name="image_360" accept="image/*">
+            <% if (typeof node !== 'undefined' && node && node.image_360) { %>
+                <p class="help-text">Current: <a href="<%= node.image_360 %>" target="_blank">View Image</a></p>
+            <% } %>
+        </div>
+
+        <div class="form-group checkbox-group">
+            <label>
+                <input type="checkbox" name="generate_qr" <%= (typeof node !== 'undefined' && node && node.qrcode) ? '' : 'checked' %>>
+                Generate QR Code
+            </label>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary"><%= typeof node !== 'undefined' && node ? 'Update Node' : 'Create Node' %></button>
+            <a href="/nodes" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,55 @@
+<%- include('partials/header', { title: 'Edges - Campus Navigation' }) %>
+
+<div class="page-header">
+    <h1>🔗 Edges</h1>
+    <a href="/edges/create" class="btn-primary">+ Add Edge</a>
+</div>
+
+<% if (edges.length === 0) { %>
+    <div class="empty-state">
+        <p>No edges found. Create nodes first, then connect them with edges.</p>
+        <a href="/edges/create" class="btn-primary">Create Edge</a>
+    </div>
+<% } else { %>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>From Node</th>
+                    <th>To Node</th>
+                    <th>Distance</th>
+                    <th>Compass Angle</th>
+                    <th>Direction</th>
+                    <th>Staircase</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% edges.forEach(function(edge) { %>
+                    <tr>
+                        <td><%= edge.id %></td>
+                        <td><%= edge.from_node ? edge.from_node.name : 'Unknown' %></td>
+                        <td><%= edge.to_node ? edge.to_node.name : 'Unknown' %></td>
+                        <td><%= edge.distance ? edge.distance.toFixed(2) : '-' %> m</td>
+                        <td><%= edge.compass_angle ? edge.compass_angle.toFixed(1) : '-' %>°</td>
+                        <td><%= edge.direction || '-' %></td>
+                        <td>
+                            <% if (edge.is_staircase) { %>
+                                <span class="badge badge-staircase">🪜 Yes</span>
+                            <% } else { %>
+                                <span class="status-no">No</span>
+                            <% } %>
+                        </td>
+                        <td class="actions">
+                            <a href="/edges/<%= edge.id %>/edit" class="btn-sm btn-edit">Edit</a>
+                            <a href="/edges/<%= edge.id %>/delete" class="btn-sm btn-delete">Delete</a>
+                        </td>
+                    </tr>
+                <% }); %>
+            </tbody>
+        </table>
+    </div>
+<% } %>
+
+<%- include('partials/footer') %>
