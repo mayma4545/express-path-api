@@ -3,6 +3,7 @@
  * A* Pathfinding with Compass Directions & 360° Panorama Support
  */
 
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
@@ -117,7 +118,7 @@ async function startServer() {
         await sequelize.sync({ alter: false });
         console.log('✅ Database models synchronized');
         
-        app.listen(PORT, () => {
+        app.listen(PORT,'0.0.0.0', () => {
             console.log(`🗺️  Campus Navigator running at http://localhost:${PORT}`);
             console.log(`📱 Mobile API available at http://localhost:${PORT}/api/mobile`);
         });

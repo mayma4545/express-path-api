@@ -455,15 +455,45 @@ router.delete('/admin/nodes/:node_id/delete', requireAuth, async (req, res) => {
             return res.status(404).json({ success: false, error: 'Node not found' });
         }
 
-        if (node.image360) await deleteFileHybrid(null, node.image360);
-        if (node.qrcode) await deleteQRCode(node.qrcode);
+        // Delete all related edges first (both from and to this node)
+        await Edges.destroy({
+            where: {
+                [Op.or]: [
+                    { from_node_id: node.node_id },
+                    { to_node_id: node.node_id }
+                ]
+            }
+        });
+
+        // Delete all related annotations
+        await Annotation.destroy({
+            where: {
+                [Op.or]: [
+                    { panorama_id: node.node_id },
+                    { target_node_id: node.node_id }
+                ]
+            }
+        });
+
+        // Delete associated files from both Cloudinary and local storage
+        if (node.image360) {
+            console.log(`🗑️  Deleting 360° image: ${node.image360}`);
+            await deleteFileHybrid(null, node.image360);
+        }
+        if (node.qrcode) {
+            console.log(`🗑️  Deleting QR code: ${node.qrcode}`);
+            await deleteQRCode(node.qrcode);
+        }
         
+        // Now safe to delete the node
         await node.destroy();
         resetPathfinder();
+        
+        console.log(`✅ Successfully deleted node ${node.node_code} and all associated data`);
 
         res.json({
             success: true,
-            message: 'Node deleted successfully'
+            message: 'Node and all related data deleted successfully'
         });
     } catch (error) {
         console.error('Delete node error:', error);

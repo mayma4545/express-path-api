@@ -103,8 +103,11 @@ async function saveBase64Hybrid(base64Data, filename, subfolder) {
  */
 async function deleteFileHybrid(localPath, cloudinaryUrl) {
     try {
-        // Delete from Cloudinary
+        console.log(`🗑️  Hybrid delete initiated - Local: ${localPath || 'none'}, Cloud: ${cloudinaryUrl ? 'yes' : 'none'}`);
+        
+        // Delete from Cloudinary first
         if (cloudinaryUrl) {
+            console.log(`☁️  Deleting from Cloudinary: ${cloudinaryUrl}`);
             await deleteFromCloudinary(cloudinaryUrl);
         }
 
@@ -113,15 +116,19 @@ async function deleteFileHybrid(localPath, cloudinaryUrl) {
             const fullPath = path.join(MEDIA_DIR, localPath);
             try {
                 await fs.unlink(fullPath);
-                console.log(`🗑️  Local file deleted: ${localPath}`);
+                console.log(`✅ Local file deleted: ${localPath}`);
             } catch (error) {
                 if (error.code !== 'ENOENT') {
-                    console.error('Local file delete error:', error);
+                    console.error('❌ Local file delete error:', error.message);
+                } else {
+                    console.log(`ℹ️  Local file not found (already deleted): ${localPath}`);
                 }
             }
         }
+        
+        console.log(`✅ Hybrid deletion completed`);
     } catch (error) {
-        console.error('Hybrid delete error:', error);
+        console.error('❌ Hybrid delete error:', error.message);
         // Don't throw - deletion errors shouldn't break the app
     }
 }

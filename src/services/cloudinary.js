@@ -188,20 +188,37 @@ async function uploadQRCode(buffer, filename) {
 async function deleteFromCloudinary(imageUrl) {
     try {
         if (!imageUrl || !imageUrl.includes('cloudinary.com')) {
+            console.log('⏭️  Skipping deletion - not a Cloudinary URL or empty');
             return; // Not a Cloudinary URL, skip
         }
 
         // Extract public ID from URL
+        // URL format: https://res.cloudinary.com/{cloud_name}/image/upload/{version}/{folder}/{filename}.{ext}
         const parts = imageUrl.split('/');
         const filename = parts[parts.length - 1];
-        const folder = parts.slice(parts.indexOf('campus-navigator'), -1).join('/');
+        const folderStartIndex = parts.indexOf('campus-navigator');
+        
+        if (folderStartIndex === -1) {
+            console.warn('⚠️  Could not find folder path in Cloudinary URL');
+            return;
+        }
+        
+        const folder = parts.slice(folderStartIndex, -1).join('/');
         const publicId = `${folder}/${filename.split('.')[0]}`;
 
-        await cloudinary.uploader.destroy(publicId);
-        console.log(`✅ Deleted from Cloudinary: ${publicId}`);
+        console.log(`🗑️  Attempting to delete from Cloudinary: ${publicId}`);
+        const result = await cloudinary.uploader.destroy(publicId);
+        
+        if (result.result === 'ok') {
+            console.log(`✅ Successfully deleted from Cloudinary: ${publicId}`);
+        } else if (result.result === 'not found') {
+            console.warn(`⚠️  Image not found in Cloudinary: ${publicId}`);
+        } else {
+            console.warn(`⚠️  Cloudinary deletion result: ${result.result} for ${publicId}`);
+        }
     } catch (error) {
-        console.error('Cloudinary delete error:', error);
-        // Don't throw error, just log it
+        console.error('❌ Cloudinary delete error:', error.message);
+        // Don't throw error, just log it - deletion failures shouldn't break the app
     }
 }
 

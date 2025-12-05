@@ -5,19 +5,36 @@
 
 const { Sequelize, DataTypes } = require('sequelize');
 const path = require('path');
+const fs = require('fs');
 
-// Initialize Sequelize with SQLite
-const sequelize = new Sequelize({
-    dialect: 'sqlite',
-    storage: path.join(__dirname, '../../db.sqlite3'),
-    logging: process.env.NODE_ENV === 'development' ? console.log : false,
-    pool: {
-        max: 10,
-        min: 0,
-        acquire: 30000,
-        idle: 10000
+// Initialize Sequelize with MySQL (Aiven)
+const sequelize = new Sequelize(
+    process.env.DB_NAME || 'defaultdb',
+    process.env.DB_USER || 'avnadmin',
+    process.env.DB_PASSWORD,
+    {
+        host: process.env.DB_HOST || 'map-fernandezmayma-c63d.c.aivencloud.com',
+        port: process.env.DB_PORT || 11343,
+        dialect: 'mysql',
+        dialectOptions: {
+            ssl: process.env.DB_SSL === 'true' ? {
+                ca: fs.readFileSync(path.join(__dirname, '../../ca-certificate.pem')).toString()
+            } : false,
+            connectTimeout: 60000
+        },
+        logging: false,//process.env.NODE_ENV === 'development' ? console.log : false,
+        pool: {
+            max: 10,
+            min: 0,
+            acquire: 30000,
+            idle: 10000
+        },
+        define: {
+            charset: 'utf8mb4',
+            collate: 'utf8mb4_unicode_ci'
+        }
     }
-});
+);
 
 // CampusMap Model
 const CampusMap = sequelize.define('CampusMap', {
@@ -263,15 +280,15 @@ const User = sequelize.define('User', {
     updatedAt: 'updated_at'
 });
 
-// Define Associations
-Edges.belongsTo(Nodes, { foreignKey: 'from_node_id', as: 'from_node' });
-Edges.belongsTo(Nodes, { foreignKey: 'to_node_id', as: 'to_node' });
-Nodes.hasMany(Edges, { foreignKey: 'from_node_id', as: 'from_edges' });
-Nodes.hasMany(Edges, { foreignKey: 'to_node_id', as: 'to_edges' });
+// Define Associations with CASCADE delete
+Edges.belongsTo(Nodes, { foreignKey: 'from_node_id', as: 'from_node', onDelete: 'CASCADE' });
+Edges.belongsTo(Nodes, { foreignKey: 'to_node_id', as: 'to_node', onDelete: 'CASCADE' });
+Nodes.hasMany(Edges, { foreignKey: 'from_node_id', as: 'from_edges', onDelete: 'CASCADE' });
+Nodes.hasMany(Edges, { foreignKey: 'to_node_id', as: 'to_edges', onDelete: 'CASCADE' });
 
-Annotation.belongsTo(Nodes, { foreignKey: 'panorama_id', as: 'panorama' });
-Annotation.belongsTo(Nodes, { foreignKey: 'target_node_id', as: 'target_node' });
-Nodes.hasMany(Annotation, { foreignKey: 'panorama_id', as: 'annotations' });
+Annotation.belongsTo(Nodes, { foreignKey: 'panorama_id', as: 'panorama', onDelete: 'CASCADE' });
+Annotation.belongsTo(Nodes, { foreignKey: 'target_node_id', as: 'target_node', onDelete: 'SET NULL' });
+Nodes.hasMany(Annotation, { foreignKey: 'panorama_id', as: 'annotations', onDelete: 'CASCADE' });
 
 module.exports = {
     sequelize,
