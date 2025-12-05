@@ -20,6 +20,7 @@ media/qrcodes/*
 # Logs
 logs/
 *.log
+*.pem
 npm-debug.log*
 
 # OS files
