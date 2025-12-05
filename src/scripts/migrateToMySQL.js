@@ -5,7 +5,19 @@
 
 const { Sequelize, DataTypes } = require('sequelize');
 const path = require('path');
-const fs = require('fs');
+
+// Load environment variables
+require('dotenv').config();
+
+// Helper function to get SSL CA certificate from environment
+const getSSLConfig = () => {
+    if (process.env.DB_SSL !== 'true') return false;
+    if (process.env.DB_CA_CERT) {
+        // Replace escaped newlines with actual newlines
+        return { ca: process.env.DB_CA_CERT.replace(/\\n/g, '\n') };
+    }
+    return { rejectUnauthorized: false };
+};
 
 // SQLite Connection (Source)
 const sqliteSequelize = new Sequelize({
@@ -15,7 +27,6 @@ const sqliteSequelize = new Sequelize({
 });
 
 // MySQL Connection (Destination - Aiven)
-require('dotenv').config();
 const mysqlSequelize = new Sequelize(
     process.env.DB_NAME,
     process.env.DB_USER,
@@ -25,9 +36,7 @@ const mysqlSequelize = new Sequelize(
         port: process.env.DB_PORT,
         dialect: 'mysql',
         dialectOptions: {
-            ssl: process.env.DB_SSL === 'true' ? {
-                ca: fs.readFileSync(path.join(__dirname, '../../ca-certificate.pem')).toString()
-            } : false,
+            ssl: getSSLConfig(),
             connectTimeout: 60000
         },
         logging: false,
