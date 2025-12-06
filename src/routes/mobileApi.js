@@ -189,35 +189,53 @@ router.get('/campus-map', async (req, res) => {
 // Get data version - returns timestamps for change detection
 router.get('/data-version', async (req, res) => {
     try {
-        // Get latest update timestamps from each table
-        const [nodesUpdate, edgesUpdate, annotationsUpdate] = await Promise.all([
-            Nodes.findOne({
-                attributes: [[sequelize.fn('MAX', sequelize.col('updatedAt')), 'lastUpdate']],
-                raw: true
-            }),
-            Edges.findOne({
-                attributes: [[sequelize.fn('MAX', sequelize.col('updatedAt')), 'lastUpdate']],
-                raw: true
-            }),
-            Annotation.findOne({
-                attributes: [[sequelize.fn('MAX', sequelize.col('updatedAt')), 'lastUpdate']],
-                raw: true
-            })
-        ]);
-
-        // Get counts
+        // Get counts - these always work
         const [nodesCount, edgesCount, annotationsCount] = await Promise.all([
             Nodes.count(),
             Edges.count({ where: { is_active: true } }),
             Annotation.count({ where: { is_active: true } })
         ]);
 
+        // Try to get latest update timestamps, fallback to epoch if columns don't exist
+        let nodesUpdate, edgesUpdate, annotationsUpdate;
+        
+        try {
+            const result = await sequelize.query(
+                'SELECT MAX(updated_at) as lastUpdate FROM nodes',
+                { type: sequelize.QueryTypes.SELECT }
+            );
+            nodesUpdate = result[0]?.lastUpdate || new Date(0).toISOString();
+        } catch (e) {
+            // Column doesn't exist, use current time
+            nodesUpdate = new Date().toISOString();
+        }
+
+        try {
+            const result = await sequelize.query(
+                'SELECT MAX(updated_at) as lastUpdate FROM edges',
+                { type: sequelize.QueryTypes.SELECT }
+            );
+            edgesUpdate = result[0]?.lastUpdate || new Date(0).toISOString();
+        } catch (e) {
+            edgesUpdate = new Date().toISOString();
+        }
+
+        try {
+            const result = await sequelize.query(
+                'SELECT MAX(updated_at) as lastUpdate FROM annotations',
+                { type: sequelize.QueryTypes.SELECT }
+            );
+            annotationsUpdate = result[0]?.lastUpdate || new Date(0).toISOString();
+        } catch (e) {
+            annotationsUpdate = new Date().toISOString();
+        }
+
         res.json({
             success: true,
             version: {
-                nodes_updated: nodesUpdate?.lastUpdate || new Date(0).toISOString(),
-                edges_updated: edgesUpdate?.lastUpdate || new Date(0).toISOString(),
-                annotations_updated: annotationsUpdate?.lastUpdate || new Date(0).toISOString(),
+                nodes_updated: nodesUpdate,
+                edges_updated: edgesUpdate,
+                annotations_updated: annotationsUpdate,
                 nodes_count: nodesCount,
                 edges_count: edgesCount,
                 annotations_count: annotationsCount,
