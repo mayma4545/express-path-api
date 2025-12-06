@@ -7,7 +7,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
-const { Nodes, Edges, Annotation, CampusMap, User } = require('../models');
+const { Nodes, Edges, Annotation, CampusMap, User, sequelize } = require('../models');
 const { getPathfinder, resetPathfinder } = require('../services/pathfinding');
 const { generateQRCode, deleteQRCode } = require('../services/qrcode.cloudinary');
 const { saveBase64Hybrid, deleteFileHybrid } = require('../services/upload.hybrid');
@@ -182,6 +182,50 @@ router.get('/campus-map', async (req, res) => {
         });
     } catch (error) {
         console.error('Campus map error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Get data version - returns timestamps for change detection
+router.get('/data-version', async (req, res) => {
+    try {
+        // Get latest update timestamps from each table
+        const [nodesUpdate, edgesUpdate, annotationsUpdate] = await Promise.all([
+            Nodes.findOne({
+                attributes: [[sequelize.fn('MAX', sequelize.col('updatedAt')), 'lastUpdate']],
+                raw: true
+            }),
+            Edges.findOne({
+                attributes: [[sequelize.fn('MAX', sequelize.col('updatedAt')), 'lastUpdate']],
+                raw: true
+            }),
+            Annotation.findOne({
+                attributes: [[sequelize.fn('MAX', sequelize.col('updatedAt')), 'lastUpdate']],
+                raw: true
+            })
+        ]);
+
+        // Get counts
+        const [nodesCount, edgesCount, annotationsCount] = await Promise.all([
+            Nodes.count(),
+            Edges.count({ where: { is_active: true } }),
+            Annotation.count({ where: { is_active: true } })
+        ]);
+
+        res.json({
+            success: true,
+            version: {
+                nodes_updated: nodesUpdate?.lastUpdate || new Date(0).toISOString(),
+                edges_updated: edgesUpdate?.lastUpdate || new Date(0).toISOString(),
+                annotations_updated: annotationsUpdate?.lastUpdate || new Date(0).toISOString(),
+                nodes_count: nodesCount,
+                edges_count: edgesCount,
+                annotations_count: annotationsCount,
+                server_time: new Date().toISOString()
+            }
+        });
+    } catch (error) {
+        console.error('Data version error:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
