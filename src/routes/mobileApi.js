@@ -6,34 +6,69 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
 const { Nodes, Edges, Annotation, CampusMap, User, sequelize } = require('../models');
 const { getPathfinder, resetPathfinder } = require('../services/pathfinding');
 const { generateQRCode, deleteQRCode } = require('../services/qrcode.cloudinary');
 const { saveBase64Hybrid, deleteFileHybrid } = require('../services/upload.hybrid');
 
+// Import services, validation and utilities
+const NodeService = require('../services/NodeService');
+const EdgeService = require('../services/EdgeService');
+const AnnotationService = require('../services/AnnotationService');
+const { nodeValidation, edgeValidation, annotationValidation, pathfindingValidation, loginValidation } = require('../middleware/validate');
+const { authLimiter } = require('../middleware/rateLimiter');
+const { logger } = require('../utils/logger');
+const { JWT } = require('../utils/constants');
+
 // Helper to build absolute URL
 const buildUrl = (req, path) => {
     if (!path || path.trim() === '') return null;
-    
+
     // If already a full URL (Cloudinary), return as-is
     if (path.startsWith('http://') || path.startsWith('https://')) {
         return path;
     }
-    
+
     // Otherwise, build local media URL
     return `${req.protocol}://${req.get('host')}/media/${path}`;
 };
 
 // Auth middleware for admin routes
 const requireAuth = (req, res, next) => {
-    if (!req.session.user || !req.session.user.is_staff) {
-        return res.status(401).json({
-            success: false,
-            error: 'Authentication required'
-        });
+    // Check for Bearer token (JWT)
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        try {
+            const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
+            const decoded = jwt.verify(token, secret);
+            req.user = decoded; // Attach to req.user
+            return next();
+        } catch (err) {
+            if (err.name === 'TokenExpiredError') {
+                return res.status(401).json({
+                    success: false,
+                    error: 'Session expired'
+                });
+            }
+            return res.status(401).json({
+                success: false,
+                error: 'Invalid token'
+            });
+        }
     }
-    next();
+
+    // Fallback to session-based auth (legacy/webview)
+    if (req.session.user && req.session.user.is_staff) {
+        return next();
+    }
+
+    return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+    });
 };
 
 // ============= Public API Endpoints =============
@@ -42,7 +77,7 @@ const requireAuth = (req, res, next) => {
 router.get('/nodes', async (req, res) => {
     try {
         const { search, building, floor } = req.query;
-        
+
         const where = {};
         if (search) {
             where[Op.or] = [
@@ -89,7 +124,7 @@ router.get('/nodes', async (req, res) => {
 router.get('/nodes/:node_id', async (req, res) => {
     try {
         const node = await Nodes.findByPk(req.params.node_id);
-        
+
         if (!node) {
             return res.status(404).json({
                 success: false,
@@ -163,7 +198,7 @@ router.get('/buildings', async (req, res) => {
 router.get('/campus-map', async (req, res) => {
     try {
         const campusMap = await CampusMap.findOne({ where: { is_active: true } });
-        
+
         if (!campusMap) {
             return res.status(404).json({
                 success: false,
@@ -198,7 +233,7 @@ router.get('/data-version', async (req, res) => {
 
         // Try to get latest update timestamps, fallback to epoch if columns don't exist
         let nodesUpdate, edgesUpdate, annotationsUpdate;
-        
+
         try {
             const result = await sequelize.query(
                 'SELECT MAX(updated_at) as lastUpdate FROM nodes',
@@ -323,7 +358,7 @@ router.get('/edges', async (req, res) => {
 router.get('/annotations', async (req, res) => {
     try {
         const { panorama_id } = req.query;
-        
+
         const where = {};
         if (panorama_id) where.panorama_id = parseInt(panorama_id);
 
@@ -367,16 +402,9 @@ router.get('/annotations', async (req, res) => {
 
 // ============= Admin Authentication =============
 
-router.post('/admin/login', async (req, res) => {
+router.post('/admin/login', authLimiter, loginValidation, async (req, res) => {
     try {
         const { username, password } = req.body;
-
-        if (!username || !password) {
-            return res.status(400).json({
-                success: false,
-                error: 'Username and password required'
-            });
-        }
 
         const user = await User.findOne({ where: { username } });
 
@@ -388,7 +416,7 @@ router.post('/admin/login', async (req, res) => {
         }
 
         const isValid = await bcrypt.compare(password, user.password);
-        
+
         if (!isValid || !user.is_staff) {
             return res.status(401).json({
                 success: false,
@@ -396,7 +424,15 @@ router.post('/admin/login', async (req, res) => {
             });
         }
 
-        // Store user in session
+        // Generate JWT Token
+        const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
+        const token = jwt.sign(
+            { id: user.id, username: user.username, is_staff: user.is_staff, is_superuser: user.is_superuser },
+            secret,
+            { expiresIn: JWT.EXPIRES_IN }
+        );
+
+        // Store user in session (legacy support)
         req.session.user = {
             id: user.id,
             username: user.username,
@@ -407,6 +443,7 @@ router.post('/admin/login', async (req, res) => {
         res.json({
             success: true,
             message: 'Login successful',
+            token: token,
             user: {
                 username: user.username,
                 is_staff: user.is_staff,
@@ -467,7 +504,7 @@ router.post('/admin/nodes/create', requireAuth, async (req, res) => {
 router.put('/admin/nodes/:node_id/update', requireAuth, async (req, res) => {
     try {
         const node = await Nodes.findByPk(req.params.node_id);
-        
+
         if (!node) {
             return res.status(404).json({ success: false, error: 'Node not found' });
         }
@@ -512,7 +549,7 @@ router.put('/admin/nodes/:node_id/update', requireAuth, async (req, res) => {
 router.delete('/admin/nodes/:node_id/delete', requireAuth, async (req, res) => {
     try {
         const node = await Nodes.findByPk(req.params.node_id);
-        
+
         if (!node) {
             return res.status(404).json({ success: false, error: 'Node not found' });
         }
@@ -546,11 +583,11 @@ router.delete('/admin/nodes/:node_id/delete', requireAuth, async (req, res) => {
             console.log(`🗑️  Deleting QR code: ${node.qrcode}`);
             await deleteQRCode(node.qrcode);
         }
-        
+
         // Now safe to delete the node
         await node.destroy();
         resetPathfinder();
-        
+
         console.log(`✅ Successfully deleted node ${node.node_code} and all associated data`);
 
         res.json({
@@ -603,7 +640,7 @@ router.post('/admin/edges/create', requireAuth, async (req, res) => {
 router.put('/admin/edges/:edge_id/update', requireAuth, async (req, res) => {
     try {
         const edge = await Edges.findByPk(req.params.edge_id);
-        
+
         if (!edge) {
             return res.status(404).json({ success: false, error: 'Edge not found' });
         }
@@ -611,13 +648,13 @@ router.put('/admin/edges/:edge_id/update', requireAuth, async (req, res) => {
         const { from_node_id, to_node_id, distance, compass_angle, is_staircase, is_active } = req.body;
 
         const updateData = {};
-        
+
         if (from_node_id !== undefined) {
             const fromNode = await Nodes.findByPk(from_node_id);
             if (!fromNode) return res.status(404).json({ success: false, error: 'From node not found' });
             updateData.from_node_id = parseInt(from_node_id);
         }
-        
+
         if (to_node_id !== undefined) {
             const toNode = await Nodes.findByPk(to_node_id);
             if (!toNode) return res.status(404).json({ success: false, error: 'To node not found' });
@@ -646,7 +683,7 @@ router.put('/admin/edges/:edge_id/update', requireAuth, async (req, res) => {
 router.delete('/admin/edges/:edge_id/delete', requireAuth, async (req, res) => {
     try {
         const edge = await Edges.findByPk(req.params.edge_id);
-        
+
         if (!edge) {
             return res.status(404).json({ success: false, error: 'Edge not found' });
         }
@@ -706,7 +743,7 @@ router.post('/admin/annotations/create', requireAuth, async (req, res) => {
 router.put('/admin/annotations/:annotation_id/update', requireAuth, async (req, res) => {
     try {
         const annotation = await Annotation.findByPk(req.params.annotation_id);
-        
+
         if (!annotation) {
             return res.status(404).json({ success: false, error: 'Annotation not found' });
         }
@@ -753,7 +790,7 @@ router.put('/admin/annotations/:annotation_id/update', requireAuth, async (req, 
 router.delete('/admin/annotations/:annotation_id/delete', requireAuth, async (req, res) => {
     try {
         const annotation = await Annotation.findByPk(req.params.annotation_id);
-        
+
         if (!annotation) {
             return res.status(404).json({ success: false, error: 'Annotation not found' });
         }

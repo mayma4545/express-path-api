@@ -16,9 +16,18 @@ const { sequelize } = require('./models');
 const webRoutes = require('./routes/web');
 const apiRoutes = require('./routes/api');
 const mobileApiRoutes = require('./routes/mobileApi');
+const { logger, requestLogger } = require('./utils/logger');
+const { apiLimiter } = require('./middleware/rateLimiter');
+const { SESSION } = require('./utils/constants');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Validate required environment variables
+if (!process.env.SESSION_SECRET && process.env.NODE_ENV === 'production') {
+    logger.error('SESSION_SECRET environment variable is required in production');
+    process.exit(1);
+}
 
 // Security middleware
 app.use(helmet({
@@ -29,11 +38,17 @@ app.use(helmet({
 // Performance middleware
 app.use(compression());
 
+// Request logging
+app.use(requestLogger);
+
 // CORS configuration
 app.use(cors({
     origin: process.env.CORS_ORIGIN || '*',
     credentials: true
 }));
+
+// Rate limiting for API routes
+app.use('/api', apiLimiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: '50mb' }));
@@ -41,13 +56,14 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 
 // Session configuration
+const sessionSecret = process.env.SESSION_SECRET || 'dev-secret-change-in-production';
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'campus-navigator-secret-key-change-in-production',
+    secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
     cookie: {
         secure: process.env.NODE_ENV === 'production',
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        maxAge: SESSION.MAX_AGE_MS
     }
 }));
 
@@ -93,15 +109,15 @@ app.use((req, res) => {
 
 // Error handler
 app.use((err, req, res, next) => {
-    console.error('Error:', err);
-    
+    logger.error('Request error', { error: err.message, stack: err.stack, path: req.path });
+
     if (req.path.startsWith('/api')) {
         return res.status(500).json({
             success: false,
             error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message
         });
     }
-    
+
     res.status(500).render('error', {
         title: 'Server Error',
         message: process.env.NODE_ENV === 'production' ? 'Something went wrong' : err.message
@@ -112,18 +128,18 @@ app.use((err, req, res, next) => {
 async function startServer() {
     try {
         await sequelize.authenticate();
-        console.log('✅ Database connection established');
-        
+        logger.info('Database connection established');
+
         // Only sync without altering existing tables (safe for production)
         await sequelize.sync({ alter: false });
-        console.log('✅ Database models synchronized');
-        
-        app.listen(PORT,'0.0.0.0', () => {
-            console.log(`🗺️  Campus Navigator running at http://localhost:${PORT}`);
-            console.log(`📱 Mobile API available at http://localhost:${PORT}/api/mobile`);
+        logger.info('Database models synchronized');
+
+        app.listen(PORT, '0.0.0.0', () => {
+            logger.info(`Campus Navigator running at http://localhost:${PORT}`);
+            logger.info(`Mobile API available at http://localhost:${PORT}/api/mobile`);
         });
     } catch (error) {
-        console.error('❌ Failed to start server:', error);
+        logger.error('Failed to start server', { error: error.message, stack: error.stack });
         process.exit(1);
     }
 }
