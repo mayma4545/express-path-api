@@ -8,7 +8,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
-const { Nodes, Edges, Annotation, CampusMap, User, sequelize } = require('../models');
+const { Nodes, Edges, Annotation, CampusMap, User, Event, sequelize } = require('../models');
 const { getPathfinder, resetPathfinder } = require('../services/pathfinding');
 const { generateQRCode, deleteQRCode } = require('../services/qrcode.cloudinary');
 const { saveBase64Hybrid, deleteFileHybrid } = require('../services/upload.hybrid');
@@ -17,6 +17,7 @@ const { saveBase64Hybrid, deleteFileHybrid } = require('../services/upload.hybri
 const NodeService = require('../services/NodeService');
 const EdgeService = require('../services/EdgeService');
 const AnnotationService = require('../services/AnnotationService');
+const EventService = require('../services/EventService');
 const { nodeValidation, edgeValidation, annotationValidation, pathfindingValidation, loginValidation } = require('../middleware/validate');
 const { authLimiter } = require('../middleware/rateLimiter');
 const { logger } = require('../utils/logger');
@@ -803,6 +804,228 @@ router.delete('/admin/annotations/:annotation_id/delete', requireAuth, async (re
         });
     } catch (error) {
         console.error('Delete annotation error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ============= Event Endpoints =============
+
+// Get active/upcoming events (public)
+router.get('/events', async (req, res) => {
+    try {
+        const { search, category, from_date, to_date } = req.query;
+        const events = await EventService.getActiveEvents({ search, category, from_date, to_date });
+
+        const data = events.map(e => ({
+            event_id: e.event_id,
+            event_name: e.event_name,
+            description: e.description,
+            category: e.category,
+            start_datetime: e.start_datetime,
+            end_datetime: e.end_datetime,
+            is_featured: e.is_featured,
+            location: e.location ? {
+                node_id: e.location.node_id,
+                node_code: e.location.node_code,
+                name: e.location.name,
+                building: e.location.building,
+                floor_level: e.location.floor_level,
+                map_x: e.location.map_x,
+                map_y: e.location.map_y
+            } : null
+        }));
+
+        res.json({
+            success: true,
+            events: data,
+            count: data.length
+        });
+    } catch (error) {
+        console.error('Events list error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Get event details by ID (public)
+router.get('/events/:event_id', async (req, res) => {
+    try {
+        const event = await EventService.getEventById(req.params.event_id);
+
+        if (!event) {
+            return res.status(404).json({
+                success: false,
+                error: 'Event not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            event: {
+                event_id: event.event_id,
+                event_name: event.event_name,
+                description: event.description,
+                category: event.category,
+                start_datetime: event.start_datetime,
+                end_datetime: event.end_datetime,
+                is_active: event.is_active,
+                is_featured: event.is_featured,
+                location: event.location ? {
+                    node_id: event.location.node_id,
+                    node_code: event.location.node_code,
+                    name: event.location.name,
+                    building: event.location.building,
+                    floor_level: event.location.floor_level,
+                    map_x: event.location.map_x,
+                    map_y: event.location.map_y,
+                    description: event.location.description
+                } : null
+            }
+        });
+    } catch (error) {
+        console.error('Event detail error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Combined search for events and nodes (public)
+router.get('/events/search', async (req, res) => {
+    try {
+        const { query } = req.query;
+
+        if (!query || query.trim() === '') {
+            return res.json({
+                success: true,
+                events: [],
+                nodes: []
+            });
+        }
+
+        const results = await EventService.combinedSearch(query);
+
+        res.json({
+            success: true,
+            events: results.events,
+            nodes: results.nodes
+        });
+    } catch (error) {
+        console.error('Combined search error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Get all events - admin only
+router.get('/admin/events/all', requireAuth, async (req, res) => {
+    try {
+        const events = await EventService.getAllEvents();
+
+        const data = events.map(e => ({
+            event_id: e.event_id,
+            event_name: e.event_name,
+            description: e.description,
+            category: e.category,
+            start_datetime: e.start_datetime,
+            end_datetime: e.end_datetime,
+            is_active: e.is_active,
+            is_featured: e.is_featured,
+            location: e.location ? {
+                node_id: e.location.node_id,
+                node_code: e.location.node_code,
+                name: e.location.name,
+                building: e.location.building,
+                floor_level: e.location.floor_level
+            } : null
+        }));
+
+        res.json({
+            success: true,
+            events: data,
+            count: data.length
+        });
+    } catch (error) {
+        console.error('Admin events list error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Create event (admin only)
+router.post('/admin/events/create', requireAuth, async (req, res) => {
+    try {
+        const { event_name, description, category, node_id, start_datetime, end_datetime, is_active, is_featured } = req.body;
+
+        if (!event_name || !node_id) {
+            return res.status(400).json({
+                success: false,
+                error: 'event_name and node_id are required'
+            });
+        }
+
+        const event = await EventService.createEvent(req.body);
+
+        res.json({
+            success: true,
+            message: 'Event created successfully',
+            event_id: event.event_id,
+            event
+        });
+    } catch (error) {
+        console.error('Create event error:', error);
+        if (error.message === 'Node not found') {
+            return res.status(404).json({ success: false, error: error.message });
+        }
+        if (error.message.includes('datetime')) {
+            return res.status(400).json({ success: false, error: error.message });
+        }
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Update event (admin only)
+router.put('/admin/events/:event_id/update', requireAuth, async (req, res) => {
+    try {
+        const event = await EventService.updateEvent(req.params.event_id, req.body);
+
+        if (!event) {
+            return res.status(404).json({
+                success: false,
+                error: 'Event not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Event updated successfully',
+            event
+        });
+    } catch (error) {
+        console.error('Update event error:', error);
+        if (error.message === 'Node not found') {
+            return res.status(404).json({ success: false, error: error.message });
+        }
+        if (error.message.includes('datetime')) {
+            return res.status(400).json({ success: false, error: error.message });
+        }
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Delete event (admin only)
+router.delete('/admin/events/:event_id/delete', requireAuth, async (req, res) => {
+    try {
+        const result = await EventService.deleteEvent(req.params.event_id);
+
+        if (!result) {
+            return res.status(404).json({
+                success: false,
+                error: 'Event not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: `Event "${result.eventName}" deleted successfully`
+        });
+    } catch (error) {
+        console.error('Delete event error:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });

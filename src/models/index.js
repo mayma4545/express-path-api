@@ -286,6 +286,59 @@ const User = sequelize.define('User', {
     updatedAt: 'updated_at'
 });
 
+// Event Model
+const Event = sequelize.define('Event', {
+    event_id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    event_name: {
+        type: DataTypes.STRING(255),
+        allowNull: false
+    },
+    description: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    category: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+        validate: {
+            isIn: [['Academic', 'Social', 'Sports', 'Career', 'Workshop', 'Conference', 'Cultural', 'Other']]
+        }
+    },
+    node_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'nodes',
+            key: 'node_id'
+        }
+    },
+    start_datetime: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    end_datetime: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    is_active: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true
+    },
+    is_featured: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    }
+}, {
+    tableName: 'events',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
+});
+
 // Define Associations with CASCADE delete
 Edges.belongsTo(Nodes, { foreignKey: 'from_node_id', as: 'from_node', onDelete: 'CASCADE' });
 Edges.belongsTo(Nodes, { foreignKey: 'to_node_id', as: 'to_node', onDelete: 'CASCADE' });
@@ -296,6 +349,9 @@ Annotation.belongsTo(Nodes, { foreignKey: 'panorama_id', as: 'panorama', onDelet
 Annotation.belongsTo(Nodes, { foreignKey: 'target_node_id', as: 'target_node', onDelete: 'SET NULL' });
 Nodes.hasMany(Annotation, { foreignKey: 'panorama_id', as: 'annotations', onDelete: 'CASCADE' });
 
+Event.belongsTo(Nodes, { foreignKey: 'node_id', as: 'location', onDelete: 'CASCADE' });
+Nodes.hasMany(Event, { foreignKey: 'node_id', as: 'events', onDelete: 'CASCADE' });
+
 module.exports = {
     sequelize,
     Sequelize,
@@ -303,5 +359,6 @@ module.exports = {
     Nodes,
     Edges,
     Annotation,
-    User
+    User,
+    Event
 };
