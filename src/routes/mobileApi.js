@@ -19,7 +19,7 @@ const EdgeService = require('../services/EdgeService');
 const AnnotationService = require('../services/AnnotationService');
 const EventService = require('../services/EventService');
 const { nodeValidation, edgeValidation, annotationValidation, pathfindingValidation, loginValidation } = require('../middleware/validate');
-const { authLimiter } = require('../middleware/rateLimiter');
+const { authLimiter, adminLimiter } = require('../middleware/rateLimiter');
 const { logger } = require('../utils/logger');
 const { JWT } = require('../utils/constants');
 
@@ -402,6 +402,9 @@ router.get('/annotations', async (req, res) => {
 });
 
 // ============= Admin Authentication =============
+
+// Apply higher rate limit to all admin routes (prevents lockout during concurrent node edits)
+router.use('/admin', adminLimiter);
 
 router.post('/admin/login', authLimiter, loginValidation, async (req, res) => {
     try {

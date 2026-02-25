@@ -19,8 +19,9 @@ module.exports = {
     // Rate limiting
     RATE_LIMIT: {
         WINDOW_MS: 15 * 60 * 1000, // 15 minutes
-        MAX_REQUESTS: 100,
-        AUTH_MAX_ATTEMPTS: 5,
+        MAX_REQUESTS: 300,          // general API cap per window (raised from 100)
+        AUTH_MAX_ATTEMPTS: 5,       // login cap per window
+        ADMIN_MAX_REQUESTS: 1000,   // admin API cap per window (concurrent node edits)
     },
 
     // Pathfinding
