@@ -85,10 +85,37 @@ class NodeService {
     }
 
     /**
+     * Generate a unique node code from building and floor.
+     * Format: {BLD}-F{N}-{RAND4}  e.g. ENG-F2-3K9A
+     * Basement floors use B prefix: ENG-B1-3K9A
+     */
+    generateNodeCode(building, floor_level) {
+        const prefix = (building || 'NOD')
+            .trim()
+            .split(/\s+/)
+            .map(w => (w[0] || '').toUpperCase())
+            .join('')
+            .substring(0, 3) || 'NOD';
+
+        const floorNum = parseInt(floor_level) || 1;
+        const floorPart = floorNum < 0 ? `B${Math.abs(floorNum)}` : `F${floorNum}`;
+
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        const suffix = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+
+        return `${prefix}-${floorPart}-${suffix}`;
+    }
+
+    /**
      * Create a new node
      */
     async createNode(data, imageBase64 = null, imageFile = null) {
-        const { node_code, name, building, floor_level, type_of_node, description, map_x, map_y } = data;
+        let { node_code, name, building, floor_level, type_of_node, description, map_x, map_y } = data;
+
+        // Auto-generate a unique node_code if not supplied
+        if (!node_code) {
+            node_code = this.generateNodeCode(building, floor_level);
+        }
 
         const node = await Nodes.create({
             node_code,
