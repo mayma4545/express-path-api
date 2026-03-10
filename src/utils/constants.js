@@ -18,10 +18,12 @@ module.exports = {
 
     // Rate limiting
     RATE_LIMIT: {
-        WINDOW_MS: 15 * 60 * 1000, // 15 minutes
-        MAX_REQUESTS: 300,          // general API cap per window (raised from 100)
-        AUTH_MAX_ATTEMPTS: 5,       // login cap per window
-        ADMIN_MAX_REQUESTS: 1000,   // admin API cap per window (concurrent node edits)
+        WINDOW_MS: 15 * 60 * 1000,   // 15 minutes
+        MAX_REQUESTS: 300,            // general API cap per window (raised from 100)
+        AUTH_MAX_ATTEMPTS: 5,         // login cap per window
+        ADMIN_MAX_REQUESTS: 1000,     // admin API cap per window (concurrent node edits)
+        PER_INSTALL_WINDOW_MS: 1000, // 1-second sliding window per install ID
+        PER_INSTALL_MAX: 5,          // max 5 requests per second per install ID
     },
 
     // Pathfinding

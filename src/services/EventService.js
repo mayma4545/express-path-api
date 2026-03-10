@@ -145,7 +145,8 @@ class EventService {
         node_code: n.node_code,
         name: n.name,
         building: n.building,
-        floor_level: n.floor_level
+        floor_level: n.floor_level,
+        type_of_node: n.type_of_node
       }))
     };
   }

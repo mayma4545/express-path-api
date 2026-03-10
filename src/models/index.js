@@ -8,11 +8,20 @@ const { Sequelize, DataTypes } = require('sequelize');
 // Helper function to get SSL CA certificate from environment
 const getSSLConfig = () => {
     if (process.env.DB_SSL !== 'true') return false;
-    if (process.env.DB_CA_CERT) {
-        // Replace escaped newlines with actual newlines
-        return { ca: process.env.DB_CA_CERT.replace(/\\n/g, '\n') };
+    
+    // For Aiven and other MySQL providers with self-signed certificates
+    const ssl = {
+        rejectUnauthorized: false
+    };
+    
+    if (process.env.DB_CA_CERT && 
+        process.env.DB_CA_CERT.trim() !== '' && 
+        process.env.DB_CA_CERT.includes('BEGIN CERTIFICATE')) {
+        ssl.ca = process.env.DB_CA_CERT.replace(/\\n/g, '\n');
+        ssl.rejectUnauthorized = true;
     }
-    return { rejectUnauthorized: false };
+    
+    return ssl;
 };
 
 // Initialize Sequelize with MySQL (Aiven)
@@ -127,6 +136,11 @@ const Nodes = sequelize.define('Nodes', {
             min: 0.0,
             max: 100.0
         }
+    },
+    annotation: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+        comment: 'Initial view angle (0-360°) for the 360° panorama viewer'
     }
 }, {
     tableName: 'nodes',

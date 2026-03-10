@@ -17,7 +17,7 @@ const webRoutes = require('./routes/web');
 const apiRoutes = require('./routes/api');
 const mobileApiRoutes = require('./routes/mobileApi');
 const { logger, requestLogger } = require('./utils/logger');
-const { apiLimiter } = require('./middleware/rateLimiter');
+const { apiLimiter, perInstallLimiter } = require('./middleware/rateLimiter');
 const { SESSION } = require('./utils/constants');
 
 const app = express();
@@ -27,6 +27,17 @@ const PORT = process.env.PORT || 3000;
 if (!process.env.SESSION_SECRET && process.env.NODE_ENV === 'production') {
     logger.error('SESSION_SECRET environment variable is required in production');
     process.exit(1);
+}
+
+// JWT secret guard — catch misconfigured deployments early
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'dev-jwt-secret') {
+    const jwtWarning = 'JWT_SECRET is not set or uses the insecure default value. Set a strong random secret in .env before deploying.';
+    if (process.env.NODE_ENV === 'production') {
+        logger.error(`[FATAL] ${jwtWarning}`);
+        process.exit(1);
+    } else {
+        logger.warn(`[SECURITY WARNING] ${jwtWarning}`);
+    }
 }
 
 // Security middleware
@@ -94,6 +105,9 @@ app.use((req, res, next) => {
     next();
 });
 
+// Per-install-ID rate limiting for mobile API (5 req/sec per unique install)
+app.use('/api/mobile', perInstallLimiter);
+
 // Routes
 app.use('/', webRoutes);
 app.use('/api', apiRoutes);
@@ -144,6 +158,9 @@ async function startServer() {
     }
 }
 
-startServer();
+// Only start the HTTP server when this file is run directly (not required by tests)
+if (require.main === module) {
+    startServer();
+}
 
 module.exports = app;

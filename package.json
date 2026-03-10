@@ -6,13 +6,16 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "test": "jest --runInBand --forceExit",
+    "test:watch": "jest --runInBand --watch",
     "db:sync": "node src/scripts/syncDb.js",
     "db:seed": "node src/scripts/seedData.js",
     "db:migrate:mysql": "node src/scripts/migrateToMySQL.js",
     "db:verify:mysql": "node src/scripts/verifyMySQL.js",
     "db:test:mysql": "node src/scripts/testMySQL.js",
     "test:node-deletion": "node src/scripts/testNodeDeletion.js",
-    "test:cloudinary-deletion": "node src/scripts/testCloudinaryDeletion.js"
+    "test:cloudinary-deletion": "node src/scripts/testCloudinaryDeletion.js",
+    "images:download360": "node src/scripts/download360Images.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -38,7 +41,9 @@
     "winston": "^3.19.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.2",
+    "supertest": "^7.2.2"
   },
   "engines": {
     "node": ">=18.0.0"

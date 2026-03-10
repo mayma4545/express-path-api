@@ -110,7 +110,7 @@ class NodeService {
      * Create a new node
      */
     async createNode(data, imageBase64 = null, imageFile = null) {
-        let { node_code, name, building, floor_level, type_of_node, description, map_x, map_y } = data;
+        let { node_code, name, building, floor_level, type_of_node, description, map_x, map_y, annotation } = data;
 
         // Auto-generate a unique node_code if not supplied
         if (!node_code) {
@@ -126,23 +126,36 @@ class NodeService {
             description: description || '',
             map_x: map_x ? parseFloat(map_x) : null,
             map_y: map_y ? parseFloat(map_y) : null,
+            annotation: annotation !== undefined && annotation !== '' ? parseFloat(annotation) : null,
         });
 
         // Handle base64 image (from mobile API)
         if (imageBase64) {
-            const { cloudinaryUrl } = await saveBase64Hybrid(imageBase64, `${node.node_code}_360.jpg`, '360_images');
-            await node.update({ image360: cloudinaryUrl });
+            try {
+                const { cloudinaryUrl } = await saveBase64Hybrid(imageBase64, `${node.node_code}_360.jpg`, '360_images');
+                await node.update({ image360: cloudinaryUrl });
+            } catch (imgErr) {
+                logger.warn(`360 image upload failed for node ${node.node_code}: ${imgErr.message}`);
+            }
         }
 
         // Handle file upload (from web form)
         if (imageFile) {
-            const { cloudinaryUrl } = await saveFileHybrid(imageFile, '360_images');
-            await node.update({ image360: cloudinaryUrl });
+            try {
+                const { cloudinaryUrl } = await saveFileHybrid(imageFile, '360_images');
+                await node.update({ image360: cloudinaryUrl });
+            } catch (imgErr) {
+                logger.warn(`360 image file upload failed for node ${node.node_code}: ${imgErr.message}`);
+            }
         }
 
-        // Generate QR code
-        const qrcodeUrl = await generateQRCode(node);
-        await node.update({ qrcode: qrcodeUrl });
+        // Generate QR code (non-fatal – node creation succeeds even if Cloudinary is misconfigured)
+        try {
+            const qrcodeUrl = await generateQRCode(node);
+            await node.update({ qrcode: qrcodeUrl });
+        } catch (qrErr) {
+            logger.warn(`QR code generation failed for node ${node.node_code}: ${qrErr.message}`);
+        }
 
         resetPathfinder();
         logger.info(`Node created: ${node.node_code}`, { nodeId: node.node_id });
