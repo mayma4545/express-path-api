@@ -1,0 +1,177 @@
+/* ===================================================
+   Campus Navigator - Component Styles
+   (supplements style.css)
+   =================================================== */
+
+/* ========== Search Bar ========== */
+.search-bar-wrapper {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 0.5rem 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transition: border-color 0.2s;
+}
+.search-bar-wrapper:focus-within {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102,126,234,0.15);
+}
+.search-icon { font-size: 1.2rem; margin-right: 0.75rem; flex-shrink: 0; }
+.search-bar-input {
+    flex: 1; border: none; outline: none; font-size: 1rem;
+    color: #333; background: transparent; padding: 0.4rem 0;
+}
+.search-bar-input::placeholder { color: #aaa; }
+.search-clear {
+    display: none; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 50%; border: none;
+    background: #e0e0e0; color: #555; font-size: 0.75rem;
+    cursor: pointer; flex-shrink: 0; margin-left: 0.5rem; transition: background 0.2s;
+}
+.search-clear:hover { background: #bdbdbd; }
+
+/* ========== Sort/Filter Controls ========== */
+.sort-controls {
+    display: flex; align-items: center; gap: 0.5rem;
+    flex-wrap: wrap; margin-bottom: 0.75rem;
+}
+.sort-label { font-size: 0.9rem; color: #6c757d; font-weight: 600; margin-right: 0.25rem; }
+.sort-btn {
+    padding: 0.35rem 0.9rem; border: 1.5px solid #667eea;
+    border-radius: 20px; background: #fff; color: #667eea;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+}
+.sort-btn:hover, .sort-btn.active { background: #667eea; color: #fff; }
+.sort-dir-btn { border-color: #764ba2; color: #764ba2; margin-left: auto; }
+.sort-dir-btn:hover, .sort-dir-btn.active { background: #764ba2; color: #fff; border-color: #764ba2; }
+
+/* ========== Record Count ========== */
+.record-count {
+    font-size: 0.85rem; color: #764ba2;
+    font-weight: 600; margin-bottom: 0.75rem; min-height: 1.2em;
+}
+
+/* ========== Status Indicators ========== */
+.status-yes { color: #28a745; font-weight: 600; }
+.status-no  { color: #aaa; }
+.badge-room      { background: #e3f2fd; color: #1565c0; }
+.badge-hallway   { background: #f3e5f5; color: #6a1b9a; }
+.badge-entrance  { background: #e8f5e9; color: #1b5e20; }
+.badge-staircase { background: #fff3e0; color: #e65100; }
+.badge-elevator  { background: #e0f2f1; color: #004d40; }
+.badge-landmark  { background: #fce4ec; color: #880e4f; }
+
+/* ========== Form Sections ========== */
+.styled-form { display: flex; flex-direction: column; gap: 1.5rem; }
+
+.form-section {
+    background: #fff; border: 1px solid #e9ecef;
+    border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.form-section-header {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 2px solid #f0f0f0;
+}
+.form-section-icon { font-size: 1.5rem; flex-shrink: 0; line-height: 1; padding-top: 2px; }
+.form-section-title { font-size: 1.1rem; font-weight: 700; color: #2c3e50; margin: 0 0 0.2rem 0; }
+.form-section-subtitle { font-size: 0.85rem; color: #6c757d; margin: 0; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+
+.form-group { display: flex; flex-direction: column; margin-bottom: 1rem; }
+.form-group:last-child { margin-bottom: 0; }
+.form-group label { font-weight: 600; margin-bottom: 0.4rem; color: #2c3e50; font-size: 0.95rem; }
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 8px;
+    font-size: 1rem; font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: #fff; color: #2c3e50;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none; border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102,126,234,0.15);
+}
+.help-text, .form-group small { font-size: 0.8rem; color: #6c757d; margin-top: 0.3rem; display: block; }
+
+.checkbox-group { margin-bottom: 0.75rem; }
+.checkbox-label { display: flex; align-items: center; gap: 0.6rem; cursor: pointer; font-weight: 600; color: #2c3e50; font-size: 0.95rem; }
+.checkbox-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: #667eea; cursor: pointer; flex-shrink: 0; }
+
+/* ========== Small Table Buttons ========== */
+.btn-sm {
+    display: inline-block; padding: 0.3rem 0.75rem;
+    border-radius: 6px; font-size: 0.85rem; font-weight: 600;
+    text-decoration: none; transition: all 0.2s; margin-right: 4px;
+}
+.btn-edit { background: #e3f2fd; color: #1565c0; border: 1px solid #bbdefb; }
+.btn-edit:hover { background: #1565c0; color: #fff; }
+.btn-delete { background: #fce4ec; color: #c62828; border: 1px solid #ffcdd2; }
+.btn-delete:hover { background: #c62828; color: #fff; }
+
+/* ========== Image / QR helpers ========== */
+.current-image-info { margin-top: 0.5rem; padding: 0.6rem 0.9rem; background: #e8f5e9; border-radius: 8px; font-size: 0.85rem; color: #2e7d32; }
+.qr-preview { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+
+/* ========== Compass Quick-Pick Grid ========== */
+.compass-guide { background: #fff8e1; border-radius: 10px; padding: 1rem; margin-top: 0.75rem; }
+.compass-title { font-size: 0.9rem; font-weight: 700; color: #f57c00; margin-bottom: 0.75rem; text-align: center; margin-top: 0; }
+.compass-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+.compass-btn {
+    background: #fff; border: 1.5px solid #ffe0b2; border-radius: 8px;
+    padding: 0.5rem 0.25rem; text-align: center; cursor: pointer;
+    font-size: 0.85rem; font-weight: 700; color: #2c3e50;
+    transition: all 0.15s; display: flex; flex-direction: column;
+    align-items: center; gap: 2px;
+}
+.compass-btn span { font-size: 0.75rem; color: #6c757d; font-weight: 500; }
+.compass-btn:hover { background: #fff3e0; border-color: #f57c00; }
+.compass-btn.active { background: #667eea; border-color: #667eea; color: #fff; }
+.compass-btn.active span { color: rgba(255,255,255,0.85); }
+
+/* ========== Connection Preview ========== */
+.connection-preview {
+    background: #e8f5e9; border-left: 4px solid #4caf50;
+    border-radius: 0 8px 8px 0; padding: 0.75rem 1rem;
+    margin-top: 0.75rem; font-size: 0.9rem; font-weight: 600; color: #2e7d32;
+}
+
+/* ========== Edge Info Box ========== */
+.info-box-edge {
+    background: #f5e6ff; border-left: 4px solid #764ba2;
+    border-radius: 0 8px 8px 0; padding: 1rem;
+    font-size: 0.9rem; color: #4a2060; line-height: 1.6;
+}
+
+/* ========== Empty State ========== */
+.empty-state {
+    text-align: center; padding: 3rem 1rem; color: #6c757d;
+    background: #fff; border-radius: 10px; margin-top: 1rem;
+}
+.empty-state p { margin-bottom: 1rem; font-size: 1rem; }
+
+/* ========== Table helpers ========== */
+.table-responsive {
+    background: #fff; border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07); overflow-x: auto;
+}
+.data-table code {
+    background: #f0f4ff; color: #667eea;
+    padding: 0.15rem 0.4rem; border-radius: 4px;
+    font-size: 0.8rem; font-family: monospace;
+}
+.text-muted { color: #6c757d; }
+
+/* ========== Responsive ========== */
+@media (max-width: 768px) {
+    .form-row { grid-template-columns: 1fr; }
+    .sort-controls { gap: 0.35rem; }
+    .sort-btn { padding: 0.3rem 0.65rem; font-size: 0.8rem; }
+    .compass-grid { grid-template-columns: repeat(4, 1fr); }
+}

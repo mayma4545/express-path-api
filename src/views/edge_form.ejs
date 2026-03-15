@@ -6,66 +6,205 @@
 </div>
 
 <div class="form-container">
-    <form action="<%= typeof edge !== 'undefined' && edge ? '/edges/' + edge.id + '/edit' : '/edges/create' %>" method="POST" class="styled-form">
-        
-        <div class="form-row">
-            <div class="form-group">
-                <label for="from_node_id">From Node *</label>
-                <select id="from_node_id" name="from_node_id" required>
-                    <option value="">Select a node...</option>
-                    <% nodes.forEach(function(node) { %>
-                        <option value="<%= node.id %>" <%= (typeof edge !== 'undefined' && edge && edge.from_node_id === node.id) ? 'selected' : '' %>>
-                            <%= node.name %> (<%= node.building || 'No building' %>)
-                        </option>
-                    <% }); %>
-                </select>
+    <form action="<%= typeof edge !== 'undefined' && edge ? '/edges/' + edge.edge_id + '/edit' : '/edges/create' %>" method="POST" class="styled-form">
+
+        <!-- ===== Node Selection ===== -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <span class="form-section-icon">📍</span>
+                <div>
+                    <h3 class="form-section-title">Node Connection</h3>
+                    <p class="form-section-subtitle">Select the start and end nodes for this edge</p>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="to_node_id">To Node *</label>
-                <select id="to_node_id" name="to_node_id" required>
-                    <option value="">Select a node...</option>
-                    <% nodes.forEach(function(node) { %>
-                        <option value="<%= node.id %>" <%= (typeof edge !== 'undefined' && edge && edge.to_node_id === node.id) ? 'selected' : '' %>>
-                            <%= node.name %> (<%= node.building || 'No building' %>)
-                        </option>
-                    <% }); %>
-                </select>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="from_node_id">From Node <span class="required">*</span></label>
+                    <select id="from_node_id" name="from_node" required>
+                        <option value="">Select a node...</option>
+                        <% nodes.forEach(function(n) { %>
+                            <option value="<%= n.node_id %>" <%= (typeof edge !== 'undefined' && edge && edge.from_node_id === n.node_id) ? 'selected' : '' %>>
+                                <%= n.node_code %> — <%= n.name %> (<%= n.building || 'No building' %>, Fl.<%= n.floor_level %>)
+                            </option>
+                        <% }); %>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="to_node_id">To Node <span class="required">*</span></label>
+                    <select id="to_node_id" name="to_node" required>
+                        <option value="">Select a node...</option>
+                        <% nodes.forEach(function(n) { %>
+                            <option value="<%= n.node_id %>" <%= (typeof edge !== 'undefined' && edge && edge.to_node_id === n.node_id) ? 'selected' : '' %>>
+                                <%= n.node_code %> — <%= n.name %> (<%= n.building || 'No building' %>, Fl.<%= n.floor_level %>)
+                            </option>
+                        <% }); %>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Live connection preview -->
+            <div id="connection-preview" class="connection-preview" style="display:none;">
+                <span id="preview-text">📍 Select both nodes to see connection preview</span>
             </div>
         </div>
 
-        <div class="form-row">
-            <div class="form-group">
-                <label for="distance">Distance (meters)</label>
-                <input type="number" id="distance" name="distance" step="0.01" min="0" value="<%= typeof edge !== 'undefined' && edge ? (edge.distance || '') : '' %>">
+        <!-- ===== Distance & Direction ===== -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <span class="form-section-icon">📏</span>
+                <div>
+                    <h3 class="form-section-title">Distance &amp; Direction</h3>
+                    <p class="form-section-subtitle">Physical measurement and compass bearing</p>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="compass_angle">Compass Angle (0-360°)</label>
-                <input type="number" id="compass_angle" name="compass_angle" step="0.1" min="0" max="360" value="<%= typeof edge !== 'undefined' && edge ? (edge.compass_angle || '') : '' %>">
-                <p class="help-text">0° = North, 90° = East, 180° = South, 270° = West</p>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="distance">Distance (meters) <span class="required">*</span></label>
+                    <input type="number" id="distance" name="distance" step="0.01" min="0"
+                        value="<%= typeof edge !== 'undefined' && edge ? (edge.distance || '') : '' %>"
+                        placeholder="e.g., 15.5" required>
+                    <small class="help-text">Physical distance between the two nodes</small>
+                </div>
+                <div class="form-group">
+                    <label for="compass_angle">Compass Angle (0–360°) <span class="required">*</span></label>
+                    <input type="number" id="compass_angle" name="compass_angle" step="0.1" min="0" max="360"
+                        value="<%= typeof edge !== 'undefined' && edge ? (edge.compass_angle || '') : '' %>"
+                        placeholder="e.g., 90" required>
+                    <small class="help-text">0° = North ↑, 90° = East →, 180° = South ↓, 270° = West ←
+                        &nbsp;<span id="compass-direction" style="color:#764ba2;font-weight:600;"></span>
+                    </small>
+                </div>
+            </div>
+
+            <!-- Compass quick-pick grid (matches app) -->
+            <div class="compass-guide">
+                <p class="compass-title">🧭 Compass Quick-Pick</p>
+                <div class="compass-grid">
+                    <button type="button" class="compass-btn" data-angle="0">0° <span>N ↑</span></button>
+                    <button type="button" class="compass-btn" data-angle="45">45° <span>NE ↗</span></button>
+                    <button type="button" class="compass-btn" data-angle="90">90° <span>E →</span></button>
+                    <button type="button" class="compass-btn" data-angle="135">135° <span>SE ↘</span></button>
+                    <button type="button" class="compass-btn" data-angle="180">180° <span>S ↓</span></button>
+                    <button type="button" class="compass-btn" data-angle="225">225° <span>SW ↙</span></button>
+                    <button type="button" class="compass-btn" data-angle="270">270° <span>W ←</span></button>
+                    <button type="button" class="compass-btn" data-angle="315">315° <span>NW ↖</span></button>
+                </div>
             </div>
         </div>
 
-        <div class="form-group checkbox-group">
-            <label>
-                <input type="checkbox" name="is_staircase" <%= (typeof edge !== 'undefined' && edge && edge.is_staircase) ? 'checked' : '' %>>
-                Is Staircase Connection
-            </label>
-            <p class="help-text">Check if this edge connects different floors via stairs</p>
+        <!-- ===== Settings ===== -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <span class="form-section-icon">⚙️</span>
+                <div>
+                    <h3 class="form-section-title">Settings</h3>
+                    <p class="form-section-subtitle">Edge behaviour and pathfinding options</p>
+                </div>
+            </div>
+
+            <div class="form-group checkbox-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="is_staircase" <%= (typeof edge !== 'undefined' && edge && edge.is_staircase) ? 'checked' : '' %>>
+                    <span>🪜 This is a staircase connection</span>
+                </label>
+                <small class="help-text">Check if this edge connects different floors via stairs</small>
+            </div>
+
+            <div class="form-group checkbox-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="is_active" <%= (typeof edge === 'undefined' || !edge || edge.is_active) ? 'checked' : '' %>>
+                    <span>✅ Active</span>
+                </label>
+                <small class="help-text">Inactive edges won't be used in pathfinding</small>
+            </div>
+
+            <% if (typeof edge === 'undefined' || !edge) { %>
+            <div class="form-group checkbox-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="bidirectional" checked>
+                    <span>🔄 Create Bidirectional Edge</span>
+                </label>
+                <small class="help-text">Automatically creates a reverse edge with compass angle + 180°</small>
+            </div>
+            <% } %>
         </div>
 
-        <div class="form-group checkbox-group">
-            <label>
-                <input type="checkbox" name="bidirectional" checked>
-                Create Bidirectional Edge
-            </label>
-            <p class="help-text">Automatically creates a reverse edge with opposite compass angle</p>
+        <!-- Info note (matches app) -->
+        <div class="info-box-edge">
+            💡 <strong>Note:</strong> Edges represent pathways between nodes. The compass angle indicates the direction
+            of travel <em>from</em> the start node <em>toward</em> the end node.
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn-primary"><%= typeof edge !== 'undefined' && edge ? 'Update Edge' : 'Create Edge' %></button>
+            <button type="submit" class="btn-primary"><%= typeof edge !== 'undefined' && edge ? '💾 Update Edge' : '✨ Create Edge' %></button>
             <a href="/edges" class="btn-secondary">Cancel</a>
         </div>
     </form>
 </div>
+
+<script>
+(function() {
+    var angleInput = document.getElementById('compass_angle');
+    var dirLabel = document.getElementById('compass-direction');
+    var fromSel = document.getElementById('from_node_id');
+    var toSel = document.getElementById('to_node_id');
+    var preview = document.getElementById('connection-preview');
+    var previewText = document.getElementById('preview-text');
+
+    function getDir(deg) {
+        var d = parseFloat(deg);
+        if (isNaN(d)) return '';
+        if (d >= 337.5 || d < 22.5)  return 'N ↑';
+        if (d < 67.5)  return 'NE ↗';
+        if (d < 112.5) return 'E →';
+        if (d < 157.5) return 'SE ↘';
+        if (d < 202.5) return 'S ↓';
+        if (d < 247.5) return 'SW ↙';
+        if (d < 292.5) return 'W ←';
+        if (d < 337.5) return 'NW ↖';
+        return '';
+    }
+
+    function updateDir() {
+        dirLabel.textContent = angleInput.value ? '• Direction: ' + getDir(angleInput.value) : '';
+    }
+    angleInput && angleInput.addEventListener('input', updateDir);
+    updateDir();
+
+    // Compass quick-pick buttons
+    document.querySelectorAll('.compass-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            angleInput.value = this.dataset.angle;
+            updateDir();
+            document.querySelectorAll('.compass-btn').forEach(function(b) { b.classList.remove('active'); });
+            this.classList.add('active');
+        });
+    });
+
+    // Activate the correct compass button on load
+    if (angleInput && angleInput.value) {
+        document.querySelectorAll('.compass-btn').forEach(function(btn) {
+            if (btn.dataset.angle === angleInput.value) btn.classList.add('active');
+        });
+    }
+
+    // Connection preview
+    function updatePreview() {
+        var fromText = fromSel.options[fromSel.selectedIndex] && fromSel.value ? fromSel.options[fromSel.selectedIndex].text.trim() : null;
+        var toText = toSel.options[toSel.selectedIndex] && toSel.value ? toSel.options[toSel.selectedIndex].text.trim() : null;
+        if (fromText && toText) {
+            previewText.textContent = '📍 ' + fromText.split('—')[1]?.trim().split('(')[0]?.trim() + ' → ' + toText.split('—')[1]?.trim().split('(')[0]?.trim();
+            preview.style.display = 'block';
+        } else {
+            preview.style.display = 'none';
+        }
+    }
+    fromSel && fromSel.addEventListener('change', updatePreview);
+    toSel && toSel.addEventListener('change', updatePreview);
+    updatePreview();
+})();
+</script>
 
 <%- include('partials/footer') %>

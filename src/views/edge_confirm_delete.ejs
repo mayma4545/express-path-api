@@ -8,14 +8,14 @@
     </div>
     
     <div class="edge-details">
-        <p><strong>ID:</strong> <%= edge.id %></p>
+        <p><strong>ID:</strong> <%= edge.edge_id %></p>
         <p><strong>From:</strong> <%= edge.from_node ? edge.from_node.name : 'Unknown' %></p>
         <p><strong>To:</strong> <%= edge.to_node ? edge.to_node.name : 'Unknown' %></p>
         <p><strong>Distance:</strong> <%= edge.distance ? edge.distance.toFixed(2) + ' m' : 'N/A' %></p>
         <p><strong>Compass Angle:</strong> <%= edge.compass_angle ? edge.compass_angle.toFixed(1) + '°' : 'N/A' %></p>
     </div>
 
-    <form action="/edges/<%= edge.id %>/delete" method="POST" class="delete-form">
+    <form action="/edges/<%= edge.edge_id %>/delete" method="POST" class="delete-form">
         <button type="submit" class="btn-danger">Yes, Delete Edge</button>
         <a href="/edges" class="btn-secondary">Cancel</a>
     </form>

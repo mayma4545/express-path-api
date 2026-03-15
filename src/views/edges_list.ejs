@@ -5,6 +5,26 @@
     <a href="/edges/create" class="btn-primary">+ Add Edge</a>
 </div>
 
+<!-- Search Bar -->
+<div class="search-bar-wrapper">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="edgeSearch" class="search-bar-input"
+        placeholder="Search by node name, building..."
+        oninput="filterEdges(this.value)">
+    <button class="search-clear" id="searchClearBtn" onclick="clearSearch()" title="Clear search">✕</button>
+</div>
+
+<!-- Filter row -->
+<div class="sort-controls">
+    <span class="sort-label">Filter:</span>
+    <button class="sort-btn active" onclick="filterStatus('all', this)">All</button>
+    <button class="sort-btn" onclick="filterStatus('active', this)">✅ Active</button>
+    <button class="sort-btn" onclick="filterStatus('inactive', this)">🚫 Inactive</button>
+    <button class="sort-btn" onclick="filterStatus('staircase', this)">🪜 Staircase</button>
+</div>
+
+<div id="edge-count" class="record-count"></div>
+
 <% if (edges.length === 0) { %>
     <div class="empty-state">
         <p>No edges found. Create nodes first, then connect them with edges.</p>
@@ -12,28 +32,45 @@
     </div>
 <% } else { %>
     <div class="table-responsive">
-        <table class="data-table">
+        <table class="data-table" id="edgesTable">
             <thead>
                 <tr>
                     <th>ID</th>
                     <th>From Node</th>
                     <th>To Node</th>
                     <th>Distance</th>
-                    <th>Compass Angle</th>
+                    <th>Angle</th>
                     <th>Direction</th>
                     <th>Staircase</th>
+                    <th>Active</th>
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="edgesTableBody">
                 <% edges.forEach(function(edge) { %>
-                    <tr>
-                        <td><%= edge.id %></td>
-                        <td><%= edge.from_node ? edge.from_node.name : 'Unknown' %></td>
-                        <td><%= edge.to_node ? edge.to_node.name : 'Unknown' %></td>
+                    <tr class="edge-row"
+                        data-from="<%= (edge.from_node ? edge.from_node.name : '').toLowerCase() %>"
+                        data-to="<%= (edge.to_node ? edge.to_node.name : '').toLowerCase() %>"
+                        data-from-building="<%= (edge.from_node ? (edge.from_node.building || '') : '').toLowerCase() %>"
+                        data-to-building="<%= (edge.to_node ? (edge.to_node.building || '') : '').toLowerCase() %>"
+                        data-staircase="<%= edge.is_staircase ? 'yes' : 'no' %>"
+                        data-active="<%= edge.is_active ? 'yes' : 'no' %>">
+                        <td><%= edge.edge_id %></td>
+                        <td>
+                            <strong><%= edge.from_node ? edge.from_node.name : 'Unknown' %></strong>
+                            <% if (edge.from_node && edge.from_node.building) { %>
+                                <br><small class="text-muted"><%= edge.from_node.building %></small>
+                            <% } %>
+                        </td>
+                        <td>
+                            <strong><%= edge.to_node ? edge.to_node.name : 'Unknown' %></strong>
+                            <% if (edge.to_node && edge.to_node.building) { %>
+                                <br><small class="text-muted"><%= edge.to_node.building %></small>
+                            <% } %>
+                        </td>
                         <td><%= edge.distance ? edge.distance.toFixed(2) : '-' %> m</td>
-                        <td><%= edge.compass_angle ? edge.compass_angle.toFixed(1) : '-' %>°</td>
-                        <td><%= edge.direction || '-' %></td>
+                        <td><%= edge.compass_angle !== null && edge.compass_angle !== undefined ? edge.compass_angle.toFixed(1) + '°' : '-' %></td>
+                        <td><%= edge.direction || getCompassDir(edge.compass_angle) %></td>
                         <td>
                             <% if (edge.is_staircase) { %>
                                 <span class="badge badge-staircase">🪜 Yes</span>
@@ -41,15 +78,106 @@
                                 <span class="status-no">No</span>
                             <% } %>
                         </td>
+                        <td>
+                            <% if (edge.is_active) { %>
+                                <span class="status-yes">✓ Yes</span>
+                            <% } else { %>
+                                <span class="status-no">✗ No</span>
+                            <% } %>
+                        </td>
                         <td class="actions">
-                            <a href="/edges/<%= edge.id %>/edit" class="btn-sm btn-edit">Edit</a>
-                            <a href="/edges/<%= edge.id %>/delete" class="btn-sm btn-delete">Delete</a>
+                            <a href="/edges/<%= edge.edge_id %>/edit" class="btn-sm btn-edit">Edit</a>
+                            <a href="/edges/<%= edge.edge_id %>/delete" class="btn-sm btn-delete">Delete</a>
                         </td>
                     </tr>
                 <% }); %>
             </tbody>
         </table>
     </div>
+
+    <div id="no-results" class="empty-state" style="display:none;">
+        <p>No edges match your search. <a href="#" onclick="clearSearch();currentStatusFilter='all';applyFilters();return false;">Clear filters</a></p>
+    </div>
 <% } %>
+
+<%
+// EJS helper function to get compass direction string
+function getCompassDir(angle) {
+    if (angle === undefined || angle === null) return '-';
+    var d = parseFloat(angle);
+    if (isNaN(d)) return '-';
+    if (d >= 337.5 || d < 22.5)  return 'N';
+    if (d < 67.5)  return 'NE';
+    if (d < 112.5) return 'E';
+    if (d < 157.5) return 'SE';
+    if (d < 202.5) return 'S';
+    if (d < 247.5) return 'SW';
+    if (d < 292.5) return 'W';
+    return 'NW';
+}
+%>
+
+<script>
+var currentQuery = '';
+var currentStatusFilter = 'all';
+
+function filterEdges(query) {
+    currentQuery = query.toLowerCase().trim();
+    applyFilters();
+    document.getElementById('searchClearBtn').style.display = currentQuery ? 'flex' : 'none';
+}
+
+function filterStatus(status, btn) {
+    currentStatusFilter = status;
+    document.querySelectorAll('.sort-controls .sort-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    applyFilters();
+}
+
+function applyFilters() {
+    var rows = document.querySelectorAll('.edge-row');
+    var visible = 0;
+    rows.forEach(function(row) {
+        var textMatch = !currentQuery ||
+            row.dataset.from.includes(currentQuery) ||
+            row.dataset.to.includes(currentQuery) ||
+            row.dataset.fromBuilding.includes(currentQuery) ||
+            row.dataset.toBuilding.includes(currentQuery);
+
+        var statusMatch = currentStatusFilter === 'all' ||
+            (currentStatusFilter === 'active' && row.dataset.active === 'yes') ||
+            (currentStatusFilter === 'inactive' && row.dataset.active === 'no') ||
+            (currentStatusFilter === 'staircase' && row.dataset.staircase === 'yes');
+
+        var show = textMatch && statusMatch;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+    document.getElementById('no-results').style.display = visible === 0 ? 'block' : 'none';
+    updateCount(visible, rows.length);
+}
+
+function clearSearch() {
+    document.getElementById('edgeSearch').value = '';
+    currentQuery = '';
+    applyFilters();
+    document.getElementById('searchClearBtn').style.display = 'none';
+}
+
+function updateCount(visible, total) {
+    var el = document.getElementById('edge-count');
+    if (!el) return;
+    el.textContent = visible === total
+        ? 'Showing all ' + total + ' edges'
+        : 'Showing ' + visible + ' of ' + total + ' edges';
+}
+
+// Init
+(function() {
+    var total = document.querySelectorAll('.edge-row').length;
+    updateCount(total, total);
+    document.getElementById('searchClearBtn').style.display = 'none';
+})();
+</script>
 
 <%- include('partials/footer') %>

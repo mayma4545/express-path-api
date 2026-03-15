@@ -92,7 +92,7 @@ router.get('/nodes/create', async (req, res) => {
 
 router.post('/nodes/create', upload360Hybrid.single('image_360'), async (req, res) => {
     try {
-        const { node_code, name, building, floor_level, type_of_node, description, map_x, map_y } = req.body;
+        const { node_code, name, building, floor_level, type_of_node, description, map_x, map_y, annotation } = req.body;
 
         const node = await Nodes.create({
             node_code,
@@ -102,7 +102,8 @@ router.post('/nodes/create', upload360Hybrid.single('image_360'), async (req, re
             type_of_node: type_of_node || 'room',
             description: description || '',
             map_x: map_x ? parseFloat(map_x) : null,
-            map_y: map_y ? parseFloat(map_y) : null
+            map_y: map_y ? parseFloat(map_y) : null,
+            annotation: annotation !== '' && annotation !== undefined ? parseFloat(annotation) : null
         });
 
         // Save image to both local (backup) and Cloudinary
@@ -154,7 +155,7 @@ router.post('/nodes/:node_id/edit', upload360Hybrid.single('image_360'), async (
             return res.redirect('/nodes');
         }
 
-        const { node_code, name, building, floor_level, type_of_node, description, map_x, map_y, regenerate_qr } = req.body;
+        const { node_code, name, building, floor_level, type_of_node, description, map_x, map_y, annotation, regenerate_qr } = req.body;
         const oldNodeCode = node.node_code;
 
         const updateData = {
@@ -165,7 +166,8 @@ router.post('/nodes/:node_id/edit', upload360Hybrid.single('image_360'), async (
             type_of_node: type_of_node || 'room',
             description: description || '',
             map_x: map_x ? parseFloat(map_x) : null,
-            map_y: map_y ? parseFloat(map_y) : null
+            map_y: map_y ? parseFloat(map_y) : null,
+            annotation: annotation !== '' && annotation !== undefined ? parseFloat(annotation) : null
         };
 
         if (req.file) {

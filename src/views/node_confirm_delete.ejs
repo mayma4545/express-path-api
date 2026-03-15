@@ -8,13 +8,13 @@
     </div>
     
     <div class="node-details">
-        <p><strong>ID:</strong> <%= node.id %></p>
+        <p><strong>ID:</strong> <%= node.node_id %></p>
         <p><strong>Building:</strong> <%= node.building || 'N/A' %></p>
-        <p><strong>Floor:</strong> <%= node.floor || 'N/A' %></p>
-        <p><strong>Type:</strong> <%= node.node_type %></p>
+        <p><strong>Floor:</strong> <%= node.floor_level || 'N/A' %></p>
+        <p><strong>Type:</strong> <%= node.type_of_node %></p>
     </div>
 
-    <form action="/nodes/<%= node.id %>/delete" method="POST" class="delete-form">
+    <form action="/nodes/<%= node.node_id %>/delete" method="POST" class="delete-form">
         <button type="submit" class="btn-danger">Yes, Delete Node</button>
         <a href="/nodes" class="btn-secondary">Cancel</a>
     </form>
