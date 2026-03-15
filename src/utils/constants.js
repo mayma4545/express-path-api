@@ -23,7 +23,7 @@ module.exports = {
         AUTH_MAX_ATTEMPTS: 5,         // login cap per window
         ADMIN_MAX_REQUESTS: 1000,     // admin API cap per window (concurrent node edits)
         PER_INSTALL_WINDOW_MS: 1000, // 1-second sliding window per install ID
-        PER_INSTALL_MAX: 5,          // max 5 requests per second per install ID
+        PER_INSTALL_MAX: 20,         // max 20 requests per second per install ID (raised from 5 — startup fires multiple concurrent requests)
     },
 
     // Pathfinding
