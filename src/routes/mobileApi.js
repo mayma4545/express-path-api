@@ -110,7 +110,8 @@ router.get('/nodes', async (req, res) => {
             image360_url: buildUrl(req, n.image360),
             qrcode_url: buildUrl(req, n.qrcode),
             description: n.description,
-            annotation: n.annotation !== null ? parseFloat(n.annotation) : null
+            annotation: n.annotation !== null ? parseFloat(n.annotation) : null,
+            created_at: n.created_at ? n.created_at.toISOString() : null
         }));
 
         res.json({
@@ -337,7 +338,8 @@ router.get('/edges', async (req, res) => {
             from_node: {
                 node_id: e.from_node.node_id,
                 node_code: e.from_node.node_code,
-                name: e.from_node.name
+                name: e.from_node.name,
+                building: e.from_node.building
             },
             to_node: {
                 node_id: e.to_node.node_id,
@@ -347,7 +349,8 @@ router.get('/edges', async (req, res) => {
             distance: e.distance,
             compass_angle: e.compass_angle,
             is_staircase: e.is_staircase,
-            is_active: e.is_active
+            is_active: e.is_active,
+            created_at: e.created_at ? e.created_at.toISOString() : null
         }));
 
         res.json({
@@ -509,30 +512,70 @@ router.put('/admin/nodes/:node_id/update', requireAuth, async (req, res) => {
             node_code: node_code || node.node_code,
             name: name || node.name,
             building: building || node.building,
-            floor_level: floor_level ? parseInt(floor_level) : node.floor_level,
+            floor_level:
+                floor_level !== undefined && floor_level !== null && floor_level !== ''
+                    ? parseInt(floor_level, 10)
+                    : node.floor_level,
             type_of_node: type_of_node || node.type_of_node,
             description: description !== undefined ? description : node.description,
-            annotation: annotation !== undefined && annotation !== '' ? parseFloat(annotation) : (annotation === '' ? null : node.annotation)
         };
 
+        // Fix: handle annotation safely — null/undefined both mean "keep existing or clear"
+        if (annotation !== undefined) {
+            if (annotation === null || annotation === '') {
+                updateData.annotation = null;
+            } else {
+                const parsed = parseFloat(annotation);
+                updateData.annotation = isNaN(parsed) ? null : parsed;
+            }
+        } else {
+            updateData.annotation = node.annotation;
+        }
+
         if (map_x !== undefined && map_y !== undefined) {
-            updateData.map_x = parseFloat(map_x);
-            updateData.map_y = parseFloat(map_y);
+            updateData.map_x = map_x === null || map_x === '' ? null : parseFloat(map_x);
+            updateData.map_y = map_y === null || map_y === '' ? null : parseFloat(map_y);
         }
 
         // Handle base64 image - save to both local and Cloudinary
-        if (image360_base64) {
+        // Use a timestamp-based filename so Cloudinary gets a new unique URL,
+        // which allows the mobile app's offline cache to detect the change and re-download.
+        if (image360_base64 && image360_base64.trim() !== '') {
             if (node.image360) await deleteFileHybrid(null, node.image360);
-            const { cloudinaryUrl } = await saveBase64Hybrid(image360_base64, `${node_code || node.node_code}_360.jpg`, '360_images');
+            const timestamp = Date.now();
+            const filename = `${node_code || node.node_code}_360_${timestamp}.jpg`;
+            const { cloudinaryUrl } = await saveBase64Hybrid(image360_base64, filename, '360_images');
             updateData.image360 = cloudinaryUrl;
         }
 
         await node.update(updateData);
+        // Reload the instance so node.image360 reflects what was actually written to the DB,
+        // not the potentially stale in-memory Sequelize value.
+        await node.reload();
         resetPathfinder();
+
+        const image360Url = buildUrl(req, node.image360);
 
         res.json({
             success: true,
-            message: 'Node updated successfully'
+            message: 'Node updated successfully',
+            image360_url: image360Url,
+            node: {
+                node_id: node.node_id,
+                node_code: node.node_code,
+                name: node.name,
+                building: node.building,
+                floor_level: node.floor_level,
+                type_of_node: node.type_of_node,
+                map_x: node.map_x !== null ? parseFloat(node.map_x) : null,
+                map_y: node.map_y !== null ? parseFloat(node.map_y) : null,
+                annotation: node.annotation !== null ? parseFloat(node.annotation) : null,
+                description: node.description,
+                has_360_image: !!(node.image360 && node.image360.trim()),
+                image360: image360Url,
+                image360_url: image360Url,
+                created_at: node.created_at ? node.created_at.toISOString() : null
+            }
         });
     } catch (error) {
         console.error('Update node error:', error);
@@ -899,7 +942,11 @@ router.get('/events/search', async (req, res) => {
         res.json({
             success: true,
             events: results.events,
-            nodes: results.nodes
+            nodes: results.nodes.map(n => ({
+                ...n,
+                image360_url: buildUrl(req, n.image360),
+                has_360_image: !!(n.image360 && n.image360.trim()),
+            }))
         });
     } catch (error) {
         console.error('Combined search error:', error);

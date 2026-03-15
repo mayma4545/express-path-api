@@ -6,7 +6,7 @@
 require('dotenv').config();
 const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const CloudinaryStorage = require('multer-storage-cloudinary');
 const path = require('path');
 
 // Configure Cloudinary
@@ -22,7 +22,7 @@ if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !pr
 }
 
 // Configure Cloudinary Storage for 360° images
-const image360Storage = new CloudinaryStorage({
+const image360Storage = CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
         folder: 'campus-navigator/360-images',
@@ -33,7 +33,7 @@ const image360Storage = new CloudinaryStorage({
 });
 
 // Configure Cloudinary Storage for campus maps
-const campusMapStorage = new CloudinaryStorage({
+const campusMapStorage = CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
         folder: 'campus-navigator/campus-maps',
@@ -44,7 +44,7 @@ const campusMapStorage = new CloudinaryStorage({
 });
 
 // Configure Cloudinary Storage for QR codes
-const qrcodeStorage = new CloudinaryStorage({
+const qrcodeStorage = CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
         folder: 'campus-navigator/qrcodes',
@@ -112,7 +112,7 @@ async function uploadToCloudinary(file, folder = 'campus-navigator/uploads', opt
             fetch_format: 'auto',
             ...options
         });
-        
+
         return result.secure_url;
     } catch (error) {
         console.error('Cloudinary upload error:', error);
@@ -171,7 +171,7 @@ async function uploadQRCode(buffer, filename) {
                     else resolve(result.secure_url);
                 }
             );
-            
+
             uploadStream.end(buffer);
         });
     } catch (error) {
@@ -197,18 +197,18 @@ async function deleteFromCloudinary(imageUrl) {
         const parts = imageUrl.split('/');
         const filename = parts[parts.length - 1];
         const folderStartIndex = parts.indexOf('campus-navigator');
-        
+
         if (folderStartIndex === -1) {
             console.warn('⚠️  Could not find folder path in Cloudinary URL');
             return;
         }
-        
+
         const folder = parts.slice(folderStartIndex, -1).join('/');
         const publicId = `${folder}/${filename.split('.')[0]}`;
 
         console.log(`🗑️  Attempting to delete from Cloudinary: ${publicId}`);
         const result = await cloudinary.uploader.destroy(publicId);
-        
+
         if (result.result === 'ok') {
             console.log(`✅ Successfully deleted from Cloudinary: ${publicId}`);
         } else if (result.result === 'not found') {
@@ -229,17 +229,17 @@ async function deleteFromCloudinary(imageUrl) {
  */
 function getCloudinaryUrl(file) {
     if (!file) return null;
-    
+
     // If using CloudinaryStorage, URL is in file.path
     if (file.path && file.path.includes('cloudinary.com')) {
         return file.path;
     }
-    
+
     // If file has cloudinary result
     if (file.secure_url) {
         return file.secure_url;
     }
-    
+
     return null;
 }
 

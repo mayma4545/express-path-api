@@ -174,26 +174,39 @@ class NodeService {
         }
 
         const oldNodeCode = node.node_code;
-        const { node_code, name, building, floor_level, type_of_node, description, map_x, map_y } = data;
+        const { node_code, name, building, floor_level, type_of_node, description, map_x, map_y, annotation } = data;
 
         const updateData = {
             node_code: node_code || node.node_code,
             name: name || node.name,
             building: building || node.building,
-            floor_level: floor_level ? parseInt(floor_level) : node.floor_level,
+            floor_level:
+                floor_level !== undefined && floor_level !== null && floor_level !== ''
+                    ? parseInt(floor_level, 10)
+                    : node.floor_level,
             type_of_node: type_of_node || node.type_of_node,
             description: description !== undefined ? description : node.description,
         };
 
+        if (annotation !== undefined) {
+            if (annotation === null || annotation === '') {
+                updateData.annotation = null;
+            } else {
+                const parsed = parseFloat(annotation);
+                updateData.annotation = isNaN(parsed) ? null : parsed;
+            }
+        }
+
         if (map_x !== undefined && map_y !== undefined) {
-            updateData.map_x = parseFloat(map_x);
-            updateData.map_y = parseFloat(map_y);
+            updateData.map_x = map_x === null || map_x === '' ? null : parseFloat(map_x);
+            updateData.map_y = map_y === null || map_y === '' ? null : parseFloat(map_y);
         }
 
         // Handle base64 image update (from mobile API)
         if (imageBase64) {
             if (node.image360) await deleteFileHybrid(null, node.image360);
-            const { cloudinaryUrl } = await saveBase64Hybrid(imageBase64, `${node_code || node.node_code}_360.jpg`, '360_images');
+            const timestamp = Date.now();
+            const { cloudinaryUrl } = await saveBase64Hybrid(imageBase64, `${node_code || node.node_code}_360_${timestamp}.jpg`, '360_images');
             updateData.image360 = cloudinaryUrl;
         }
 
@@ -205,6 +218,7 @@ class NodeService {
         }
 
         await node.update(updateData);
+        await node.reload();
 
         // Regenerate QR code if node_code changed
         if (regenerateQR || (node_code && node_code !== oldNodeCode)) {

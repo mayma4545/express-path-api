@@ -146,7 +146,9 @@ class EventService {
         name: n.name,
         building: n.building,
         floor_level: n.floor_level,
-        type_of_node: n.type_of_node
+        type_of_node: n.type_of_node,
+        // Include the raw image360 path so the route handler can build the full URL
+        image360: n.image360 || null
       }))
     };
   }
