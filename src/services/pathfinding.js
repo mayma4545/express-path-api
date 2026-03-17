@@ -180,6 +180,7 @@ class PathFinder {
                 image360: node.image360 || null,
                 map_x: node.map_x !== null ? parseFloat(node.map_x) : null,
                 map_y: node.map_y !== null ? parseFloat(node.map_y) : null,
+                annotation: node.annotation !== undefined ? node.annotation : null,
                 distance_from_prev: edge.distance,
                 compass_angle: edge.compass_angle,
                 is_staircase: edge.is_staircase
@@ -200,6 +201,7 @@ class PathFinder {
             image360: startNode.image360 || null,
             map_x: startNode.map_x !== null ? parseFloat(startNode.map_x) : null,
             map_y: startNode.map_y !== null ? parseFloat(startNode.map_y) : null,
+            annotation: startNode.annotation !== undefined ? startNode.annotation : null,
             distance_from_prev: 0,
             compass_angle: null,
             is_staircase: false
@@ -218,33 +220,130 @@ class PathFinder {
     }
 
     /**
-     * Get turn-by-turn directions with compass headings
+     * Get turn-by-turn directions with practical, user-friendly instructions
+     * Uses node annotations (initial view angles) and edge compass angles
+     * to generate relative turn-based directions (e.g. "turn left", "slightly turn right")
      */
     async getDirections(startCode, goalCode, avoidStairs = false) {
         const result = await this.findPath(startCode, goalCode, avoidStairs);
 
         if (result.error) return result;
 
-        // Add human-readable directions
         const directions = [];
+        // Track the angle the user is currently facing
+        let currentFacingAngle = null;
+
         for (let i = 0; i < result.path.length; i++) {
             const step = result.path[i];
+
             if (i === 0) {
-                directions.push(`Start at ${step.name} (${step.building}, Floor ${step.floor_level})`);
-            } else {
-                const compassDir = step.compass_angle !== null 
-                    ? this.compassToDirection(step.compass_angle) 
-                    : 'forward';
-                const stairInfo = step.is_staircase ? ' via stairs' : '';
-                const angle = step.compass_angle !== null ? step.compass_angle.toFixed(0) : '0';
-                directions.push(
-                    `Go ${compassDir} (${angle}°) for ${step.distance_from_prev.toFixed(1)}m${stairInfo} to ${step.name}`
-                );
+                // First node: instruct user to face towards the next node
+                if (i + 1 < result.path.length) {
+                    const nextStep = result.path[i + 1];
+                    directions.push(`Face towards ${nextStep.name} and start walking`);
+
+                    // Determine the user's initial facing angle from this node's annotation
+                    const initialAngle = (step.annotation !== null && step.annotation !== undefined)
+                        ? parseFloat(step.annotation)
+                        : null;
+                    const edgeAngle = (nextStep.compass_angle !== null && nextStep.compass_angle !== undefined)
+                        ? parseFloat(nextStep.compass_angle)
+                        : null;
+
+                    if (initialAngle !== null && edgeAngle !== null) {
+                        const turn = this.getRelativeTurn(initialAngle, edgeAngle);
+                        const stairInfo = nextStep.is_staircase ? ' via stairs' : '';
+                        const distance = nextStep.distance_from_prev ? nextStep.distance_from_prev.toFixed(1) : '0';
+
+                        if (turn.instruction === 'continue straight') {
+                            directions.push(`Walk straight ahead for ${distance}m${stairInfo} to ${nextStep.name}`);
+                        } else {
+                            directions.push(`${turn.instruction} and walk for ${distance}m${stairInfo} to ${nextStep.name}`);
+                        }
+                    } else {
+                        // Fallback when angles are unavailable
+                        const stairInfo = nextStep.is_staircase ? ' via stairs' : '';
+                        const distance = nextStep.distance_from_prev ? nextStep.distance_from_prev.toFixed(1) : '0';
+                        directions.push(`Walk forward for ${distance}m${stairInfo} to ${nextStep.name}`);
+                    }
+
+                    // After the first move, user is now facing the edge direction
+                    currentFacingAngle = edgeAngle;
+                } else {
+                    // Only one node (start = destination)
+                    directions.push(`You are already at ${step.name}`);
+                }
+            } else if (i >= 2) {
+                // Subsequent nodes (from the 3rd node onward):
+                // Compare the user's current facing angle with the new edge direction
+                const edgeAngle = (step.compass_angle !== null && step.compass_angle !== undefined)
+                    ? parseFloat(step.compass_angle)
+                    : null;
+
+                if (currentFacingAngle !== null && edgeAngle !== null) {
+                    const turn = this.getRelativeTurn(currentFacingAngle, edgeAngle);
+                    const stairInfo = step.is_staircase ? ' via stairs' : '';
+                    const distance = step.distance_from_prev ? step.distance_from_prev.toFixed(1) : '0';
+
+                    if (turn.instruction === 'continue straight') {
+                        directions.push(`Continue straight for ${distance}m${stairInfo} to ${step.name}`);
+                    } else {
+                        directions.push(`${turn.instruction} and walk for ${distance}m${stairInfo} to ${step.name}`);
+                    }
+
+                    // Update facing angle to this edge's direction
+                    currentFacingAngle = edgeAngle;
+                } else {
+                    // Fallback
+                    const stairInfo = step.is_staircase ? ' via stairs' : '';
+                    const distance = step.distance_from_prev ? step.distance_from_prev.toFixed(1) : '0';
+                    directions.push(`Walk forward for ${distance}m${stairInfo} to ${step.name}`);
+                    if (edgeAngle !== null) currentFacingAngle = edgeAngle;
+                }
             }
+            // Note: i === 1 is handled inside i === 0 block (first move generates 2 directions)
+        }
+
+        // Add arrival message
+        if (result.path.length > 1) {
+            const lastStep = result.path[result.path.length - 1];
+            directions.push(`You have arrived at ${lastStep.name}`);
         }
 
         result.directions = directions;
         return result;
+    }
+
+    /**
+     * Calculate the shortest angular difference and return a turn instruction
+     * Properly handles wrap-around (e.g. 350° to 20° = 30° right, not 330° left)
+     * 
+     * @param {number} fromAngle - Current facing angle (0-360)
+     * @param {number} toAngle - Target direction angle (0-360)
+     * @returns {Object} { degrees: number, direction: 'left'|'right'|'straight', instruction: string }
+     */
+    getRelativeTurn(fromAngle, toAngle) {
+        // Calculate shortest signed angular difference
+        // Positive = clockwise = turn right
+        // Negative = counter-clockwise = turn left
+        let diff = ((toAngle - fromAngle + 540) % 360) - 180;
+
+        const absDiff = Math.abs(diff);
+        const roundedDiff = Math.round(absDiff);
+
+        if (absDiff <= 10) {
+            return { degrees: roundedDiff, direction: 'straight', instruction: 'continue straight' };
+        }
+
+        const turnDir = diff > 0 ? 'right' : 'left';
+
+        if (absDiff <= 45) {
+            return { degrees: roundedDiff, direction: turnDir, instruction: `Slightly turn ${turnDir} (${roundedDiff}°)` };
+        } else if (absDiff <= 135) {
+            return { degrees: roundedDiff, direction: turnDir, instruction: `Turn ${turnDir} (${roundedDiff}°)` };
+        } else {
+            return { degrees: roundedDiff, direction: turnDir, instruction: `Turn sharply ${turnDir} (${roundedDiff}°)` };
+        }
     }
 
     /**
