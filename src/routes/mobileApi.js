@@ -76,6 +76,12 @@ const requireAuth = (req, res, next) => {
 
 // ============= Public API Endpoints =============
 
+// Health / connectivity ping — lightweight endpoint for the mobile app's
+// welcome screen to confirm the server is reachable without fetching any data.
+router.get('/ping', (req, res) => {
+    res.json({ isOnline: true });
+});
+
 // Get list of all nodes
 router.get('/nodes', async (req, res) => {
     try {
