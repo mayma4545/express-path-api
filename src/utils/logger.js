@@ -71,11 +71,20 @@ const requestLogger = (req, res, next) => {
         const duration = Date.now() - start;
         const logLevel = res.statusCode >= 400 ? 'warn' : 'info';
 
-        logger[logLevel](`${req.method} ${req.originalUrl}`, {
+        const diagnostics = {
             status: res.statusCode,
             duration: `${duration}ms`,
             ip: req.ip,
-        });
+            userAgent: req.get('user-agent'),
+            installId: req.get('x-app-install-id'),
+        };
+
+        // Log query params if present
+        if (Object.keys(req.query).length > 0) {
+            diagnostics.query = req.query;
+        }
+
+        logger[logLevel](`${req.method} ${req.originalUrl}`, diagnostics);
     });
 
     next();
