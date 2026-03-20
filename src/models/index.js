@@ -300,6 +300,191 @@ const User = sequelize.define('User', {
     updatedAt: 'updated_at'
 });
 
+// User Profile Model (super admin managed extended user data)
+const UserProfile = sequelize.define('UserProfile', {
+    profile_id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        unique: true,
+        references: {
+            model: 'users',
+            key: 'id'
+        }
+    },
+    full_name: {
+        type: DataTypes.STRING(255),
+        allowNull: false
+    },
+    age: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
+    department: {
+        type: DataTypes.STRING(255),
+        allowNull: true
+    },
+    email: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+        unique: true
+    },
+    phone: {
+        type: DataTypes.STRING(50),
+        allowNull: true
+    },
+    position: {
+        type: DataTypes.STRING(120),
+        allowNull: true
+    }
+}, {
+    tableName: 'user_profiles',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
+});
+
+// User Status Model (online state + login timestamps)
+const UserStatus = sequelize.define('UserStatus', {
+    status_id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        unique: true,
+        references: {
+            model: 'users',
+            key: 'id'
+        }
+    },
+    is_online: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    last_login_at: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    last_logout_at: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    last_activity_at: {
+        type: DataTypes.DATE,
+        allowNull: true
+    }
+}, {
+    tableName: 'user_status',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
+});
+
+// User Activity Model (tracks staff/superadmin actions)
+const UserActivity = sequelize.define('UserActivity', {
+    activity_id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'users',
+            key: 'id'
+        }
+    },
+    activity_type: {
+        type: DataTypes.STRING(50),
+        allowNull: false
+    },
+    module: {
+        type: DataTypes.STRING(100),
+        allowNull: false
+    },
+    target_type: {
+        type: DataTypes.STRING(100),
+        allowNull: true
+    },
+    target_id: {
+        type: DataTypes.STRING(100),
+        allowNull: true
+    },
+    metadata: {
+        type: DataTypes.JSON,
+        allowNull: true
+    },
+    is_online: {
+        type: DataTypes.BOOLEAN,
+        allowNull: true
+    },
+    occurred_at: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW
+    }
+}, {
+    tableName: 'user_activities',
+    timestamps: false,
+    indexes: [
+        { fields: ['user_id'] },
+        { fields: ['activity_type'] },
+        { fields: ['module'] },
+        { fields: ['occurred_at'] }
+    ]
+});
+
+// Node Visit Analytics Model (for frequent destination analytics)
+const NodeVisitAnalytics = sequelize.define('NodeVisitAnalytics', {
+    visit_id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    node_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'nodes',
+            key: 'node_id'
+        }
+    },
+    user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'users',
+            key: 'id'
+        }
+    },
+    source: {
+        type: DataTypes.STRING(100),
+        allowNull: false,
+        defaultValue: 'mobile'
+    },
+    visited_at: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW
+    }
+}, {
+    tableName: 'node_visit_analytics',
+    timestamps: false,
+    indexes: [
+        { fields: ['node_id'] },
+        { fields: ['user_id'] },
+        { fields: ['visited_at'] }
+    ]
+});
+
 // Event Model
 const Event = sequelize.define('Event', {
     event_id: {
@@ -366,6 +551,20 @@ Nodes.hasMany(Annotation, { foreignKey: 'panorama_id', as: 'annotations', onDele
 Event.belongsTo(Nodes, { foreignKey: 'node_id', as: 'location', onDelete: 'CASCADE' });
 Nodes.hasMany(Event, { foreignKey: 'node_id', as: 'events', onDelete: 'CASCADE' });
 
+User.hasOne(UserProfile, { foreignKey: 'user_id', as: 'profile', onDelete: 'CASCADE' });
+UserProfile.belongsTo(User, { foreignKey: 'user_id', as: 'user', onDelete: 'CASCADE' });
+
+User.hasOne(UserStatus, { foreignKey: 'user_id', as: 'status', onDelete: 'CASCADE' });
+UserStatus.belongsTo(User, { foreignKey: 'user_id', as: 'user', onDelete: 'CASCADE' });
+
+User.hasMany(UserActivity, { foreignKey: 'user_id', as: 'activities', onDelete: 'SET NULL' });
+UserActivity.belongsTo(User, { foreignKey: 'user_id', as: 'actor', onDelete: 'SET NULL' });
+
+User.hasMany(NodeVisitAnalytics, { foreignKey: 'user_id', as: 'node_visits', onDelete: 'SET NULL' });
+NodeVisitAnalytics.belongsTo(User, { foreignKey: 'user_id', as: 'visitor', onDelete: 'SET NULL' });
+Nodes.hasMany(NodeVisitAnalytics, { foreignKey: 'node_id', as: 'visits', onDelete: 'CASCADE' });
+NodeVisitAnalytics.belongsTo(Nodes, { foreignKey: 'node_id', as: 'node', onDelete: 'CASCADE' });
+
 module.exports = {
     sequelize,
     Sequelize,
@@ -374,5 +573,9 @@ module.exports = {
     Edges,
     Annotation,
     User,
+    UserProfile,
+    UserStatus,
+    UserActivity,
+    NodeVisitAnalytics,
     Event
 };

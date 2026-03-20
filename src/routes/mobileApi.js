@@ -8,7 +8,19 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
-const { Nodes, Edges, Annotation, CampusMap, User, Event, sequelize } = require('../models');
+const {
+    Nodes,
+    Edges,
+    Annotation,
+    CampusMap,
+    User,
+    UserProfile,
+    UserStatus,
+    UserActivity,
+    NodeVisitAnalytics,
+    Event,
+    sequelize
+} = require('../models');
 const { getPathfinder, resetPathfinder } = require('../services/pathfinding');
 const { generateQRCode, deleteQRCode } = require('../services/qrcode.cloudinary');
 const { saveBase64Hybrid, deleteFileHybrid } = require('../services/upload.hybrid');
@@ -46,6 +58,12 @@ const requireAuth = (req, res, next) => {
             const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
             const decoded = jwt.verify(token, secret);
             req.user = decoded; // Attach decoded payload for downstream use
+            upsertUserStatus(decoded.id, {
+                is_online: true,
+                last_activity_at: new Date()
+            }).catch((error) => {
+                logger.warn('Failed to refresh user status from JWT auth', { error: error.message });
+            });
             return next();
         } catch (err) {
             if (err.name === 'TokenExpiredError') {
@@ -65,12 +83,79 @@ const requireAuth = (req, res, next) => {
     if (req.session.user && req.session.user.is_staff) {
         // Set req.user for consistency so downstream handlers always have it
         req.user = req.session.user;
+        upsertUserStatus(req.session.user.id, {
+            is_online: true,
+            last_activity_at: new Date()
+        }).catch((error) => {
+            logger.warn('Failed to refresh user status from session auth', { error: error.message });
+        });
         return next();
     }
 
     return res.status(401).json({
         success: false,
         error: 'Authentication required'
+    });
+};
+
+const requireSuperuser = (req, res, next) => {
+    if (req.user && req.user.is_superuser) {
+        return next();
+    }
+
+    return res.status(403).json({
+        success: false,
+        error: 'Super admin privileges required'
+    });
+};
+
+const getRequestMeta = (req) => ({
+    ip: req.headers['x-forwarded-for'] || req.ip,
+    user_agent: req.get('user-agent') || null,
+    method: req.method,
+    path: req.originalUrl
+});
+
+const logUserActivity = async ({ userId, activityType, moduleName, targetType, targetId, metadata, isOnline }) => {
+    if (!UserActivity) {
+        return;
+    }
+
+    try {
+        await UserActivity.create({
+            user_id: userId || null,
+            activity_type: activityType,
+            module: moduleName,
+            target_type: targetType || null,
+            target_id: targetId !== undefined && targetId !== null ? String(targetId) : null,
+            metadata: metadata || null,
+            is_online: isOnline !== undefined ? !!isOnline : null,
+            occurred_at: new Date()
+        });
+    } catch (error) {
+        logger.warn('Failed to log user activity', { error: error.message });
+    }
+};
+
+const upsertUserStatus = async (userId, payload = {}) => {
+    if (!userId || !UserStatus) {
+        return;
+    }
+
+    const statusPayload = {
+        ...payload,
+        last_activity_at: payload.last_activity_at || new Date()
+    };
+
+    const existingStatus = await UserStatus.findOne({ where: { user_id: userId } });
+    if (existingStatus) {
+        await existingStatus.update(statusPayload);
+        return;
+    }
+
+    await UserStatus.create({
+        user_id: userId,
+        ...statusPayload
     });
 };
 
@@ -182,6 +267,43 @@ router.get('/nodes/:node_id', async (req, res) => {
         });
     } catch (error) {
         console.error('Node detail error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Track node visit for analytics (public endpoint)
+router.post('/node-visit', async (req, res) => {
+    try {
+        const { node_id, source } = req.body;
+
+        if (!node_id) {
+            return res.status(400).json({
+                success: false,
+                error: 'node_id is required'
+            });
+        }
+
+        const node = await Nodes.findByPk(node_id);
+        if (!node) {
+            return res.status(404).json({
+                success: false,
+                error: 'Node not found'
+            });
+        }
+
+        await NodeVisitAnalytics.create({
+            node_id: parseInt(node_id, 10),
+            user_id: req.user?.id || null,
+            source: source || 'mobile',
+            visited_at: new Date()
+        });
+
+        res.json({
+            success: true,
+            message: 'Node visit recorded'
+        });
+    } catch (error) {
+        console.error('Node visit tracking error:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -314,6 +436,27 @@ router.post('/find-path', async (req, res) => {
             return res.status(404).json({ success: false, error: result.error });
         }
 
+        try {
+            const visitCodes = [...new Set([start_code, goal_code])];
+            const visitedNodes = await Nodes.findAll({
+                where: { node_code: { [Op.in]: visitCodes } },
+                attributes: ['node_id']
+            });
+
+            if (visitedNodes.length > 0) {
+                await NodeVisitAnalytics.bulkCreate(
+                    visitedNodes.map((node) => ({
+                        node_id: node.node_id,
+                        user_id: null,
+                        source: 'path_request',
+                        visited_at: new Date()
+                    }))
+                );
+            }
+        } catch (analyticsError) {
+            logger.warn('Failed to store path analytics', { error: analyticsError.message });
+        }
+
         // Add absolute URLs for images and has_360_image flag
         for (const node of result.path) {
             node.has_360_image = !!(node.image360 && node.image360.trim());
@@ -443,6 +586,30 @@ router.post('/admin/login', authLimiter, loginValidation, async (req, res) => {
             });
         }
 
+        // Business rule: the legacy `admin` account is staff admin only.
+        if (user.username === 'admin' && user.is_superuser) {
+            await user.update({ is_superuser: false });
+        }
+
+        const profile = UserProfile
+            ? await UserProfile.findOne({ where: { user_id: user.id } })
+            : null;
+        await upsertUserStatus(user.id, {
+            is_online: true,
+            last_login_at: new Date(),
+            last_activity_at: new Date()
+        });
+
+        await logUserActivity({
+            userId: user.id,
+            activityType: 'LOGIN',
+            moduleName: 'auth',
+            targetType: 'user',
+            targetId: user.id,
+            metadata: getRequestMeta(req),
+            isOnline: true
+        });
+
         // Generate JWT Token
         const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
         const token = jwt.sign(
@@ -464,13 +631,359 @@ router.post('/admin/login', authLimiter, loginValidation, async (req, res) => {
             message: 'Login successful',
             token: token,
             user: {
+                id: user.id,
                 username: user.username,
                 is_staff: user.is_staff,
-                is_superuser: user.is_superuser
+                is_superuser: user.is_superuser,
+                role: user.is_superuser ? 'superadmin' : 'staff_admin',
+                profile: profile ? {
+                    full_name: profile.full_name,
+                    age: profile.age,
+                    department: profile.department,
+                    email: profile.email,
+                    phone: profile.phone,
+                    position: profile.position
+                } : null
             }
         });
     } catch (error) {
         console.error('Login error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.post('/admin/logout', requireAuth, async (req, res) => {
+    try {
+        await upsertUserStatus(req.user.id, {
+            is_online: false,
+            last_logout_at: new Date(),
+            last_activity_at: new Date()
+        });
+
+        await logUserActivity({
+            userId: req.user.id,
+            activityType: 'LOGOUT',
+            moduleName: 'auth',
+            targetType: 'user',
+            targetId: req.user.id,
+            metadata: getRequestMeta(req),
+            isOnline: false
+        });
+
+        req.session.user = null;
+
+        return res.json({
+            success: true,
+            message: 'Logout successful'
+        });
+    } catch (error) {
+        console.error('Logout error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ============= Super Admin: User Management =============
+
+router.get('/admin/super/users', requireAuth, requireSuperuser, async (req, res) => {
+    try {
+        const users = await User.findAll({
+            attributes: ['id', 'username', 'is_staff', 'is_superuser', 'created_at', 'updated_at'],
+            include: [
+                {
+                    model: UserProfile,
+                    as: 'profile',
+                    required: false,
+                    attributes: ['full_name', 'age', 'department', 'email', 'phone', 'position']
+                },
+                {
+                    model: UserStatus,
+                    as: 'status',
+                    required: false,
+                    attributes: ['is_online', 'last_login_at', 'last_logout_at', 'last_activity_at']
+                }
+            ],
+            order: [['id', 'ASC']]
+        });
+
+        res.json({
+            success: true,
+            users: users.map((user) => ({
+                id: user.id,
+                username: user.username,
+                role: user.is_superuser ? 'superadmin' : (user.is_staff ? 'staff_admin' : 'viewer'),
+                is_staff: user.is_staff,
+                is_superuser: user.is_superuser,
+                profile: user.profile,
+                status: user.status,
+                created_at: user.created_at,
+                updated_at: user.updated_at
+            })),
+            count: users.length
+        });
+    } catch (error) {
+        console.error('Super admin users list error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.post('/admin/super/users/create', requireAuth, requireSuperuser, async (req, res) => {
+    const transaction = await sequelize.transaction();
+
+    try {
+        const {
+            username,
+            password,
+            full_name,
+            age,
+            department,
+            email,
+            phone,
+            position,
+            is_staff,
+            is_superuser
+        } = req.body;
+
+        if (!username || !password || !full_name) {
+            await transaction.rollback();
+            return res.status(400).json({
+                success: false,
+                error: 'username, password, and full_name are required'
+            });
+        }
+
+        if (is_superuser === true) {
+            await transaction.rollback();
+            return res.status(400).json({
+                success: false,
+                error: 'Only one super admin account is allowed'
+            });
+        }
+
+        const existingUser = await User.findOne({ where: { username }, transaction });
+        if (existingUser) {
+            await transaction.rollback();
+            return res.status(409).json({
+                success: false,
+                error: 'Username already exists'
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const createdUser = await User.create({
+            username,
+            password: hashedPassword,
+            is_staff: is_staff !== false,
+            is_superuser: false
+        }, { transaction });
+
+        await UserProfile.create({
+            user_id: createdUser.id,
+            full_name,
+            age: age !== undefined && age !== null && age !== '' ? parseInt(age, 10) : null,
+            department: department || null,
+            email: email || null,
+            phone: phone || null,
+            position: position || null
+        }, { transaction });
+
+        await UserStatus.create({
+            user_id: createdUser.id,
+            is_online: false,
+            last_activity_at: new Date()
+        }, { transaction });
+
+        await transaction.commit();
+
+        await logUserActivity({
+            userId: req.user.id,
+            activityType: 'CREATE',
+            moduleName: 'users',
+            targetType: 'user',
+            targetId: createdUser.id,
+            metadata: {
+                username: createdUser.username,
+                role: createdUser.is_superuser ? 'superadmin' : 'staff_admin',
+                ...getRequestMeta(req)
+            },
+            isOnline: true
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: 'User created successfully',
+            user: {
+                id: createdUser.id,
+                username: createdUser.username,
+                is_staff: createdUser.is_staff,
+                is_superuser: createdUser.is_superuser,
+                role: createdUser.is_superuser ? 'superadmin' : 'staff_admin'
+            }
+        });
+    } catch (error) {
+        await transaction.rollback();
+        console.error('Super admin create user error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.delete('/admin/super/users/:user_id/delete', requireAuth, requireSuperuser, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.user_id, 10);
+
+        if (req.user.id === userId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Cannot delete your own account while logged in'
+            });
+        }
+
+        const targetUser = await User.findByPk(userId);
+        if (!targetUser) {
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+
+        const deletedUsername = targetUser.username;
+        await targetUser.destroy();
+
+        await logUserActivity({
+            userId: req.user.id,
+            activityType: 'DELETE',
+            moduleName: 'users',
+            targetType: 'user',
+            targetId: userId,
+            metadata: {
+                deleted_username: deletedUsername,
+                ...getRequestMeta(req)
+            },
+            isOnline: true
+        });
+
+        return res.json({
+            success: true,
+            message: 'User deleted successfully'
+        });
+    } catch (error) {
+        console.error('Super admin delete user error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.get('/admin/super/activities', requireAuth, requireSuperuser, async (req, res) => {
+    try {
+        const limit = Math.min(parseInt(req.query.limit || 50, 10), 200);
+        const where = {};
+        if (req.query.user_id) {
+            where.user_id = parseInt(req.query.user_id, 10);
+        }
+
+        const activities = await UserActivity.findAll({
+            where,
+            include: [
+                {
+                    model: User,
+                    as: 'actor',
+                    required: false,
+                    attributes: ['id', 'username', 'is_staff', 'is_superuser'],
+                    include: [
+                        {
+                            model: UserProfile,
+                            as: 'profile',
+                            required: false,
+                            attributes: ['full_name', 'department']
+                        }
+                    ]
+                }
+            ],
+            order: [['occurred_at', 'DESC']],
+            limit
+        });
+
+        res.json({
+            success: true,
+            activities: activities.map((activity) => ({
+                activity_id: activity.activity_id,
+                user: activity.actor ? {
+                    id: activity.actor.id,
+                    username: activity.actor.username,
+                    is_staff: activity.actor.is_staff,
+                    is_superuser: activity.actor.is_superuser,
+                    full_name: activity.actor.profile?.full_name || null,
+                    department: activity.actor.profile?.department || null
+                } : null,
+                activity_type: activity.activity_type,
+                module: activity.module,
+                target_type: activity.target_type,
+                target_id: activity.target_id,
+                metadata: activity.metadata,
+                is_online: activity.is_online,
+                occurred_at: activity.occurred_at
+            })),
+            count: activities.length
+        });
+    } catch (error) {
+        console.error('Super admin activities list error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.get('/admin/super/analytics/overview', requireAuth, requireSuperuser, async (req, res) => {
+    try {
+        const [
+            totalStaffAdmins,
+            totalSuperAdmins,
+            onlineUsers,
+            actionTypeStats,
+            moduleStats,
+            mostVisitedNodes,
+            activityTimeline
+        ] = await Promise.all([
+            User.count({ where: { is_staff: true, is_superuser: false } }),
+            User.count({ where: { is_superuser: true } }),
+            UserStatus.count({ where: { is_online: true } }),
+            sequelize.query(
+                'SELECT activity_type, COUNT(activity_id) AS total FROM user_activities GROUP BY activity_type ORDER BY total DESC',
+                { type: sequelize.QueryTypes.SELECT }
+            ),
+            sequelize.query(
+                'SELECT module, COUNT(activity_id) AS total FROM user_activities GROUP BY module ORDER BY total DESC',
+                { type: sequelize.QueryTypes.SELECT }
+            ),
+            sequelize.query(
+                `SELECT n.node_id, n.node_code, n.name, n.building, n.floor_level, COUNT(v.visit_id) AS visit_count
+                 FROM node_visit_analytics v
+                 INNER JOIN nodes n ON n.node_id = v.node_id
+                 GROUP BY n.node_id, n.node_code, n.name, n.building, n.floor_level
+                 ORDER BY visit_count DESC
+                 LIMIT 10`,
+                { type: sequelize.QueryTypes.SELECT }
+            ),
+            sequelize.query(
+                `SELECT DATE(occurred_at) AS activity_date, COUNT(activity_id) AS total_activities
+                 FROM user_activities
+                 WHERE occurred_at >= DATE_SUB(NOW(), INTERVAL 14 DAY)
+                 GROUP BY DATE(occurred_at)
+                 ORDER BY activity_date DESC`,
+                { type: sequelize.QueryTypes.SELECT }
+            )
+        ]);
+
+        res.json({
+            success: true,
+            analytics: {
+                users: {
+                    total_staff_admins: totalStaffAdmins,
+                    total_super_admins: totalSuperAdmins,
+                    total_admin_accounts: totalStaffAdmins + totalSuperAdmins,
+                    online_users: onlineUsers
+                },
+                actions_by_type: actionTypeStats,
+                actions_by_module: moduleStats,
+                most_frequent_visited_nodes: mostVisitedNodes,
+                activity_timeline_last_14_days: activityTimeline
+            }
+        });
+    } catch (error) {
+        console.error('Super admin analytics error:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -487,6 +1000,20 @@ router.post('/admin/nodes/create', requireAuth, async (req, res) => {
             { node_code, name, building, floor_level, type_of_node, description, map_x, map_y, annotation },
             image360_base64 || null
         );
+
+        await logUserActivity({
+            userId: req.user.id,
+            activityType: 'CREATE',
+            moduleName: 'nodes',
+            targetType: 'node',
+            targetId: node.node_id,
+            metadata: {
+                node_code: node.node_code,
+                name: node.name,
+                ...getRequestMeta(req)
+            },
+            isOnline: true
+        });
 
         res.json({
             success: true,
@@ -560,6 +1087,20 @@ router.put('/admin/nodes/:node_id/update', requireAuth, async (req, res) => {
         await node.reload();
         resetPathfinder();
 
+        await logUserActivity({
+            userId: req.user.id,
+            activityType: 'UPDATE',
+            moduleName: 'nodes',
+            targetType: 'node',
+            targetId: node.node_id,
+            metadata: {
+                node_code: node.node_code,
+                name: node.name,
+                ...getRequestMeta(req)
+            },
+            isOnline: true
+        });
+
         const image360Url = buildUrl(req, node.image360);
 
         res.json({
@@ -629,10 +1170,27 @@ router.delete('/admin/nodes/:node_id/delete', requireAuth, async (req, res) => {
         }
 
         // Now safe to delete the node
+        const deletedNodeId = node.node_id;
+        const deletedNodeCode = node.node_code;
+        const deletedNodeName = node.name;
         await node.destroy();
         resetPathfinder();
 
         console.log(`✅ Successfully deleted node ${node.node_code} and all associated data`);
+
+        await logUserActivity({
+            userId: req.user.id,
+            activityType: 'DELETE',
+            moduleName: 'nodes',
+            targetType: 'node',
+            targetId: deletedNodeId,
+            metadata: {
+                node_code: deletedNodeCode,
+                name: deletedNodeName,
+                ...getRequestMeta(req)
+            },
+            isOnline: true
+        });
 
         res.json({
             success: true,
@@ -668,6 +1226,20 @@ router.post('/admin/edges/create', requireAuth, async (req, res) => {
         });
 
         resetPathfinder();
+
+        await logUserActivity({
+            userId: req.user.id,
+            activityType: 'CREATE',
+            moduleName: 'edges',
+            targetType: 'edge',
+            targetId: edge.edge_id,
+            metadata: {
+                from_node_id: edge.from_node_id,
+                to_node_id: edge.to_node_id,
+                ...getRequestMeta(req)
+            },
+            isOnline: true
+        });
 
         res.json({
             success: true,
@@ -713,6 +1285,19 @@ router.put('/admin/edges/:edge_id/update', requireAuth, async (req, res) => {
         await edge.update(updateData);
         resetPathfinder();
 
+        await logUserActivity({
+            userId: req.user.id,
+            activityType: 'UPDATE',
+            moduleName: 'edges',
+            targetType: 'edge',
+            targetId: edge.edge_id,
+            metadata: {
+                ...updateData,
+                ...getRequestMeta(req)
+            },
+            isOnline: true
+        });
+
         res.json({
             success: true,
             message: 'Edge updated successfully'
@@ -732,8 +1317,19 @@ router.delete('/admin/edges/:edge_id/delete', requireAuth, async (req, res) => {
             return res.status(404).json({ success: false, error: 'Edge not found' });
         }
 
+        const deletedEdgeId = edge.edge_id;
         await edge.destroy();
         resetPathfinder();
+
+        await logUserActivity({
+            userId: req.user.id,
+            activityType: 'DELETE',
+            moduleName: 'edges',
+            targetType: 'edge',
+            targetId: deletedEdgeId,
+            metadata: getRequestMeta(req),
+            isOnline: true
+        });
 
         res.json({
             success: true,
@@ -770,6 +1366,20 @@ router.post('/admin/annotations/create', requireAuth, async (req, res) => {
             pitch: parseFloat(pitch),
             visible_radius: parseFloat(visible_radius || 10),
             is_active: is_active !== false
+        });
+
+        await logUserActivity({
+            userId: req.user.id,
+            activityType: 'CREATE',
+            moduleName: 'annotations',
+            targetType: 'annotation',
+            targetId: annotation.id,
+            metadata: {
+                panorama_id: annotation.panorama_id,
+                target_node_id: annotation.target_node_id,
+                ...getRequestMeta(req)
+            },
+            isOnline: true
         });
 
         res.json({
@@ -820,6 +1430,19 @@ router.put('/admin/annotations/:annotation_id/update', requireAuth, async (req, 
 
         await annotation.update(updateData);
 
+        await logUserActivity({
+            userId: req.user.id,
+            activityType: 'UPDATE',
+            moduleName: 'annotations',
+            targetType: 'annotation',
+            targetId: annotation.id,
+            metadata: {
+                ...updateData,
+                ...getRequestMeta(req)
+            },
+            isOnline: true
+        });
+
         res.json({
             success: true,
             message: 'Annotation updated successfully'
@@ -839,7 +1462,18 @@ router.delete('/admin/annotations/:annotation_id/delete', requireAuth, async (re
             return res.status(404).json({ success: false, error: 'Annotation not found' });
         }
 
+        const deletedAnnotationId = annotation.id;
         await annotation.destroy();
+
+        await logUserActivity({
+            userId: req.user.id,
+            activityType: 'DELETE',
+            moduleName: 'annotations',
+            targetType: 'annotation',
+            targetId: deletedAnnotationId,
+            metadata: getRequestMeta(req),
+            isOnline: true
+        });
 
         res.json({
             success: true,
@@ -1008,6 +1642,20 @@ router.post('/admin/events/create', requireAuth, async (req, res) => {
 
         const event = await EventService.createEvent(req.body);
 
+        await logUserActivity({
+            userId: req.user.id,
+            activityType: 'CREATE',
+            moduleName: 'events',
+            targetType: 'event',
+            targetId: event.event_id,
+            metadata: {
+                event_name: event.event_name,
+                node_id: event.node_id,
+                ...getRequestMeta(req)
+            },
+            isOnline: true
+        });
+
         res.json({
             success: true,
             message: 'Event created successfully',
@@ -1038,6 +1686,19 @@ router.put('/admin/events/:event_id/update', requireAuth, async (req, res) => {
             });
         }
 
+        await logUserActivity({
+            userId: req.user.id,
+            activityType: 'UPDATE',
+            moduleName: 'events',
+            targetType: 'event',
+            targetId: event.event_id,
+            metadata: {
+                ...req.body,
+                ...getRequestMeta(req)
+            },
+            isOnline: true
+        });
+
         res.json({
             success: true,
             message: 'Event updated successfully',
@@ -1066,6 +1727,19 @@ router.delete('/admin/events/:event_id/delete', requireAuth, async (req, res) =>
                 error: 'Event not found'
             });
         }
+
+        await logUserActivity({
+            userId: req.user.id,
+            activityType: 'DELETE',
+            moduleName: 'events',
+            targetType: 'event',
+            targetId: req.params.event_id,
+            metadata: {
+                event_name: result.eventName,
+                ...getRequestMeta(req)
+            },
+            isOnline: true
+        });
 
         res.json({
             success: true,

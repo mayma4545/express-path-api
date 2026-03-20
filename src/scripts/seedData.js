@@ -24,10 +24,14 @@ async function seedData() {
                 username: 'admin',
                 password: hashedPassword,
                 is_staff: true,
-                is_superuser: true
+                is_superuser: false
             });
             console.log('✅ Admin user created (username: admin, password: admin123)');
         } else {
+            if (existingAdmin.is_superuser) {
+                await existingAdmin.update({ is_superuser: false, is_staff: true });
+                console.log('✅ Admin user role corrected to staff_admin');
+            }
             console.log('ℹ️ Admin user already exists');
         }
         

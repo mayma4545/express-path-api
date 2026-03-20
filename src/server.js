@@ -23,6 +23,9 @@ const { SESSION } = require('./utils/constants');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy for Render.com / external rate-limited IP mapping
+app.set('trust proxy', 1);
+
 // Validate required environment variables
 if (!process.env.SESSION_SECRET && process.env.NODE_ENV === 'production') {
     logger.error('SESSION_SECRET environment variable is required in production');

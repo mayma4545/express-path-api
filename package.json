@@ -10,6 +10,7 @@
     "test:watch": "jest --runInBand --watch",
     "db:sync": "node src/scripts/syncDb.js",
     "db:seed": "node src/scripts/seedData.js",
+    "db:migrate:superadmin": "node src/scripts/migrateSuperAdminFeatures.js",
     "db:migrate:mysql": "node src/scripts/migrateToMySQL.js",
     "db:verify:mysql": "node src/scripts/verifyMySQL.js",
     "db:test:mysql": "node src/scripts/testMySQL.js",
