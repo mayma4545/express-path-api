@@ -538,6 +538,26 @@ const Event = sequelize.define('Event', {
     updatedAt: 'updated_at'
 });
 
+// Guest Survey Model
+const Guest = sequelize.define('Guest', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    display_type: {
+        type: DataTypes.STRING(255),
+        allowNull: false
+    },
+    guest_type: {
+        type: DataTypes.STRING(255),
+        allowNull: false
+    }
+}, {
+    tableName: 'GUEST',
+    timestamps: true
+});
+
 // Define Associations with CASCADE delete
 Edges.belongsTo(Nodes, { foreignKey: 'from_node_id', as: 'from_node', onDelete: 'CASCADE' });
 Edges.belongsTo(Nodes, { foreignKey: 'to_node_id', as: 'to_node', onDelete: 'CASCADE' });
@@ -577,5 +597,6 @@ module.exports = {
     UserStatus,
     UserActivity,
     NodeVisitAnalytics,
-    Event
+    Event,
+    Guest
 };

@@ -19,6 +19,7 @@ const {
     UserActivity,
     NodeVisitAnalytics,
     Event,
+    Guest,
     sequelize
 } = require('../models');
 const { getPathfinder, resetPathfinder } = require('../services/pathfinding');
@@ -165,6 +166,35 @@ const upsertUserStatus = async (userId, payload = {}) => {
 // welcome screen to confirm the server is reachable without fetching any data.
 router.get('/ping', (req, res) => {
     res.json({ isOnline: true });
+});
+
+router.post('/guests', async (req, res) => {
+    try {
+        const { display_type, guest_type } = req.body;
+
+        if (!display_type || !guest_type) {
+            return res.status(400).json({
+                success: false,
+                error: 'display_type and guest_type are required'
+            });
+        }
+
+        const newGuest = await Guest.create({
+            display_type: String(display_type).trim(),
+            guest_type: String(guest_type).trim()
+        });
+
+        return res.status(201).json({
+            success: true,
+            data: newGuest
+        });
+    } catch (error) {
+        logger.error('Guest record creation failed', { error: error.message });
+        return res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
 });
 
 // Get list of all nodes

@@ -26,6 +26,14 @@ const PORT = process.env.PORT || 3000;
 // Trust proxy for Render.com / external rate-limited IP mapping
 app.set('trust proxy', 1);
 
+// Debug Edge Hit for mobile ping (Put this up here before anything blocks it)
+app.use((req, res, next) => {
+    if (req.path === '/api/mobile/ping' || req.path === '/api/mobile/ping/') {
+        logger.info(`[EDGE HIT] /ping requested - IP: ${req.ip}, CF-Connecting-IP: ${req.headers['cf-connecting-ip']}, Install-ID: ${req.headers['x-app-install-id']}`);
+    }
+    next();
+});
+
 // Validate required environment variables
 if (!process.env.SESSION_SECRET && process.env.NODE_ENV === 'production') {
     logger.error('SESSION_SECRET environment variable is required in production');

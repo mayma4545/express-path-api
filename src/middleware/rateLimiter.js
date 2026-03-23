@@ -39,8 +39,9 @@ const apiLimiter = rateLimit({
     standardHeaders: true,  // Return RateLimit-* headers so clients can back off
     legacyHeaders: false,
     handler: (req, res, next, options) => {
-        logger.warn(`Rate limit exceeded (public): ${req.method} ${req.path}`, {
+        logger.warn(`[RATE LIMIT EXCEEDED] apiLimiter blocked request: ${req.method} ${req.path}`, {
             ip: req.ip,
+            installId: req.headers['x-app-install-id'],
             limit: options.max,
             windowMs: options.windowMs,
         });
@@ -102,7 +103,7 @@ const perInstallLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     handler: (req, res, next, options) => {
-        logger.warn(`Rate limit exceeded (per-install): ${req.method} ${req.path}`, {
+        logger.warn(`[RATE LIMIT EXCEEDED] perInstallLimiter blocked request: ${req.method} ${req.path}`, {
             ip: req.ip,
             installId: req.headers['x-app-install-id'],
             limit: options.max,
