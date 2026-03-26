@@ -737,17 +737,31 @@ router.get('/admin/super/users', requireAuth, requireSuperuser, async (req, res)
 
         res.json({
             success: true,
-            users: users.map((user) => ({
-                id: user.id,
-                username: user.username,
-                role: user.is_superuser ? 'superadmin' : (user.is_staff ? 'staff_admin' : 'viewer'),
-                is_staff: user.is_staff,
-                is_superuser: user.is_superuser,
-                profile: user.profile,
-                status: user.status,
-                created_at: user.created_at,
-                updated_at: user.updated_at
-            })),
+            users: users.map((user) => {
+                // If last activity is older than 30 mins, treat as offline
+                let isActuallyOnline = user.status?.is_online || false;
+                if (isActuallyOnline && user.status?.last_activity_at) {
+                    const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000);
+                    if (new Date(user.status.last_activity_at) < thirtyMinsAgo) {
+                        isActuallyOnline = false;
+                    }
+                }
+
+                return {
+                    id: user.id,
+                    username: user.username,
+                    role: user.is_superuser ? 'superadmin' : (user.is_staff ? 'staff_admin' : 'viewer'),
+                    is_staff: user.is_staff,
+                    is_superuser: user.is_superuser,
+                    profile: user.profile,
+                    status: {
+                        ...user.status?.toJSON(),
+                        is_online: isActuallyOnline
+                    },
+                    created_at: user.created_at,
+                    updated_at: user.updated_at
+                };
+            }),
             count: users.length
         });
     } catch (error) {
@@ -852,6 +866,110 @@ router.post('/admin/super/users/create', requireAuth, requireSuperuser, async (r
     } catch (error) {
         await transaction.rollback();
         console.error('Super admin create user error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.put('/admin/super/users/:user_id/update', requireAuth, requireSuperuser, async (req, res) => {
+    const transaction = await sequelize.transaction();
+    try {
+        const userId = parseInt(req.params.user_id, 10);
+        const {
+            username,
+            password,
+            full_name,
+            age,
+            department,
+            email,
+            phone,
+            position,
+            is_staff,
+            is_superuser
+        } = req.body;
+
+        const targetUser = await User.findByPk(userId, { transaction });
+        if (!targetUser) {
+            await transaction.rollback();
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+
+        // Prevent modifying the main superadmin directly to remove its access, or making another superadmin
+        if (is_superuser === true && targetUser.is_superuser === false) {
+            await transaction.rollback();
+            return res.status(400).json({ success: false, error: 'Cannot promote a user to super admin' });
+        }
+
+        if (username && username !== targetUser.username) {
+            const existingUser = await User.findOne({ where: { username }, transaction });
+            if (existingUser) {
+                await transaction.rollback();
+                return res.status(409).json({ success: false, error: 'Username already exists' });
+            }
+            targetUser.username = username;
+        }
+
+        if (password) {
+            targetUser.password = await bcrypt.hash(password, 10);
+        }
+
+        if (is_staff !== undefined) {
+            targetUser.is_staff = is_staff;
+        }
+
+        await targetUser.save({ transaction });
+
+        const profile = await UserProfile.findOne({ where: { user_id: userId }, transaction });
+        if (profile) {
+            if (full_name !== undefined) profile.full_name = full_name;
+            if (age !== undefined) profile.age = age !== null && age !== '' ? parseInt(age, 10) : null;
+            if (department !== undefined) profile.department = department || null;
+            if (email !== undefined) profile.email = email || null;
+            if (phone !== undefined) profile.phone = phone || null;
+            if (position !== undefined) profile.position = position || null;
+            await profile.save({ transaction });
+        } else if (full_name) {
+             await UserProfile.create({
+                 user_id: userId,
+                 full_name,
+                 age: age !== undefined && age !== null && age !== '' ? parseInt(age, 10) : null,
+                 department: department || null,
+                 email: email || null,
+                 phone: phone || null,
+                 position: position || null
+             }, { transaction });
+        }
+
+        await transaction.commit();
+
+        await logUserActivity({
+            userId: req.user.id,
+            activityType: 'UPDATE',
+            moduleName: 'users',
+            targetType: 'user',
+            targetId: targetUser.id,
+            metadata: {
+                username: targetUser.username,
+                role: targetUser.is_superuser ? 'superadmin' : 'staff_admin',
+                ...getRequestMeta(req)
+            },
+            isOnline: true
+        });
+
+        return res.json({
+            success: true,
+            message: 'User updated successfully',
+            user: {
+                id: targetUser.id,
+                username: targetUser.username,
+                is_staff: targetUser.is_staff,
+                is_superuser: targetUser.is_superuser,
+                role: targetUser.is_superuser ? 'superadmin' : 'staff_admin'
+            }
+        });
+
+    } catch (error) {
+        await transaction.rollback();
+        console.error('Super admin update user error:', error);
         return res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -965,11 +1083,23 @@ router.get('/admin/super/analytics/overview', requireAuth, requireSuperuser, asy
             actionTypeStats,
             moduleStats,
             mostVisitedNodes,
-            activityTimeline
+            activityTimeline,
+            guestTypeStats,
+            visitsByBuilding,
+            visitsBySource,
+            userNavigationTimeline
         ] = await Promise.all([
             User.count({ where: { is_staff: true, is_superuser: false } }),
             User.count({ where: { is_superuser: true } }),
-            UserStatus.count({ where: { is_online: true } }),
+            UserStatus.count({ 
+                where: { 
+                    is_online: true,
+                    // Assume user offline if no activity in last 30 minutes
+                    last_activity_at: {
+                        [Op.gte]: new Date(Date.now() - 30 * 60 * 1000)
+                    }
+                } 
+            }),
             sequelize.query(
                 'SELECT activity_type, COUNT(activity_id) AS total FROM user_activities GROUP BY activity_type ORDER BY total DESC',
                 { type: sequelize.QueryTypes.SELECT }
@@ -992,7 +1122,35 @@ router.get('/admin/super/analytics/overview', requireAuth, requireSuperuser, asy
                  FROM user_activities
                  WHERE occurred_at >= DATE_SUB(NOW(), INTERVAL 14 DAY)
                  GROUP BY DATE(occurred_at)
-                 ORDER BY activity_date DESC`,
+                 ORDER BY activity_date ASC`,
+                { type: sequelize.QueryTypes.SELECT }
+            ),
+            sequelize.query(
+                'SELECT guest_type, COUNT(id) AS count FROM GUEST GROUP BY guest_type ORDER BY count DESC',
+                { type: sequelize.QueryTypes.SELECT }
+            ),
+            sequelize.query(
+                `SELECT n.building, COUNT(v.visit_id) AS total_visits
+                 FROM node_visit_analytics v
+                 INNER JOIN nodes n ON n.node_id = v.node_id
+                 WHERE n.building IS NOT NULL AND n.building != ''
+                 GROUP BY n.building
+                 ORDER BY total_visits DESC`,
+                { type: sequelize.QueryTypes.SELECT }
+            ),
+            sequelize.query(
+                `SELECT source, COUNT(visit_id) AS total_visits
+                 FROM node_visit_analytics
+                 GROUP BY source
+                 ORDER BY total_visits DESC`,
+                { type: sequelize.QueryTypes.SELECT }
+            ),
+            sequelize.query(
+                `SELECT DATE(visited_at) AS visit_date, COUNT(visit_id) AS total_visits
+                 FROM node_visit_analytics
+                 WHERE visited_at >= DATE_SUB(NOW(), INTERVAL 14 DAY)
+                 GROUP BY DATE(visited_at)
+                 ORDER BY visit_date ASC`,
                 { type: sequelize.QueryTypes.SELECT }
             )
         ]);
@@ -1006,14 +1164,63 @@ router.get('/admin/super/analytics/overview', requireAuth, requireSuperuser, asy
                     total_admin_accounts: totalStaffAdmins + totalSuperAdmins,
                     online_users: onlineUsers
                 },
+                guest_demographics: guestTypeStats,
                 actions_by_type: actionTypeStats,
                 actions_by_module: moduleStats,
                 most_frequent_visited_nodes: mostVisitedNodes,
-                activity_timeline_last_14_days: activityTimeline
+                activity_timeline_last_14_days: activityTimeline,
+                visits_by_building: visitsByBuilding,
+                visits_by_source: visitsBySource,
+                navigation_timeline_last_14_days: userNavigationTimeline
             }
         });
     } catch (error) {
         console.error('Super admin analytics error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ============= Admin Dashboard Stats =============
+router.get('/admin/dashboard/stats', requireAuth, async (req, res) => {
+    try {
+        const [
+            nodesCount,
+            edgesCount,
+            guestsCount,
+            mostVisitedNodes,
+            recentActivities
+        ] = await Promise.all([
+            Nodes.count(),
+            Edges.count({ where: { is_active: true } }),
+            Guest.count(),
+            sequelize.query(
+                `SELECT n.node_id, n.node_code, n.name, n.building, n.floor_level, COUNT(v.visit_id) AS visit_count
+                 FROM node_visit_analytics v
+                 INNER JOIN nodes n ON n.node_id = v.node_id
+                 GROUP BY n.node_id, n.node_code, n.name, n.building, n.floor_level
+                 ORDER BY visit_count DESC
+                 LIMIT 6`,
+                { type: sequelize.QueryTypes.SELECT }
+            ),
+            UserActivity.findAll({
+                include: [{ model: User, attributes: ['username'], as: 'actor' }],
+                order: [['occurred_at', 'DESC']],
+                limit: 10
+            })
+        ]);
+
+        res.json({
+            success: true,
+            stats: {
+                nodes: nodesCount,
+                edges: edgesCount,
+                users: guestsCount
+            },
+            frequent_paths: mostVisitedNodes,
+            history: recentActivities
+        });
+    } catch (error) {
+        console.error('Dashboard stats error:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -1553,6 +1760,36 @@ router.get('/events', async (req, res) => {
     }
 });
 
+// Combined search for events and nodes (public)
+router.get('/events/search', async (req, res) => {
+    try {
+        const { query } = req.query;
+
+        if (!query || query.trim() === '') {
+            return res.json({
+                success: true,
+                events: [],
+                nodes: []
+            });
+        }
+
+        const results = await EventService.combinedSearch(query);
+
+        res.json({
+            success: true,
+            events: results.events,
+            nodes: results.nodes.map(n => ({
+                ...n,
+                image360_url: buildUrl(req, n.image360),
+                has_360_image: !!(n.image360 && n.image360.trim()),
+            }))
+        });
+    } catch (error) {
+        console.error('Combined search error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Get event details by ID (public)
 router.get('/events/:event_id', async (req, res) => {
     try {
@@ -1590,36 +1827,6 @@ router.get('/events/:event_id', async (req, res) => {
         });
     } catch (error) {
         console.error('Event detail error:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// Combined search for events and nodes (public)
-router.get('/events/search', async (req, res) => {
-    try {
-        const { query } = req.query;
-
-        if (!query || query.trim() === '') {
-            return res.json({
-                success: true,
-                events: [],
-                nodes: []
-            });
-        }
-
-        const results = await EventService.combinedSearch(query);
-
-        res.json({
-            success: true,
-            events: results.events,
-            nodes: results.nodes.map(n => ({
-                ...n,
-                image360_url: buildUrl(req, n.image360),
-                has_360_image: !!(n.image360 && n.image360.trim()),
-            }))
-        });
-    } catch (error) {
-        console.error('Combined search error:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
