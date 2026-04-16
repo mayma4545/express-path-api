@@ -240,7 +240,7 @@ class PathFinder {
                 // First node: instruct user to face towards the next node
                 if (i + 1 < result.path.length) {
                     const nextStep = result.path[i + 1];
-                    directions.push(`Face towards ${nextStep.name} and start walking`);
+                    directions.push(`Face towards ${step.name}`);
 
                     // Determine the user's initial facing angle from this node's annotation
                     const initialAngle = (step.annotation !== null && step.annotation !== undefined)

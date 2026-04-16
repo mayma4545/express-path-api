@@ -723,7 +723,7 @@ router.get('/admin/super/users', requireAuth, requireSuperuser, async (req, res)
                     model: UserProfile,
                     as: 'profile',
                     required: false,
-                    attributes: ['full_name', 'age', 'department', 'email', 'phone', 'position']
+                    attributes: ['full_name', 'age', 'department', 'email', 'phone', 'position', 'profile_image']
                 },
                 {
                     model: UserStatus,
@@ -784,7 +784,8 @@ router.post('/admin/super/users/create', requireAuth, requireSuperuser, async (r
             phone,
             position,
             is_staff,
-            is_superuser
+            is_superuser,
+            profile_image
         } = req.body;
 
         if (!username || !password || !full_name) {
@@ -820,6 +821,14 @@ router.post('/admin/super/users/create', requireAuth, requireSuperuser, async (r
             is_superuser: false
         }, { transaction });
 
+        let profileImageUrl = null;
+        if (profile_image && profile_image.startsWith('data:image')) {
+            const timestamp = Date.now();
+            profileImageUrl = await saveBase64Hybrid(profile_image, `user_${createdUser.id}_${timestamp}.jpg`, 'profiles');
+        } else if (profile_image) {
+            profileImageUrl = profile_image;
+        }
+
         await UserProfile.create({
             user_id: createdUser.id,
             full_name,
@@ -827,7 +836,8 @@ router.post('/admin/super/users/create', requireAuth, requireSuperuser, async (r
             department: department || null,
             email: email || null,
             phone: phone || null,
-            position: position || null
+            position: position || null,
+            profile_image: profileImageUrl
         }, { transaction });
 
         await UserStatus.create({
@@ -884,7 +894,8 @@ router.put('/admin/super/users/:user_id/update', requireAuth, requireSuperuser, 
             phone,
             position,
             is_staff,
-            is_superuser
+            is_superuser,
+            profile_image
         } = req.body;
 
         const targetUser = await User.findByPk(userId, { transaction });
@@ -926,8 +937,28 @@ router.put('/admin/super/users/:user_id/update', requireAuth, requireSuperuser, 
             if (email !== undefined) profile.email = email || null;
             if (phone !== undefined) profile.phone = phone || null;
             if (position !== undefined) profile.position = position || null;
+            
+            if (profile_image !== undefined) {
+                if (profile_image && profile_image.startsWith('data:image')) {
+                    const timestamp = Date.now();
+                    profile.profile_image = await saveBase64Hybrid(profile_image, `user_${userId}_${timestamp}.jpg`, 'profiles');
+                } else if (profile_image === null || profile_image === '') {
+                    profile.profile_image = null;
+                } else {
+                    profile.profile_image = profile_image;
+                }
+            }
+            
             await profile.save({ transaction });
         } else if (full_name) {
+             let profileImageUrl = null;
+             if (profile_image && profile_image.startsWith('data:image')) {
+                 const timestamp = Date.now();
+                 profileImageUrl = await saveBase64Hybrid(profile_image, `user_${userId}_${timestamp}.jpg`, 'profiles');
+             } else if (profile_image) {
+                 profileImageUrl = profile_image;
+             }
+
              await UserProfile.create({
                  user_id: userId,
                  full_name,
@@ -935,7 +966,8 @@ router.put('/admin/super/users/:user_id/update', requireAuth, requireSuperuser, 
                  department: department || null,
                  email: email || null,
                  phone: phone || null,
-                 position: position || null
+                 position: position || null,
+                 profile_image: profileImageUrl
              }, { transaction });
         }
 

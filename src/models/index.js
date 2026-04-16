@@ -340,6 +340,10 @@ const UserProfile = sequelize.define('UserProfile', {
     position: {
         type: DataTypes.STRING(120),
         allowNull: true
+    },
+    profile_image: {
+        type: DataTypes.TEXT('long'),
+        allowNull: true
     }
 }, {
     tableName: 'user_profiles',
