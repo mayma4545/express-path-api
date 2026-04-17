@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title><%= title %></title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    tailwind.config = {
+      theme: { 
+        extend: { 
+          colors: { 
+            brand: { DEFAULT: '#1DA1F2', light: '#e8f5fd' },
+            textMain: '#0f172a',
+            textMuted: '#64748b'
+          }, 
+          fontFamily: { sans: ['Inter', 'sans-serif'] }
+        } 
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f4f8fd; }
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 1);
+      box-shadow: 0 10px 40px -10px rgba(29, 161, 242, 0.1);
+    }
+  </style>
+</head>
+<body class="min-h-[100dvh] w-screen text-textMain relative flex flex-col selection:bg-brand selection:text-white">
+  
+  <div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0 fixed">
+    <div class="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] rounded-full bg-brand/10 blur-[100px]"></div>
+    <div class="absolute bottom-[20%] -right-[10%] w-[60%] h-[60%] rounded-full bg-emerald-300/10 blur-[100px]"></div>
+  </div>
+
+  <main class="relative z-10 flex flex-col w-full p-4 gap-4 pb-24 max-w-lg mx-auto">
+    
+    <header class="flex items-center gap-4 pt-2 mb-2">
+      <a href="/organizer/dashboard" class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-textMain shadow-sm border border-slate-200">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+      </a>
+      <div>
+        <h1 class="text-xl font-bold tracking-tight text-textMain">Analytics</h1>
+        <p class="text-xs text-textMuted mt-0.5">Overview of your events' performance</p>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-2 gap-3 flex-1">
+      <div class="glass-panel p-4 rounded-3xl flex flex-col justify-between relative overflow-hidden">
+        <span class="text-[11px] text-textMuted font-bold tracking-wide uppercase relative z-10">Total Events</span>
+        <div class="text-4xl font-extrabold text-textMain my-auto tracking-tighter relative z-10">
+          <%= totalEvents %>
+        </div>
+      </div>
+
+      <div class="glass-panel p-4 rounded-3xl flex flex-col justify-between relative overflow-hidden">
+        <span class="text-[11px] text-textMuted font-bold tracking-wide uppercase relative z-10">Active Events</span>
+        <div class="text-4xl font-extrabold text-emerald-500 my-auto tracking-tighter relative z-10 border-l-2 border-emerald-500/50 pl-2">
+          <%= activeEvents %>
+        </div>
+      </div>
+      
+      <div class="glass-panel p-4 rounded-3xl col-span-2 flex flex-col justify-between relative overflow-hidden min-h-[160px]">
+        <div class="absolute -right-4 -bottom-4 w-32 h-32 bg-brand/10 rounded-full blur-[20px]"></div>
+        <div class="flex justify-between items-center relative z-10 w-full">
+          <span class="text-[11px] text-textMuted font-bold tracking-wide uppercase">Engagement Overview</span>
+          <select class="text-xs bg-white text-textMain border-slate-200 border rounded px-2 py-1 outline-none">
+            <option>This Month</option>
+            <option>Last Month</option>
+            <option>All Time</option>
+          </select>
+        </div>
+        
+        <div class="w-full mt-4 h-48 relative z-10">
+          <canvas id="engagementChart"></canvas>
+        </div>
+      </div>
+
+      <div class="glass-panel p-4 rounded-3xl col-span-2 flex flex-col justify-between relative overflow-hidden">
+        <span class="text-[11px] text-textMuted font-bold tracking-wide uppercase mb-3 relative z-10">Recent Categories</span>
+        <div class="w-full h-40 relative z-10 flex justify-center">
+          <canvas id="categoryChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 5. Bottom Navigation Tab Bar -->
+  <div class="fixed bottom-0 w-full z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200">
+    <nav class="flex justify-between items-center px-6 py-3.5 max-w-lg mx-auto">
+      <a href="/organizer/dashboard" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain group">
+        <div class="p-1.5 rounded-full group-hover:bg-slate-100 transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+        </div>
+        <span class="text-[10px] font-semibold tracking-wide">Home</span>
+      </a>
+      
+      <a href="/organizer/analytics" class="flex flex-col items-center justify-center gap-1 w-12 text-brand transition-colors group">
+        <div class="p-1.5 rounded-full bg-brand-light transition-colors">
+          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+        </div>
+        <span class="text-[10px] font-semibold tracking-wide">Analytics</span>
+      </a>
+      
+      <a href="/organizer/events/add" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain transition-colors group">
+        <div class="p-1.5 rounded-full bg-brand text-white shadow-lg shadow-brand/30 hover:scale-105 transition-transform">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        </div>
+        <span class="text-[10px] font-semibold tracking-wide">Add</span>
+      </a>
+      
+      <a href="/organizer/events" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain transition-colors group">
+        <div class="p-1.5 rounded-full group-hover:bg-slate-100 transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+        </div>
+        <span class="text-[10px] font-semibold tracking-wide">Scanner</span>
+      </a>
+      
+      <a href="#" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain transition-colors relative group">
+        <div class="p-1.5 rounded-full group-hover:bg-slate-100 transition-colors relative">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+          <span class="absolute top-1.5 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+        </div>
+        <span class="text-[10px] font-semibold tracking-wide">Alerts</span>
+      </a>
+    </nav>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      // Engagement Line Chart
+      const ctx1 = document.getElementById('engagementChart').getContext('2d');
+      new Chart(ctx1, {
+        type: 'line',
+        data: {
+          labels: ['1st', '2nd', '3rd', '4th'],
+          datasets: [{
+            label: 'Attendees',
+            data: [12, 19, 15, 25],
+            borderColor: '#1DA1F2',
+            backgroundColor: 'rgba(29, 161, 242, 0.2)',
+            tension: 0.4,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { grid: { borderDash: [4, 4] }, beginAtZero: true }
+          }
+        }
+      });
+
+      // Category Doughnut Chart
+      const ctx2 = document.getElementById('categoryChart').getContext('2d');
+      new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+          labels: ['Tech', 'Health', 'Arts'],
+          datasets: [{
+            data: [40, 30, 30],
+            backgroundColor: ['#1DA1F2', '#34d399', '#fbbf24'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '70%',
+          plugins: {
+            legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } }
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>

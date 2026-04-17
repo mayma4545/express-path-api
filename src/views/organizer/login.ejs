@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { light: '#E9E4FF', DEFAULT: '#7C43FE', dark: '#5A26ED' },
+            textMain: '#111827',
+            textMuted: '#6B7280'
+          },
+          fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+          boxShadow: {
+            soft: '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+            float: '0 8px 16px -4px rgba(124, 67, 254, 0.35)'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="min-h-screen bg-[#F8F9FE] text-textMain font-sans flex items-center justify-center p-6">
+  <div class="w-full max-w-md">
+    <div class="bg-white rounded-3xl shadow-soft border border-gray-100 p-7">
+      <div class="mb-6 text-center">
+        <div class="mx-auto mb-3 w-12 h-12 rounded-2xl bg-brand text-white text-xl font-bold flex items-center justify-center shadow-float">O</div>
+        <h1 class="text-2xl font-extrabold tracking-tight">Organizer Portal</h1>
+        <p class="text-sm text-textMuted mt-1">Sign in with your organizer account.</p>
+      </div>
+
+      <form action="/organizer/login" method="POST" class="space-y-4">
+        <div>
+          <label for="email" class="block text-sm font-bold mb-1.5">Email</label>
+          <input id="email" name="email" type="email" required class="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-light focus:border-brand" placeholder="organizer@email.com">
+        </div>
+
+        <div>
+          <label for="password" class="block text-sm font-bold mb-1.5">Password</label>
+          <input id="password" name="password" type="password" required class="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-light focus:border-brand" placeholder="Enter password">
+        </div>
+
+        <button type="submit" class="w-full rounded-xl bg-brand text-white px-4 py-3 text-sm font-bold shadow-float hover:bg-brand-dark active:scale-[0.99] transition">
+          Login
+        </button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

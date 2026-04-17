@@ -39,9 +39,8 @@ const apiLimiter = rateLimit({
     standardHeaders: true,  // Return RateLimit-* headers so clients can back off
     legacyHeaders: false,
     handler: (req, res, next, options) => {
-        logger.warn(`[RATE LIMIT EXCEEDED] apiLimiter blocked request: ${req.method} ${req.path}`, {
+        logger.warn(`Rate limit exceeded (public): ${req.method} ${req.path}`, {
             ip: req.ip,
-            installId: req.headers['x-app-install-id'],
             limit: options.max,
             windowMs: options.windowMs,
         });
@@ -69,14 +68,7 @@ const adminLimiter = rateLimit({
     },
 });
 
-// Per-install-ID limiter: 5 requests per second per unique app installation.
-// Key is the UUID sent by the mobile app via X-App-Install-ID header.
-// This ensures fair usage even when many devices share the same IP (e.g. campus WiFi).
 
-/**
- * Exported standalone so unit tests can call it directly (express-rate-limit
- * does not expose the keyGenerator function as a property on the middleware).
- */
 const installIdKeyGenerator = (req) => {
     const installId = req.headers['x-app-install-id'];
     // Accept only valid UUID v4 values to prevent key-space abuse
@@ -103,7 +95,7 @@ const perInstallLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     handler: (req, res, next, options) => {
-        logger.warn(`[RATE LIMIT EXCEEDED] perInstallLimiter blocked request: ${req.method} ${req.path}`, {
+        logger.warn(`Rate limit exceeded (per-install): ${req.method} ${req.path}`, {
             ip: req.ip,
             installId: req.headers['x-app-install-id'],
             limit: options.max,

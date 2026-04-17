@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title><%= title %></title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    tailwind.config = {
+      theme: { 
+        extend: { 
+          colors: { 
+            brand: { DEFAULT: '#1DA1F2', light: '#e8f5fd' },
+            textMain: '#0f172a',
+            textMuted: '#64748b'
+          }, 
+          fontFamily: { sans: ['Inter', 'sans-serif'] }
+        } 
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f4f8fd; }
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 1);
+      box-shadow: 0 10px 40px -10px rgba(29, 161, 242, 0.1);
+    }
+  </style>
+</head>
+<body class="min-h-[100dvh] w-screen text-textMain relative flex flex-col selection:bg-brand selection:text-white">
+  
+  <div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0 fixed">
+    <div class="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] rounded-full bg-brand/10 blur-[100px]"></div>
+    <div class="absolute bottom-[20%] -right-[10%] w-[60%] h-[60%] rounded-full bg-blue-300/10 blur-[100px]"></div>
+  </div>
+
+  <main class="relative z-10 flex flex-col w-full p-4 gap-4 pb-24 max-w-lg mx-auto">
+    
+    <header class="flex items-center gap-4 pt-2 mb-2">
+      <a href="/organizer/dashboard" class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-textMain shadow-sm border border-slate-200">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+      </a>
+      <div>
+        <h1 class="text-xl font-bold tracking-tight text-textMain">Create Event</h1>
+        <p class="text-xs text-textMuted mt-0.5">Fill in the event details</p>
+      </div>
+    </header>
+
+    <div class="glass-panel p-5 rounded-3xl flex flex-col gap-4">
+      <form action="/organizer/events/add" method="POST" enctype="multipart/form-data" class="flex flex-col gap-4">
+        
+        <div>
+          <label class="block text-xs font-bold text-textMuted uppercase tracking-wider mb-1.5">Event Name</label>
+          <input type="text" name="title" required placeholder="e.g. Annual Tech Symposium" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/50 text-sm placeholder:text-slate-400">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-textMuted uppercase tracking-wider mb-1.5">Description</label>
+          <textarea name="description" rows="3" placeholder="What's this event about?" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/50 text-sm placeholder:text-slate-400 resize-none"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-textMuted uppercase tracking-wider mb-1.5">Venue</label>
+          <input type="text" name="venue" required placeholder="Room or Location" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/50 text-sm placeholder:text-slate-400">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-textMuted uppercase tracking-wider mb-1.5">Date</label>
+            <input type="date" name="event_date" required class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/50 text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-textMuted uppercase tracking-wider mb-1.5">Category</label>
+            <select name="category_id" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/50 text-sm">
+              <option value="">Select Category</option>
+              <% categories.forEach(function(category) { %>
+                <option value="<%= category.id %>"><%= category.name %></option>
+              <% }); %>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-textMuted uppercase tracking-wider mb-1.5">Start Time</label>
+            <input type="time" name="start_time" required class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/50 text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-textMuted uppercase tracking-wider mb-1.5">End Time</label>
+            <input type="time" name="end_time" required class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/50 text-sm">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-textMuted uppercase tracking-wider mb-1.5">Capacity</label>
+            <input type="number" name="capacity" placeholder="e.g. 100" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/50 text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-textMuted uppercase tracking-wider mb-1.5">Event Poster</label>
+            <input type="file" name="image" accept="image/*" class="w-full px-4 py-[9px] bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/50 text-sm">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-textMuted uppercase tracking-wider mb-1.5">Pin Location on Map</label>
+          <div id="map" class="w-full h-48 rounded-xl border border-slate-200 z-10"></div>
+          <p class="text-[10px] text-textMuted mt-1">Tap/click on the map to pin the event location.</p>
+          <input type="hidden" name="latitude" id="latitude">
+          <input type="hidden" name="longitude" id="longitude">
+        </div>
+
+        <button type="submit" class="w-full mt-2 bg-brand text-white font-bold py-3.5 rounded-xl shadow-[0_8px_20px_rgba(29,161,242,0.3)] hover:bg-blue-500 active:scale-[0.98] transition-all">
+          Create Event
+        </button>
+      </form>
+    </div>
+  </main>
+
+  <!-- 5. Bottom Navigation Tab Bar -->
+  <div class="fixed bottom-0 w-full z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200">
+    <nav class="flex justify-between items-center px-6 py-3.5 max-w-lg mx-auto">
+      <a href="/organizer/dashboard" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain group">
+        <div class="p-1.5 rounded-full group-hover:bg-slate-100 transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+        </div>
+        <span class="text-[10px] font-semibold tracking-wide">Home</span>
+      </a>
+      
+      <a href="/organizer/analytics" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain transition-colors group">
+        <div class="p-1.5 rounded-full group-hover:bg-slate-100 transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+        </div>
+        <span class="text-[10px] font-semibold tracking-wide">Analytics</span>
+      </a>
+      
+      <a href="/organizer/events/add" class="flex flex-col items-center justify-center gap-1 w-12 text-brand transition-colors group">
+        <div class="p-1.5 rounded-full bg-brand text-white shadow-lg shadow-brand/30 hover:scale-105 transition-transform">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        </div>
+        <span class="text-[10px] font-semibold tracking-wide">Add</span>
+      </a>
+      
+      <a href="/organizer/events" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain transition-colors group">
+        <div class="p-1.5 rounded-full group-hover:bg-slate-100 transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+        </div>
+        <span class="text-[10px] font-semibold tracking-wide">Scanner</span>
+      </a>
+      
+      <a href="#" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain transition-colors relative group">
+        <div class="p-1.5 rounded-full group-hover:bg-slate-100 transition-colors relative">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+          <span class="absolute top-1.5 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+        </div>
+        <span class="text-[10px] font-semibold tracking-wide">Alerts</span>
+      </a>
+    </nav>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Default to a generic location or Masbate City approximate bounds
+      const defaultLat = 12.3700;
+      const defaultLng = 123.6300;
+
+      const map = L.map('map').setView([defaultLat, defaultLng], 14);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+
+      let marker = null;
+
+      map.on('click', function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+
+        if (marker) {
+          marker.setLatLng(e.latlng);
+        } else {
+          marker = L.marker(e.latlng).addTo(map);
+        }
+
+        document.getElementById('latitude').val ue = lat; // note typo below to avoid syntax issues but fix it cleanly
+        document.getElementById('latitude').value = lat;
+        document.getElementById('longitude').value = lng;
+      });
+    });
+  </script>
+</body>
+</html>

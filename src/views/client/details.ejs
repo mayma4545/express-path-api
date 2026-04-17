@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Event Details — EventFlow</title>
+  <meta name="description" content="View full event details, add to your calendar, and get directions." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: '#1DA1F2',
+            'brand-dark': '#0d8de0',
+            'brand-light': '#e8f5fe',
+          },
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] },
+        },
+      },
+    };
+  </script>
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      overscroll-behavior-y: none;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .fade-up {
+      animation: fadeUp .4s ease forwards;
+    }
+
+    @keyframes slideInRight {
+      from {
+        opacity: 0;
+        transform: translateX(40px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .slide-in {
+      animation: slideInRight .35s cubic-bezier(.4, 0, .2, 1) forwards;
+    }
+
+    .btn-ripple {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-ripple::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: white;
+      opacity: 0;
+      transition: opacity .3s;
+      border-radius: inherit;
+    }
+
+    .btn-ripple:active::after {
+      opacity: .25;
+    }
+
+    .heart-btn.liked svg {
+      fill: #ef4444;
+      stroke: #ef4444;
+    }
+
+    /* Tab selector */
+    .tab-btn {
+      transition: all .2s;
+    }
+
+    .tab-btn.active {
+      color: #1DA1F2;
+      border-bottom: 2px solid #1DA1F2;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+  </style>
+</head>
+
+<body class="bg-white min-h-screen max-w-md mx-auto overflow-x-hidden" style="padding-bottom: 90px;">
+
+  <!-- ── Floating Nav Bar ────────────────────────────── -->
+  <div
+    class="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md z-40 px-4 pt-5 flex items-center justify-between pointer-events-none"
+    style="max-width:448px;">
+    <a href="/home"
+      class="pointer-events-auto bg-white/90 backdrop-blur-md shadow-lg rounded-full p-2.5 text-gray-700 active:scale-95 transition-all flex items-center justify-center">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+      </svg>
+    </a>
+    <div class="pointer-events-auto bg-white/90 backdrop-blur-md shadow-lg rounded-xl px-4 py-2">
+      <p class="text-xs font-bold text-gray-500 text-center">Event Details</p>
+    </div>
+    <button id="heart-btn" onclick="toggleHeart()"
+      class="pointer-events-auto heart-btn bg-white/90 backdrop-blur-md shadow-lg rounded-full p-2.5 active:scale-95 transition-all">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24"
+        stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- ── Hero Image ──────────────────────────────────── -->
+  <div class="relative" style="height:300px;">
+    <img id="detail-img" src="" alt="" class="w-full h-full object-cover" />
+    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+    <!-- Category + going overlay -->
+    <div class="absolute bottom-0 left-0 right-0 px-5 pb-5 flex items-end justify-between">
+      <div>
+        <span id="detail-category"
+          class="text-xs font-bold uppercase tracking-widest text-white/80 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full border border-white/30 mb-2 inline-block"></span>
+        <h1 id="detail-name" class="text-2xl font-extrabold text-white leading-tight mt-1 drop-shadow-lg"></h1>
+      </div>
+      <div class="flex flex-col items-center bg-white/20 backdrop-blur-sm rounded-2xl px-3 py-2 border border-white/30">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-red-400 mb-0.5" fill="currentColor"
+          viewBox="0 0 24 24">
+          <path
+            d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+        </svg>
+        <p id="detail-going" class="text-sm font-bold text-white leading-none"></p>
+        <p class="text-[10px] text-white/70 font-medium">going</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Meta pills ──────────────────────────────────── -->
+  <div class="fade-up px-5 pt-5 flex flex-wrap gap-2">
+    <span class="flex items-center gap-1.5 text-xs font-semibold bg-brand-light text-brand px-3 py-1.5 rounded-full">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        stroke-width="2">
+        <rect x="3" y="4" width="18" height="18" rx="2" />
+        <line x1="16" y1="2" x2="16" y2="6" />
+        <line x1="8" y1="2" x2="8" y2="6" />
+        <line x1="3" y1="10" x2="21" y2="10" />
+      </svg>
+      <span id="detail-date"></span>
+    </span>
+    <span class="flex items-center gap-1.5 text-xs font-semibold bg-gray-100 text-gray-600 px-3 py-1.5 rounded-full">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        stroke-width="2">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+      <span id="detail-time"></span>
+    </span>
+    <span class="flex items-center gap-1.5 text-xs font-semibold bg-green-50 text-green-600 px-3 py-1.5 rounded-full">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        stroke-width="2">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+        <circle cx="12" cy="10" r="3" />
+      </svg>
+      <span id="detail-venue"></span>
+    </span>
+  </div>
+
+  <!-- ── Tabs ─────────────────────────────────────────── -->
+  <div class="slide-in mt-5 px-5">
+    <div class="flex border-b border-gray-200 mb-4">
+      <button id="tab-about" class="tab-btn active flex-1 py-2.5 text-sm font-semibold text-center"
+        onclick="switchTab('about')">About</button>
+      <button id="tab-organizer" class="tab-btn flex-1 py-2.5 text-sm font-semibold text-gray-400 text-center"
+        onclick="switchTab('organizer')">Organizer</button>
+      <button id="tab-gallery" class="tab-btn flex-1 py-2.5 text-sm font-semibold text-gray-400 text-center"
+        onclick="switchTab('gallery')">Photos</button>
+    </div>
+
+    <!-- About -->
+    <div id="tab-about-content" class="tab-content active">
+      <p id="detail-desc" class="text-sm text-gray-600 leading-relaxed"></p>
+      <!-- Tags -->
+      <div id="detail-tags" class="flex flex-wrap gap-2 mt-4"></div>
+
+      <!-- Comments Section -->
+      <div class="mt-8 border-t border-gray-100 pt-6 pb-2">
+        <h3 class="text-lg font-bold text-gray-900 mb-4">Comments (<span id="comment-count">2</span>)</h3>
+        
+        <!-- Add Comment -->
+        <div class="flex gap-3 mb-6 relative">
+          <div class="w-8 h-8 rounded-full bg-brand text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+            ME
+          </div>
+          <div class="flex-1 bg-gray-50 rounded-2xl flex items-center pr-1 border border-gray-100 focus-within:border-brand transition-colors shadow-inner">
+            <input type="text" placeholder="Add a comment..." class="flex-1 bg-transparent px-3 py-2 text-sm outline-none text-gray-700 placeholder-gray-400" />
+            <button class="text-brand font-bold text-xs px-3 py-1.5 rounded-xl hover:bg-brand-light transition">Post</button>
+          </div>
+        </div>
+
+        <!-- Comment List -->
+        <div class="space-y-5" id="comments-list">
+          <!-- Comment 1 -->
+          <div class="flex gap-3">
+            <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs flex-shrink-0">
+              JD
+            </div>
+            <div class="flex-1">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-bold text-gray-900">John Doe</span>
+                <span class="text-xs text-gray-400">2h ago</span>
+              </div>
+              <p class="text-sm text-gray-600 mt-1">This event looks amazing! Can't wait to be there. Will there be food stalls?</p>
+              <div class="flex items-center gap-4 mt-2">
+                <button class="text-xs font-semibold text-gray-500 hover:text-red-500 flex items-center gap-1 transition react-btn" onclick="toggleCommentReact(this)">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                  <span class="react-count">12</span>
+                </button>
+                <button class="text-xs font-semibold text-gray-500 hover:text-brand transition flex items-center gap-1" onclick="showReplyInput(this)">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                  Reply
+                </button>
+              </div>
+              
+              <!-- Replies -->
+              <div class="mt-3 pl-4 border-l-2 border-gray-100 space-y-4">
+                <div class="flex gap-2.5">
+                  <div class="w-6 h-6 rounded-full bg-brand text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0 shadow-md">
+                    EV
+                  </div>
+                  <div class="flex-1">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-bold text-gray-900">Event Organizer</span>
+                      <span class="text-[10px] text-gray-400">1h ago</span>
+                    </div>
+                    <p class="text-xs text-gray-600 mt-0.5">Yes, there will be multiple food stalls serving local delicacies!</p>
+                    <div class="flex items-center gap-3 mt-1.5">
+                      <button class="text-[10px] font-semibold text-gray-500 hover:text-red-500 flex items-center gap-1 transition react-btn" onclick="toggleCommentReact(this)">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        </svg>
+                        <span class="react-count">4</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Hidden Reply Input -->
+              <div class="mt-3 hidden reply-box">
+                <div class="flex gap-2">
+                  <div class="flex-1 bg-gray-50 rounded-xl flex items-center pr-1 border border-gray-100 focus-within:border-brand transition-colors">
+                    <input type="text" placeholder="Write a reply..." class="flex-1 bg-transparent px-3 py-1.5 text-xs outline-none text-gray-700" />
+                    <button class="text-brand font-bold text-[10px] px-2 py-1 rounded-lg hover:bg-brand-light transition">Send</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Comment 2 -->
+          <div class="flex gap-3">
+            <div class="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center font-bold text-xs flex-shrink-0">
+              AS
+            </div>
+            <div class="flex-1">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-bold text-gray-900">Alice Smith</span>
+                <span class="text-xs text-gray-400">5h ago</span>
+              </div>
+              <p class="text-sm text-gray-600 mt-1">Is this event pet-friendly?</p>
+              <div class="flex items-center gap-4 mt-2">
+                <button class="text-xs font-semibold text-gray-500 hover:text-red-500 flex items-center gap-1 transition react-btn" onclick="toggleCommentReact(this)">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                  <span class="react-count">2</span>
+                </button>
+                <button class="text-xs font-semibold text-gray-500 hover:text-brand transition flex items-center gap-1" onclick="showReplyInput(this)">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                  Reply
+                </button>
+              </div>
+              <!-- Hidden Reply Input -->
+              <div class="mt-3 hidden reply-box">
+                <div class="flex gap-2">
+                  <div class="flex-1 bg-gray-50 rounded-xl flex items-center pr-1 border border-gray-100 focus-within:border-brand transition-colors">
+                    <input type="text" placeholder="Write a reply..." class="flex-1 bg-transparent px-3 py-1.5 text-xs outline-none text-gray-700" />
+                    <button class="text-brand font-bold text-[10px] px-2 py-1 rounded-lg hover:bg-brand-light transition">Send</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Organizer -->
+    <div id="tab-organizer-content" class="tab-content">
+      <div class="bg-gray-50 rounded-2xl p-4 flex items-center gap-4">
+        <div id="org-avatar"
+          class="w-14 h-14 rounded-2xl bg-brand flex items-center justify-center flex-shrink-0 shadow-md shadow-brand/20">
+          <span id="org-initial" class="text-white text-xl font-extrabold"></span>
+        </div>
+        <div>
+          <p class="text-xs text-gray-400 font-medium mb-0.5">Event Organizer</p>
+          <p id="detail-organizer" class="text-base font-bold text-gray-900"></p>
+          <p class="text-xs text-brand font-medium mt-0.5">View all events →</p>
+        </div>
+      </div>
+      <div class="mt-4 grid grid-cols-2 gap-3">
+        <div class="bg-gray-50 rounded-xl p-3 text-center">
+          <p class="text-lg font-extrabold text-gray-900">12</p>
+          <p class="text-xs text-gray-400">Past Events</p>
+        </div>
+        <div class="bg-gray-50 rounded-xl p-3 text-center">
+          <p class="text-lg font-extrabold text-brand">4.9 ★</p>
+          <p class="text-xs text-gray-400">Avg Rating</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gallery -->
+    <div id="tab-gallery-content" class="tab-content">
+      <div class="grid grid-cols-2 gap-2">
+        <div id="gallery-main" class="col-span-2 rounded-2xl overflow-hidden" style="height:160px;">
+          <img id="gallery-img-main" src="" alt="" class="w-full h-full object-cover" />
+        </div>
+        <div class="rounded-xl overflow-hidden bg-gray-100" style="height:100px;">
+          <img id="gallery-img-2" src="" alt="" class="w-full h-full object-cover opacity-80" />
+        </div>
+        <div class="rounded-xl overflow-hidden bg-gray-100 relative" style="height:100px;">
+          <img id="gallery-img-3" src="" alt="" class="w-full h-full object-cover opacity-60" />
+          <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <p class="text-white font-bold text-sm">+8 more</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Sticky CTA ──────────────────────────────────── -->
+  <div
+    class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-md border-t border-gray-100 px-5 py-4 flex gap-3 z-30"
+    style="max-width:448px;">
+    <button onclick="addToCalendar()"
+      class="btn-ripple flex-1 flex items-center justify-center gap-2 border-2 border-brand text-brand font-bold py-3.5 rounded-2xl active:scale-95 transition-all text-sm">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        stroke-width="2">
+        <rect x="3" y="4" width="18" height="18" rx="2" />
+        <line x1="16" y1="2" x2="16" y2="6" />
+        <line x1="8" y1="2" x2="8" y2="6" />
+        <line x1="3" y1="10" x2="21" y2="10" />
+      </svg>
+      Add to Cal
+    </button>
+    <a id="map-btn" href="/map"
+      class="btn-ripple flex-[2] bg-brand text-white font-bold py-3.5 rounded-2xl active:scale-95 transition-all shadow-lg shadow-brand/30 text-sm flex items-center justify-center gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        stroke-width="2">
+        <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+        <line x1="8" y1="2" x2="8" y2="18" />
+        <line x1="16" y1="6" x2="16" y2="22" />
+      </svg>
+      View in Map
+    </a>
+  </div>
+
+  <!-- ── Calendar Modal ──────────────────────────────── -->
+  <div id="cal-modal" class="hidden fixed inset-0 z-50 flex items-end justify-center"
+    style="max-width:448px;left:50%;transform:translateX(-50%);">
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeCalModal()"></div>
+    <div class="relative bg-white w-full rounded-t-3xl px-6 pt-5 pb-10 space-y-3 shadow-2xl z-10">
+      <div class="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4"></div>
+      <h3 class="text-lg font-bold text-gray-900 text-center mb-4">Add to Calendar</h3>
+      <button onclick="downloadICS()"
+        class="w-full flex items-center gap-4 p-4 rounded-2xl border border-gray-200 active:bg-gray-50 transition">
+        <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+        </div>
+        <div class="text-left">
+          <p class="text-sm font-semibold text-gray-900">Download .ics File</p>
+          <p class="text-xs text-gray-400">Apple Calendar, Outlook &amp; more</p>
+        </div>
+      </button>
+      <button onclick="openGoogleCalendar()"
+        class="w-full flex items-center gap-4 p-4 rounded-2xl border border-gray-200 active:bg-gray-50 transition">
+        <div class="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center">
+          <span class="text-lg font-extrabold text-red-500">G</span>
+        </div>
+        <div class="text-left">
+          <p class="text-sm font-semibold text-gray-900">Google Calendar</p>
+          <p class="text-xs text-gray-400">Open in your browser</p>
+        </div>
+      </button>
+      <button onclick="closeCalModal()"
+        class="w-full text-sm text-gray-400 font-medium py-2 active:text-gray-600">Cancel</button>
+    </div>
+  </div>
+  <a id="ics-link" style="display:none;"></a>
+
+  <script src="/static/js/events-data.js"></script>
+  <script>
+    const eventId = parseInt(sessionStorage.getItem('currentEventId'), 10);
+    const ev = [...EVENTS, ...ONGOING_EVENTS].find(e => e.id === eventId);
+
+    if (!ev) {
+      window.location.href = '/home';
+    } else {
+      /* ── Populate ── */
+      document.title = `${ev.name} — EventFlow`;
+      document.getElementById('detail-img').src = ev.img;
+      document.getElementById('detail-img').alt = ev.name;
+      document.getElementById('detail-name').textContent = ev.name;
+      document.getElementById('detail-category').textContent = ev.category;
+      document.getElementById('detail-date').textContent = ev.date;
+      document.getElementById('detail-time').textContent = `${ev.start} – ${ev.end}`;
+      document.getElementById('detail-venue').textContent = ev.venue;
+      document.getElementById('detail-desc').textContent = ev.description;
+      document.getElementById('detail-going').textContent = formatGoing(ev.going);
+      document.getElementById('detail-organizer').textContent = ev.organizer;
+      document.getElementById('org-initial').textContent = ev.organizer[0];
+      document.getElementById('gallery-img-main').src = ev.img;
+      document.getElementById('gallery-img-2').src = ev.img;
+      document.getElementById('gallery-img-3').src = ev.img;
+
+      // heart
+      if (ev.liked) document.getElementById('heart-btn').classList.add('liked');
+
+      // tags
+      const tags = [ev.category, 'Community', 'Free Entry', '📍 Manila'];
+      const tagContainer = document.getElementById('detail-tags');
+      tags.forEach(t => {
+        const el = document.createElement('span');
+        el.className = 'text-xs font-medium bg-gray-100 text-gray-500 px-3 py-1 rounded-full';
+        el.textContent = t;
+        tagContainer.appendChild(el);
+      });
+    }
+
+    function formatGoing(n) {
+      return n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K' : String(n);
+    }
+
+    /* ── Heart ── */
+    function toggleHeart() {
+      if (!ev) return;
+      ev.liked = !ev.liked;
+      ev.going += ev.liked ? 1 : -1;
+      document.getElementById('heart-btn').classList.toggle('liked', ev.liked);
+      document.getElementById('detail-going').textContent = formatGoing(ev.going);
+    }
+
+    /* ── Tabs ── */
+    function switchTab(name) {
+      ['about', 'organizer', 'gallery'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.toggle('active', t === name);
+        document.getElementById(`tab-${t}-content`).classList.toggle('active', t === name);
+        if (t !== name) {
+          document.getElementById(`tab-${t}`).classList.remove('active');
+          document.getElementById(`tab-${t}`).classList.add('text-gray-400');
+        } else {
+          document.getElementById(`tab-${t}`).classList.remove('text-gray-400');
+        }
+      });
+    }
+
+    /* ── Calendar ── */
+    function addToCalendar() {
+      document.getElementById('cal-modal').classList.remove('hidden');
+    }
+    function closeCalModal() {
+      document.getElementById('cal-modal').classList.add('hidden');
+    }
+    function toICSDate(dt) {
+      return dt.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    }
+    function downloadICS() {
+      if (!ev) return;
+      const start = new Date(`${ev.date} ${ev.start}`);
+      const end = new Date(`${ev.date} ${ev.end}`);
+      const ics = [
+        'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//EventFlow//EN',
+        'BEGIN:VEVENT',
+        `UID:eventflow-${ev.id}@app`,
+        `DTSTART:${toICSDate(start)}`, `DTEND:${toICSDate(end)}`,
+        `SUMMARY:${ev.name}`,
+        `DESCRIPTION:${ev.description.replace(/\n/g, '\\n')}`,
+        `LOCATION:${ev.venue}`,
+        'END:VEVENT', 'END:VCALENDAR',
+      ].join('\r\n');
+      const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
+      const a = document.getElementById('ics-link');
+      a.href = url; a.download = `${ev.name.replace(/\s+/g, '-')}.ics`; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      closeCalModal();
+    }
+    function openGoogleCalendar() {
+      if (!ev) return;
+      const start = new Date(`${ev.date} ${ev.start}`);
+      const end = new Date(`${ev.date} ${ev.end}`);
+      const fmt = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z/, 'Z');
+      const p = new URLSearchParams({ action: 'TEMPLATE', text: ev.name, dates: `${fmt(start)}/${fmt(end)}`, details: ev.description, location: ev.venue });
+      window.open(`https://calendar.google.com/calendar/render?${p}`, '_blank');
+      closeCalModal();
+    }
+
+    /* ── Comments ── */
+    function toggleCommentReact(btn) {
+      const isReacted = btn.classList.contains('reacted');
+      const countSpan = btn.querySelector('.react-count');
+      let count = parseInt(countSpan.textContent, 10);
+      const svg = btn.querySelector('svg');
+
+      if (isReacted) {
+        btn.classList.remove('reacted', 'text-red-500');
+        svg.setAttribute('fill', 'none');
+        count--;
+      } else {
+        btn.classList.add('reacted', 'text-red-500');
+        svg.setAttribute('fill', 'currentColor');
+        count++;
+      }
+      countSpan.textContent = count;
+    }
+
+    function showReplyInput(btn) {
+      const commentDiv = btn.closest('.flex-1');
+      const replyBox = commentDiv.querySelector('.reply-box');
+      if (replyBox) {
+        replyBox.classList.toggle('hidden');
+        if (!replyBox.classList.contains('hidden')) {
+          replyBox.querySelector('input').focus();
+        }
+      }
+    }
+  </script>
+</body>
+
+</html>

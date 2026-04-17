@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Live Event Command Center</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: { 
+        extend: { 
+          colors: { 
+            brand: { DEFAULT: '#1DA1F2', light: '#e8f5fd' },
+            textMain: '#0f172a',
+            textMuted: '#64748b'
+          }, 
+          fontFamily: { sans: ['Inter', 'sans-serif'] }
+        } 
+      }
+    }
+  </script>
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      background-color: #f4f8fd;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior-y: none;
+    }
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    /* Hide scrollbar for IE, Edge and Firefox */
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 1);
+      box-shadow: 0 10px 40px -10px rgba(29, 161, 242, 0.1);
+    }
+    .glass-nav {
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 1);
+      box-shadow: 0 -10px 40px -15px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body class="h-[100dvh] w-screen overflow-hidden text-textMain relative flex flex-col selection:bg-brand selection:text-white">
+  
+  <!-- Ambient Background Glow -->
+  <div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+    <div class="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] rounded-full bg-brand/10 blur-[100px]"></div>
+    <div class="absolute bottom-[20%] -right-[10%] w-[60%] h-[60%] rounded-full bg-blue-300/10 blur-[100px]"></div>
+  </div>
+
+  <!-- Main Layout -->
+  <main class="relative z-10 flex flex-col h-full w-full p-4 gap-4 pb-24 max-w-lg mx-auto">
+    
+    <!-- 1. Header -->
+    <header class="flex justify-between items-center shrink-0 pt-2">
+      <div>
+        <h1 class="text-xl font-bold tracking-tight text-textMain flex items-center gap-2">
+          Command Center
+          <span class="flex h-2.5 w-2.5 relative">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></span>
+          </span>
+        </h1>
+        <p class="text-xs text-textMuted mt-0.5">Live View • <%= organizer.name %></p>
+      </div>
+      <div class="h-10 w-10 rounded-full bg-white border border-brand/20 flex items-center justify-center text-brand font-bold text-lg shadow-[0_4px_15px_rgba(29,161,242,0.15)]">
+        <%= organizer.name.charAt(0).toUpperCase() %>
+      </div>
+    </header>
+
+    <!-- 2. "Active Now" Zone -->
+    <div class="glass-panel p-4 rounded-3xl flex flex-col gap-2 shrink-0 relative overflow-hidden">
+      <div class="absolute right-0 top-0 w-32 h-32 bg-brand/10 rounded-full blur-[40px] pointer-events-none"></div>
+      <div class="flex justify-between items-start relative z-10">
+        <span class="text-[10px] font-bold text-brand uppercase tracking-widest flex items-center gap-1.5 px-2 py-1 bg-brand-light rounded-md">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          Active Event
+        </span>
+        <span class="text-[10px] font-mono bg-slate-100 px-2 py-1 rounded text-textMuted border border-slate-200">EVT-992</span>
+      </div>
+      <h2 class="text-2xl font-extrabold text-textMain leading-tight mt-1 relative z-10 truncate">Tech Symposium 2026</h2>
+      <div class="mt-2 bg-slate-50/80 rounded-2xl p-3 flex justify-between items-center border border-slate-200 relative z-10 shadow-sm">
+        <div class="flex flex-col">
+          <span class="text-[10px] text-textMuted uppercase tracking-wider font-bold">Next Milestone In</span>
+          <span class="text-sm text-slate-700 font-semibold mt-0.5">Keynote Speech</span>
+        </div>
+        <span class="text-2xl font-mono font-bold text-textMain tracking-tight">00:45:12</span>
+      </div>
+    </div>
+
+    <!-- 3. Real-Time Metric Grid (Bento Box / 4 items) -->
+    <div class="grid grid-cols-2 gap-3 flex-1 min-h-0">
+      
+      <!-- Metric A: Entry Velocity (Crowd Control) -->
+      <div class="glass-panel p-4 rounded-3xl flex flex-col justify-between relative group overflow-hidden">
+        <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-brand/10 rounded-full blur-[20px]"></div>
+        <span class="text-[11px] text-textMuted font-bold tracking-wide uppercase relative z-10">Entry Velocity</span>
+        <div class="text-3xl font-extrabold text-textMain my-auto tracking-tighter flex items-baseline gap-1 relative z-10">
+          24 <span class="text-sm text-textMuted font-medium">/ min</span>
+        </div>
+        <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 relative z-10">
+          <div class="text-[10px] text-brand font-bold tracking-wide">High Traffic</div>
+          <div class="text-[10px] text-brand font-medium bg-brand-light px-2 py-0.5 rounded">Open Gate 2</div>
+        </div>
+      </div>
+
+      <!-- Metric B: Navigation Utility -->
+      <div class="glass-panel p-4 rounded-3xl flex flex-col justify-between relative overflow-hidden">
+        <div class="absolute -right-4 -top-4 w-16 h-16 bg-brand/10 rounded-full blur-[20px]"></div>
+        <span class="text-[11px] text-textMuted font-bold tracking-wide uppercase relative z-10">Live A* Path Hits</span>
+        <div class="text-4xl font-extrabold text-brand my-auto tracking-tighter relative z-10 border-l-2 border-brand/50 pl-2">842</div>
+        <div class="flex items-center justify-between mt-1 text-[10px] text-textMuted relative z-10 bg-slate-50 p-1.5 rounded-lg border border-slate-100 shadow-sm">
+          <span class="truncate pr-1 font-medium">Gate &rarr; Venue</span>
+          <span class="text-brand font-bold shrink-0">Congested</span>
+        </div>
+      </div>
+
+      <!-- Metric C: Resource Management (Gap) -->
+      <div class="glass-panel p-4 rounded-3xl flex flex-col justify-between relative overflow-hidden">
+        <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-brand/10 rounded-full blur-[20px]"></div>
+        <div class="flex justify-between items-center mb-1 relative z-10">
+          <span class="text-[11px] text-textMuted font-bold tracking-wide uppercase">RSVP vs Actual</span>
+          <div class="w-1.5 h-1.5 rounded-full bg-brand"></div>
+        </div>
+        <div class="text-2xl font-extrabold text-textMain my-auto flex items-baseline gap-1.5 relative z-10"><span class="text-brand">140</span><span class="text-sm font-medium text-textMuted">/200</span></div>
+        <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2 mb-1.5 border border-slate-200 relative z-10">
+          <div class="bg-brand w-[70%] h-full rounded-full relative"></div>
+        </div>
+        <div class="text-[10px] text-textMuted font-medium relative z-10">Gap: 60 missing • Start in 5m</div>
+      </div>
+
+      <!-- Metric D: Issue Response (Live Pulse) -->
+      <div class="glass-panel p-4 rounded-3xl flex flex-col justify-between relative overflow-hidden">
+        <div class="absolute -left-4 -bottom-4 w-20 h-20 bg-brand/10 rounded-full blur-[20px]"></div>
+        <div class="flex justify-between items-center relative z-10">
+          <span class="text-[11px] text-textMuted font-bold tracking-wide uppercase">Live Pulse</span>
+          <span class="flex h-2 w-2 relative">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-brand"></span>
+          </span>
+        </div>
+        <div class="flex items-end gap-2 my-auto relative z-10 pt-1">
+          <div class="text-4xl font-extrabold text-brand tracking-tighter drop-shadow-[0_4px_8px_rgba(29,161,242,0.2)]">3</div>
+          <div class="text-xs text-brand/80 mb-1.5 font-bold uppercase tracking-wider">Alerts</div>
+        </div>
+        <div class="text-[10px] text-slate-700 font-medium mt-1 relative z-10 border-l-2 border-brand/50 pl-1.5">
+          A/V issue, seating shortage
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 4. Activity Feed (Condensed) -->
+    <div class="glass-panel p-4 rounded-3xl shrink-0 flex flex-col gap-3">
+      <div class="flex justify-between items-center">
+        <span class="text-[11px] font-bold text-textMuted uppercase tracking-wider">Live Activity Feed</span>
+        <span class="flex items-center gap-1 text-[10px] text-brand font-medium">
+          <span class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></span>
+          Syncing
+        </span>
+      </div>
+      <div class="flex flex-col gap-2.5">
+        <div class="flex items-start gap-3">
+          <div class="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 shrink-0 shadow-[0_0_5px_rgba(16,185,129,0.3)]"></div>
+          <div class="flex flex-col flex-1 overflow-hidden">
+            <span class="text-sm text-textMain font-semibold truncate">VIP Guest Arrived at Main Gate</span>
+            <span class="text-[10px] text-textMuted font-mono">Just Now</span>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-2 h-2 rounded-full bg-amber-500 mt-1.5 shrink-0 shadow-[0_0_5px_rgba(245,158,11,0.3)]"></div>
+          <div class="flex flex-col flex-1 overflow-hidden">
+            <span class="text-sm text-textMain font-semibold truncate">Room 204 nearing capacity limit</span>
+            <span class="text-[10px] text-textMuted font-mono">2 mins ago</span>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-2 h-2 rounded-full bg-brand mt-1.5 shrink-0 shadow-[0_0_5px_rgba(29,161,242,0.3)]"></div>
+          <div class="flex flex-col flex-1 overflow-hidden">
+            <span class="text-sm text-slate-700 font-semibold truncate">Keynote speaker checked in</span>
+            <span class="text-[10px] text-textMuted font-mono">5 mins ago</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 5. Bottom Navigation Tab Bar -->
+  <div class="fixed bottom-0 w-full z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200">
+    <nav class="flex justify-between items-center px-6 py-3.5 max-w-lg mx-auto">
+      <a href="/organizer/dashboard" class="flex flex-col items-center justify-center gap-1 w-12 text-brand group">
+        <div class="p-1.5 rounded-full bg-brand-light transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+        </div>
+        <span class="text-[10px] font-bold tracking-wide">Home</span>
+      </a>
+      
+      <a href="/organizer/analytics" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain transition-colors group">
+        <div class="p-1.5 rounded-full group-hover:bg-slate-100 transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+        </div>
+        <span class="text-[10px] font-semibold tracking-wide">Analytics</span>
+      </a>
+      
+      <a href="/organizer/events/add" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain transition-colors group">
+        <div class="p-1.5 rounded-full bg-brand text-white shadow-lg shadow-brand/30 hover:scale-105 transition-transform">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        </div>
+        <span class="text-[10px] font-semibold tracking-wide">Add</span>
+      </a>
+      
+      <a href="/organizer/events" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain transition-colors group">
+        <div class="p-1.5 rounded-full group-hover:bg-slate-100 transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+        </div>
+        <span class="text-[10px] font-semibold tracking-wide">Scanner</span>
+      </a>
+      
+      <a href="#" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain transition-colors relative group">
+        <div class="p-1.5 rounded-full group-hover:bg-slate-100 transition-colors relative">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+          <span class="absolute top-1.5 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+        </div>
+        <span class="text-[10px] font-semibold tracking-wide">Alerts</span>
+      </a>
+    </nav>
+  </div>
+
+</body>
+</html>

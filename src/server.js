@@ -16,6 +16,9 @@ const { sequelize } = require('./models');
 const webRoutes = require('./routes/web');
 const apiRoutes = require('./routes/api');
 const mobileApiRoutes = require('./routes/mobileApi');
+const clientRoutes = require('./routes/client');
+const adminRoutes = require('./routes/admin');
+const organizerRoutes = require('./routes/organizer');
 const { logger, requestLogger } = require('./utils/logger');
 const { apiLimiter, perInstallLimiter } = require('./middleware/rateLimiter');
 const { SESSION } = require('./utils/constants');
@@ -120,7 +123,10 @@ app.use((req, res, next) => {
 app.use('/api/mobile', perInstallLimiter);
 
 // Routes
-app.use('/', webRoutes);
+app.use('/', clientRoutes); // Client views from src/views/client
+app.use('/admin', adminRoutes); // City-level mapping & venues
+app.use('/organizer', organizerRoutes); // Event management for Masbate City programs
+app.use('/v1', webRoutes);  // Legacy Map Editor & API
 app.use('/api', apiRoutes);
 app.use('/api/mobile', mobileApiRoutes);
 

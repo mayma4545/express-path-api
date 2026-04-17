@@ -20,6 +20,9 @@ const {
     NodeVisitAnalytics,
     Event,
     Guest,
+    AppUser,
+    EventAttendee,
+    EventAnalytics,
     sequelize
 } = require('../models');
 const { getPathfinder, resetPathfinder } = require('../services/pathfinding');
@@ -1859,6 +1862,78 @@ router.get('/events/:event_id', async (req, res) => {
         });
     } catch (error) {
         console.error('Event detail error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// RSVP to an Event
+router.post('/events/:event_id/rsvp', requireAuth, async (req, res) => {
+    try {
+        const { event_id } = req.params;
+        const user_id = req.user?.id || req.session?.userAuth?.userId;
+
+        if (!user_id) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+
+        const event = await Event.findByPk(event_id);
+        if (!event) return res.status(404).json({ success: false, error: 'Event not found' });
+
+        if (event.status !== 'published') {
+            return res.status(400).json({ success: false, error: 'Event is not open for RSVP' });
+        }
+
+        // Check Capacity
+        if (event.capacity) {
+            const currentRsvps = await EventAttendee.count({ where: { event_id, status: 'registered' } });
+            if (currentRsvps >= event.capacity) {
+                return res.status(400).json({ success: false, error: 'Event is at full capacity' });
+            }
+        }
+
+        const [attendee, created] = await EventAttendee.findOrCreate({
+            where: { event_id, user_id },
+            defaults: { status: 'registered' }
+        });
+
+        if (!created && attendee.status === 'cancelled') {
+            await attendee.update({ status: 'registered' });
+        } else if (!created) {
+            return res.status(400).json({ success: false, error: 'Already registered for this event' });
+        }
+
+        res.json({ success: true, message: 'RSVP successful', attendee });
+    } catch (error) {
+        console.error('RSVP error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Event Analytics (QR Scan or 360 View)
+router.post('/events/:event_id/analytics', async (req, res) => {
+    try {
+        const { event_id } = req.params;
+        const { type } = req.body; // 'scan' or '360_view'
+
+        const event = await Event.findByPk(event_id);
+        if (!event) return res.status(404).json({ success: false, error: 'Event not found' });
+
+        const [analytics] = await EventAnalytics.findOrCreate({
+            where: { event_id },
+            defaults: { scan_count: 0, view_count_360: 0 }
+        });
+
+        if (type === 'scan') {
+            await analytics.increment('scan_count', { by: 1 });
+        } else if (type === '360_view') {
+            await analytics.increment('view_count_360', { by: 1 });
+        } else {
+            return res.status(400).json({ success: false, error: 'Invalid analytics type. Use "scan" or "360_view".' });
+        }
+
+        res.json({ success: true, message: `Analytics updated for ${type}` });
+    } catch (error) {
+        console.error('Event analytics error:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });

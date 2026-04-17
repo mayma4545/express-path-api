@@ -151,6 +151,41 @@ async function uploadBase64ToCloudinary(base64Data, filename, subfolder = 'uploa
 }
 
 /**
+ * Upload file buffer to Cloudinary
+ * @param {Buffer} buffer - Raw file buffer
+ * @param {string} folder - Cloudinary folder path
+ * @param {object} options - Additional Cloudinary upload options
+ * @returns {Promise<string>} Cloudinary URL
+ */
+async function uploadBufferToCloudinary(buffer, folder = 'campus-navigator/uploads', options = {}) {
+    try {
+        return await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+                {
+                    folder,
+                    resource_type: 'image',
+                    quality: 'auto',
+                    fetch_format: 'auto',
+                    ...options
+                },
+                (error, result) => {
+                    if (error) {
+                        reject(error);
+                        return;
+                    }
+                    resolve(result.secure_url);
+                }
+            );
+
+            uploadStream.end(buffer);
+        });
+    } catch (error) {
+        console.error('Buffer upload error:', error);
+        throw new Error(`Failed to upload image buffer: ${error.message}`);
+    }
+}
+
+/**
  * Upload QR code to Cloudinary
  * @param {Buffer} buffer - QR code image buffer
  * @param {string} filename - Filename for the QR code
@@ -249,6 +284,7 @@ module.exports = {
     upload360,
     uploadCampusMap,
     uploadToCloudinary,
+    uploadBufferToCloudinary,
     uploadBase64ToCloudinary,
     uploadQRCode,
     deleteFromCloudinary,

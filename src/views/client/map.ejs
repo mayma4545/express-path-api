@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Event Map — EventFlow</title>
+  <meta name="description" content="Get directions and see the route to your event with EventFlow Maps." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: '#1DA1F2',
+            'brand-dark': '#0d8de0',
+            'brand-light': '#e8f5fe',
+          },
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] },
+        },
+      },
+    };
+  </script>
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #111827;
+    }
+
+    #map-container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100dvh;
+    }
+
+    @keyframes pulse-user {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 4px rgba(29, 161, 242, 0.4);
+      }
+
+      50% {
+        box-shadow: 0 0 0 10px rgba(29, 161, 242, 0.15);
+      }
+    }
+
+    .leaflet-control-zoom {
+      border: none !important;
+    }
+
+    .leaflet-control-zoom a {
+      background: rgba(255, 255, 255, 0.95) !important;
+      backdrop-filter: blur(8px) !important;
+      border: none !important;
+      border-radius: 12px !important;
+      margin-bottom: 4px !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+      color: #374151 !important;
+      font-weight: bold !important;
+    }
+
+    /* HUD glass panels */
+    .hud-panel {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-16px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .slide-down {
+      animation: slideDown .4s cubic-bezier(.4, 0, .2, 1) forwards;
+    }
+
+    .slide-up {
+      animation: slideUp .4s cubic-bezier(.4, 0, .2, 1) forwards;
+    }
+
+    /* Simulate button pulse when running */
+    .sim-running {
+      animation: pulse-bg 1s ease-in-out infinite;
+    }
+
+    @keyframes pulse-bg {
+
+      0%,
+      100% {
+        background: #1DA1F2;
+      }
+
+      50% {
+        background: #0d8de0;
+      }
+    }
+
+    /* Legend dot */
+    .dot-blue {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #1DA1F2;
+      flex-shrink: 0;
+    }
+
+    .dot-red {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ef4444;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ── Full-screen Map ─────────────────────────────── -->
+  <div id="map-container">
+    <div id="map" style="width:100%;height:100%;"></div>
+  </div>
+
+  <!-- ── Top HUD ─────────────────────────────────────── -->
+  <div class="slide-down fixed top-0 left-0 right-0 z-40 px-4 pt-5 pb-0 max-w-md mx-auto" style="max-width:448px;">
+    <div class="hud-panel px-4 py-3 flex items-center gap-3">
+      <!-- Back -->
+      <a href="/details"
+        class="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 active:scale-90 transition-all text-gray-700">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+          stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+      </a>
+      <!-- Title -->
+      <div class="flex-1 min-w-0">
+        <p class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Navigating to</p>
+        <p id="map-title" class="text-sm font-bold text-gray-900 truncate"></p>
+      </div>
+      <!-- Simulate -->
+      <button id="sim-btn" onclick="simulatePath()" title="Simulate pathfinding"
+        class="flex-shrink-0 bg-brand text-white rounded-full w-9 h-9 flex items-center justify-center active:scale-90 transition-all shadow-md shadow-brand/40">
+        <svg id="sim-icon" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+          stroke="currentColor" stroke-width="2">
+          <polygon points="5 3 19 12 5 21 5 3" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Bottom HUD ──────────────────────────────────── -->
+  <div class="slide-up fixed bottom-0 left-0 right-0 z-40 px-4 pb-6 max-w-md mx-auto" style="max-width:448px;">
+    <!-- Stats row -->
+    <div class="hud-panel px-5 py-4 mb-3">
+      <div class="flex items-center justify-around">
+        <div class="text-center">
+          <p id="map-dist" class="text-2xl font-extrabold text-gray-900">—</p>
+          <p class="text-xs text-gray-400 font-medium mt-0.5">Distance</p>
+        </div>
+        <div class="w-px h-10 bg-gray-200"></div>
+        <div class="text-center">
+          <p id="map-eta-walk" class="text-2xl font-extrabold text-brand">—</p>
+          <p class="text-xs text-gray-400 font-medium mt-0.5">Walk ETA</p>
+        </div>
+        <div class="w-px h-10 bg-gray-200"></div>
+        <div class="text-center">
+          <p id="map-eta-drive" class="text-2xl font-extrabold text-green-500">—</p>
+          <p class="text-xs text-gray-400 font-medium mt-0.5">Drive ETA</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Legend + venue row -->
+    <div class="hud-panel px-5 py-3 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-1.5">
+          <div class="dot-blue"></div>
+          <span class="text-xs text-gray-500 font-medium">You</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <div class="dot-red"></div>
+          <span class="text-xs text-gray-500 font-medium">Event</span>
+        </div>
+      </div>
+      <p id="map-venue" class="text-xs text-gray-400 font-medium truncate text-right"></p>
+    </div>
+  </div>
+
+  <!-- ── Sim status toast ────────────────────────────── -->
+  <div id="sim-toast"
+    class="hidden fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-xl max-w-[200px] text-center">
+    🛰 Simulating path…
+  </div>
+
+  <script src="/static/js/events-data.js"></script>
+  <script>
+    const eventId = parseInt(sessionStorage.getItem('currentEventId'), 10);
+    const ev = EVENTS.find(e => e.id === eventId);
+
+    if (!ev) {
+      window.location.href = '/home';
+    }
+
+    document.getElementById('map-title').textContent = ev ? ev.name : '';
+    document.getElementById('map-venue').textContent = ev ? ev.venue : '';
+    document.title = `${ev ? ev.name : 'Event'} Map — EventFlow`;
+
+    /* ── Haversine distance (km) ── */
+    function haversine(lat1, lng1, lat2, lng2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function fmtEta(minutes) {
+      if (minutes < 60) return `${minutes}m`;
+      return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+    }
+
+    /* ── Build Map ── */
+    const map = L.map('map', {
+      zoomControl: false,
+      attributionControl: false,
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+    }).addTo(map);
+
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    const UL = USER_LOCATION;
+    const EL = ev ? ev.coords : { lat: 14.5995, lng: 120.9842 };
+
+    /* ── User Marker ── */
+    const userIcon = L.divIcon({
+      className: '',
+      html: `<div style="
+      width:18px;height:18px;
+      background:#1DA1F2;
+      border:3px solid white;
+      border-radius:50%;
+      box-shadow:0 0 0 6px rgba(29,161,242,0.3);
+      animation:pulse-user 2s ease-in-out infinite;
+    "></div>`,
+      iconSize: [18, 18],
+      iconAnchor: [9, 9],
+    });
+
+    L.marker([UL.lat, UL.lng], { icon: userIcon })
+      .addTo(map)
+      .bindPopup('<b style="font-family:Inter,sans-serif">📍 Your Location</b>');
+
+    /* ── Event Marker ── */
+    const evIcon = L.divIcon({
+      className: '',
+      html: `<div style="display:flex;flex-direction:column;align-items:center;gap:0;">
+      <div style="
+        width:28px;height:28px;
+        background:#ef4444;
+        border:3px solid white;
+        border-radius:50% 50% 50% 0;
+        transform:rotate(-45deg);
+        box-shadow:0 6px 16px rgba(239,68,68,0.5);
+      "></div>
+      <div style="width:4px;height:8px;background:#ef4444;border-radius:2px;margin-top:-2px;"></div>
+    </div>`,
+      iconSize: [28, 38],
+      iconAnchor: [14, 38],
+    });
+
+    L.marker([EL.lat, EL.lng], { icon: evIcon })
+      .addTo(map)
+      .bindPopup(`<b style="font-family:Inter,sans-serif">🎟 ${ev ? ev.name : 'Event'}</b>`);
+
+    /* ── Route Polyline ── */
+    let routeLine = L.polyline([[UL.lat, UL.lng], [EL.lat, EL.lng]], {
+      color: '#1DA1F2',
+      weight: 4,
+      opacity: 0.85,
+      dashArray: '12 8',
+    }).addTo(map);
+
+    /* ── Fit bounds ── */
+    map.fitBounds([[UL.lat, UL.lng], [EL.lat, EL.lng]], { padding: [80, 60] });
+
+    /* ── Stats ── */
+    const dist = haversine(UL.lat, UL.lng, EL.lat, EL.lng);
+    const distTxt = dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`;
+    const walkMin = Math.round(dist / 5 * 60);
+    const driveMin = Math.round(dist / 40 * 60);
+
+    document.getElementById('map-dist').textContent = distTxt;
+    document.getElementById('map-eta-walk').textContent = fmtEta(walkMin);
+    document.getElementById('map-eta-drive').textContent = fmtEta(driveMin);
+
+    /* ── Simulate Path ── */
+    let simRunning = false;
+    let simInterval = null;
+
+    function simulatePath() {
+      if (simRunning) return;
+      simRunning = true;
+
+      const btn = document.getElementById('sim-btn');
+      const toast = document.getElementById('sim-toast');
+      btn.classList.add('sim-running');
+      toast.classList.remove('hidden');
+
+      /* Remove current line */
+      map.removeLayer(routeLine);
+
+      /* Build curved bezier path */
+      const STEPS = 60;
+      const pts = [];
+      const midLat = (UL.lat + EL.lat) / 2 + (EL.lng - UL.lng) * 0.07;
+      const midLng = (UL.lng + EL.lng) / 2 - (EL.lat - UL.lat) * 0.07;
+
+      for (let i = 0; i <= STEPS; i++) {
+        const t = i / STEPS;
+        const lat = (1 - t) ** 2 * UL.lat + 2 * (1 - t) * t * midLat + t ** 2 * EL.lat;
+        const lng = (1 - t) ** 2 * UL.lng + 2 * (1 - t) * t * midLng + t ** 2 * EL.lng;
+        pts.push([lat, lng]);
+      }
+
+      /* Animated draw, segment by segment */
+      routeLine = L.polyline([], {
+        color: '#F59E0B',
+        weight: 5,
+        opacity: 1,
+      }).addTo(map);
+
+      /* Dot that moves along path */
+      const dotIcon = L.divIcon({
+        className: '',
+        html: `<div style="width:10px;height:10px;background:#F59E0B;border:2px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.4);"></div>`,
+        iconSize: [10, 10],
+        iconAnchor: [5, 5],
+      });
+      const dot = L.marker([pts[0][0], pts[0][1]], { icon: dotIcon }).addTo(map);
+
+      let step = 0;
+      const drawn = [];
+
+      simInterval = setInterval(() => {
+        if (step >= pts.length) {
+          clearInterval(simInterval);
+          dot.remove();
+          map.removeLayer(routeLine);
+          routeLine = L.polyline(pts, {
+            color: '#1DA1F2',
+            weight: 4,
+            opacity: 0.85,
+            dashArray: '12 8',
+          }).addTo(map);
+          btn.classList.remove('sim-running');
+          toast.classList.add('hidden');
+          simRunning = false;
+          return;
+        }
+        drawn.push(pts[step]);
+        routeLine.setLatLngs(drawn);
+        dot.setLatLng(pts[step]);
+        step++;
+      }, 28);
+    }
+  </script>
+</body>
+
+</html>

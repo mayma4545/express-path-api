@@ -1,0 +1,622 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title><%= event.title || event.name %> — Organizer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: { 
+        extend: { 
+          colors: { 
+            brand: { light: '#e8f5fd', DEFAULT: '#1DA1F2', dark: '#1a8fd8' },
+            bgWhite: '#FFFFFF',
+            bgLight: '#f4f8fd',
+            textMain: '#0f172a',
+            textMuted: '#64748b'
+          }, 
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          boxShadow: {
+            'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+            'float': '0 8px 16px -4px rgba(29, 161, 242, 0.3)',
+          }
+        } 
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f4f8fd; -webkit-tap-highlight-color: transparent; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-up { animation: fadeUp .4s ease forwards; }
+    .tab-btn { transition: all .2s; }
+    .tab-btn.active { color: #1DA1F2; border-bottom: 2px solid #1DA1F2; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+  </style>
+</head>
+<body class="text-textMain pb-24 md:pb-0 md:pl-20 overflow-x-hidden">
+
+  <!-- Desktop Sidebar -->
+  <aside class="hidden md:flex flex-col w-20 bg-white fixed top-0 bottom-0 left-0 border-r border-gray-100 z-40 items-center py-8 justify-between shadow-soft">
+    <div class="flex flex-col gap-8 items-center">
+      <div class="w-10 h-10 rounded-xl bg-brand font-bold text-white flex items-center justify-center text-xl shadow-float">O</div>
+      <nav class="flex flex-col gap-6">
+        <a href="/organizer/dashboard" class="p-3 rounded-xl text-textMuted hover:bg-gray-50" title="Dashboard">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path></svg>
+        </a>
+        <a href="/organizer/events" class="p-3 rounded-xl bg-brand-light text-brand" title="My Events">
+          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+        </a>
+      </nav>
+    </div>
+    <form action="/organizer/logout" method="POST" class="m-0 p-0">
+      <button type="submit" class="p-3 rounded-xl text-red-500 hover:bg-red-50 cursor-pointer" title="Logout">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+      </button>
+    </form>
+  </aside>
+
+  <!-- Mobile Bottom Tab Pane -->
+  <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white px-6 py-4 flex justify-between items-center rounded-t-3xl shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] z-40">
+    <a href="/organizer/dashboard" class="flex flex-col items-center gap-1 text-textMuted hover:text-textMain transition">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path></svg>
+    </a>
+    <a href="/organizer/events" class="flex flex-col items-center gap-1 text-brand relative">
+      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+      <span class="absolute -bottom-2 w-1 h-1 bg-brand rounded-full"></span>
+    </a>
+    <form action="/organizer/logout" method="POST" class="m-0 p-0">
+      <button type="submit" class="flex flex-col items-center gap-1 text-red-500 hover:text-red-700 transition">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+      </button>
+    </form>
+  </div>
+
+  <main class="max-w-4xl mx-auto md:p-8">
+    <!-- Breadcrumbs / Back button -->
+    <div class="px-5 py-4 md:px-0 md:py-0 md:mb-8 flex justify-between items-center bg-white/80 backdrop-blur-md md:bg-transparent sticky top-0 md:static z-30 md:z-auto">
+      <a href="/organizer/events" class="flex items-center gap-2 text-textMuted hover:text-brand font-bold text-sm transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        Events
+      </a>
+      <a href="/v1/events/<%= event.id %>/edit" class="flex items-center gap-1.5 bg-brand text-white px-5 py-2.5 rounded-full text-sm font-bold shadow-soft hover:shadow-float hover:bg-brand-dark transition-all">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.5m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+        Edit
+      </a>
+    </div>
+
+    <div class="bg-white md:rounded-[2rem] shadow-soft overflow-hidden mb-[8rem] md:mb-12">
+      <!-- Hero Image -->
+      <div class="relative h-72 md:h-96 w-full group">
+        <% if (event.image_url) { %>
+            <img src="<%= event.image_url %>" alt="Event Image" class="w-full h-full object-cover">
+        <% } else { %>
+            <div class="w-full h-full bg-gradient-to-tr from-gray-50 to-gray-200 flex flex-col items-center justify-center gap-3">
+                <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm text-gray-300">
+                  <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </div>
+                <span class="text-gray-400 font-bold text-sm uppercase tracking-widest">No Cover Photo</span>
+            </div>
+        <% } %>
+        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+        <div class="absolute bottom-0 left-0 right-0 p-6 md:p-10 flex flex-col justify-end">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="text-xs font-bold uppercase tracking-widest text-white bg-brand/90 backdrop-blur-sm px-4 py-1.5 rounded-full"><%= event.category ? event.category.name : "Event Category" %></span>
+            <span class="text-xs font-bold uppercase text-white <%= event.is_ongoing ? 'bg-green-500/90' : 'bg-gray-500/90' %> backdrop-blur-sm px-4 py-1.5 rounded-full"><%= event.is_ongoing ? "Ongoing" : "Scheduled" %></span>
+          </div>
+          <h1 class="text-3xl md:text-5xl font-extrabold text-white leading-tight drop-shadow-lg"><%= event.title || event.name %></h1>
+        </div>
+      </div>
+
+      <div class="p-6 md:p-10">
+        <!-- Meta Info (Floating Badges) -->
+        <div class="flex flex-wrap gap-3 mb-10">
+          <div class="flex items-center gap-2.5 bg-brand-light/50 text-brand-dark px-5 py-2.5 rounded-2xl">
+            <svg class="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="font-bold text-sm"><%= event.event_date %></span>
+          </div>
+          <div class="flex items-center gap-2.5 bg-gray-50 text-gray-700 px-5 py-2.5 rounded-2xl">
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2" stroke-linecap="round"/><path d="M12 6v6l4 2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="font-bold text-sm"><%= event.start_time %> – <%= event.end_time || "Late" %></span>
+          </div>
+          <div class="flex items-center gap-2.5 bg-green-50 text-green-700 px-5 py-2.5 rounded-2xl">
+            <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="10" r="3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="font-bold text-sm"><%= event.venue %></span>
+          </div>
+        </div>
+
+        <!-- Custom Tabs -->
+        <div class="border-b border-gray-100/50 flex gap-6 overflow-x-auto no-scrollbar mb-8">
+          <button id="tab-about" class="tab-btn active pb-3 text-sm font-bold text-gray-400 border-b-2 border-transparent px-2 whitespace-nowrap hover:text-brand transition" onclick="switchTab('about')">About</button>
+          <button id="tab-gallery" class="tab-btn pb-3 text-sm font-bold text-gray-400 border-b-2 border-transparent px-2 whitespace-nowrap hover:text-brand transition" onclick="switchTab('gallery')">Gallery</button>
+          <button id="tab-attendees" class="tab-btn pb-3 text-sm font-bold text-gray-400 border-b-2 border-transparent px-2 whitespace-nowrap hover:text-brand transition" onclick="switchTab('attendees')">Attendees</button>
+          <button id="tab-analytics" class="tab-btn pb-3 text-sm font-bold text-gray-400 border-b-2 border-transparent px-2 whitespace-nowrap hover:text-brand transition" onclick="switchTab('analytics')">Analytics</button>
+        </div>
+
+        <!-- About Tab -->
+        <div id="tab-about-content" class="tab-content active fade-up">
+          <div class="bg-gray-50/50 rounded-[2rem] p-6 md:p-8 text-textMuted text-[15px] leading-relaxed whitespace-pre-line mb-10 shadow-inner">
+            <%= event.description || "No description provided." %>
+          </div>
+
+          <!-- Discussions -->
+          <h3 class="text-lg font-bold text-textMain mb-5">Discussion (1)</h3>
+          <div class="space-y-4">
+            <div class="flex gap-4 p-5 bg-white rounded-[2rem] shadow-soft border border-gray-50">
+              <div class="w-12 h-12 rounded-full bg-brand-light text-brand flex items-center justify-center font-bold shrink-0">JD</div>
+              <div class="flex-1">
+                <div class="flex items-center justify-between mb-1.5">
+                  <span class="font-bold text-textMain">John Doe</span>
+                  <span class="text-xs text-textMuted font-semibold">2h ago</span>
+                </div>
+                <p class="text-sm text-textMuted leading-relaxed">This event looks amazing! Can't wait to be there. Will there be food stalls?</p>
+                <div class="mt-4">
+                  <button class="text-xs font-bold text-brand hover:text-brand-dark transition-all flex items-center gap-1" onclick="this.nextElementSibling.classList.toggle('hidden')">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
+                    Reply
+                  </button>
+                  <div class="hidden mt-3 flex gap-3">
+                    <input type="text" placeholder="Type your reply as Organizer..." class="flex-1 bg-gray-50 border-0 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 transition shadow-inner">
+                    <button class="bg-brand text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-brand/30 hover:scale-95 transition-all">Send</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gallery Tab -->
+        <div id="tab-gallery-content" class="tab-content fade-up hidden">
+          <div class="mb-6 flex justify-between items-center text-textMain">
+            <h3 class="text-lg font-bold">Event Photos</h3>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div class="aspect-square rounded-[2rem] overflow-hidden relative group bg-gray-50 shadow-soft">
+              <img src="<%= event.image_url || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=800" %>" class="w-full h-full object-cover">
+            </div>
+            <!-- Empty placeholder for Add Photo -->
+            <button class="aspect-square rounded-[2rem] border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400 hover:border-brand hover:text-brand hover:bg-brand-light/20 transition-all bg-gray-50/50">
+              <svg class="w-10 h-10 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+              <span class="text-sm font-bold tracking-wide">Upload Photo</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Attendees Tab -->
+        <div id="tab-attendees-content" class="tab-content fade-up hidden">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-bold text-textMain">RSVPs & Attendees</h3>
+            <button class="text-brand font-bold text-sm bg-brand-light px-5 py-2.5 rounded-xl hover:bg-brand hover:text-white transition-all shadow-sm">Export CSV</button>
+          </div>
+          <!-- Attendee List via JS -->
+          <div id="attendees-list-container"></div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div id="tab-analytics-content" class="tab-content fade-up">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-bold text-textMain">Performance & Engagement</h3>
+          </div>
+          <div id="analytics-list-container">
+              <!-- Dynamically loaded -->
+              <div class="text-center text-gray-500 py-6 text-sm">Loading analytics...</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Sticky CTA (Organizer Mode) -->
+  <div class="fixed bottom-[4.5rem] md:bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] md:w-full md:max-w-md bg-white/95 backdrop-blur-md rounded-3xl shadow-float px-4 py-3 flex gap-3 z-30 mb-safe border border-gray-100">
+    <a href="/v1/events/<%= event.id %>/edit"
+      class="flex-1 flex items-center justify-center gap-2 border-2 border-brand text-brand font-bold py-3 rounded-2xl hover:scale-95 transition-all text-sm bg-brand-light/30">
+      Edit
+    </a>
+    
+    <!-- Broadcast Button -->
+    <button type="button" onclick="toggleBroadcastModal()" class="flex-1 flex items-center justify-center gap-2 bg-blue-500 text-white font-bold py-3 rounded-2xl hover:scale-95 transition-all text-sm shadow-md shadow-blue-500/30">
+        Broadcast
+    </button>
+    
+    <form action="/v1/events/<%= event.id %>?_method=DELETE" method="POST" class="flex-1 flex" onsubmit="return confirm('Are you sure you want to delete this event?');">
+        <button type="submit" class="w-full bg-red-500 text-white font-bold py-3 rounded-2xl hover:scale-95 transition-all shadow-md shadow-red-500/30 text-sm flex items-center justify-center gap-2">
+            Delete
+        </button>
+    </form>
+  </div>
+
+  <!-- Broadcast Modal -->
+  <div id="broadcastModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl w-full max-w-sm max-h-[90vh] overflow-y-auto p-6 shadow-2xl relative">
+        <button onclick="toggleBroadcastModal()" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+        <h3 class="font-bold text-xl mb-1 text-gray-900 pr-8">Email Broadcast</h3>
+        <p class="text-sm text-gray-500 mb-6">Send an announcement to all attendees.</p>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1.5">Subject Line</label>
+                <input type="text" id="bcSubject" class="w-full bg-gray-50 border-0 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 transition shadow-inner" placeholder="e.g. Venue Change">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1.5">Message</label>
+                <textarea id="bcMessage" rows="5" class="w-full bg-gray-50 border-0 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 transition shadow-inner resize-none" placeholder="Type your message here..."></textarea>
+            </div>
+        </div>
+        
+        <div class="mt-6 flex gap-3">
+            <button onclick="toggleBroadcastModal()" class="flex-1 py-3 rounded-xl bg-gray-100 font-bold text-gray-600 text-sm hover:bg-gray-200 transition">Cancel</button>
+            <button onclick="sendBroadcast('<%= event.id %>')" class="flex-[2] py-3 rounded-xl bg-brand text-white font-bold text-sm shadow-md shadow-brand/30 hover:scale-95 transition">Send Email</button>
+        </div>
+    </div>
+  </div>
+
+  <script>
+    function switchTab(name) {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active', 'text-brand', 'border-brand');
+        btn.classList.add('text-gray-500', 'border-transparent');
+      });
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+        content.classList.add('hidden'); // Also hide the generic ones just in case
+      });
+      
+      const activeBtn = document.getElementById(`tab-${name}`);
+      if(activeBtn) {
+        activeBtn.classList.remove('text-gray-500', 'border-transparent');
+        activeBtn.classList.add('active', 'text-brand', 'border-brand');
+      }
+      
+      const activeContent = document.getElementById(`tab-${name}-content`);
+      if(activeContent) {
+        activeContent.classList.add('active');
+        activeContent.classList.remove('hidden');
+      }
+
+      if (name === 'attendees') fetchAttendees('<%= event.id %>');
+      if (name === 'analytics') fetchAnalytics('<%= event.id %>');
+    }
+
+    // Initialize the default active tab
+    switchTab('about');
+    
+    function toggleBroadcastModal() {
+      document.getElementById('broadcastModal').classList.toggle('hidden');
+    }
+
+    async function sendBroadcast(eventId) {
+        const subject = document.getElementById('bcSubject').value.trim();
+        const message = document.getElementById('bcMessage').value.trim();
+        
+        if (!subject || !message) {
+            alert('Please fill out both subject and message.');
+            return;
+        }
+        
+        try {
+            const res = await fetch(`/organizer/events/${eventId}/broadcast`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ subject, message })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(data.message);
+                toggleBroadcastModal();
+                document.getElementById('bcSubject').value = '';
+                document.getElementById('bcMessage').value = '';
+            } else {
+                alert(data.error || data.message || 'Error sending broadcast');
+            }
+        } catch (error) {
+            alert('Network error while sending broadcast');
+        }
+    }
+
+    async function fetchAttendees(eventId) {
+        const container = document.getElementById('attendees-list-container');
+        if (!container) return;
+        container.innerHTML = '<div class="text-center text-gray-500 py-12 text-sm"><div class="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>Loading attendees...</div>';
+        
+        try {
+            const response = await fetch(`/organizer/events/${eventId}/attendees`);
+            const data = await response.json();
+            
+            if (data.attendees && data.attendees.length > 0) {
+                container.innerHTML = `
+                    <div class="mb-4 text-xs font-bold text-gray-400 uppercase tracking-wider pl-2">${data.attendees.length} Registered Guest(s)</div>
+                    <div class="space-y-3">
+                        ${data.attendees.map(a => `
+                            <div class="flex items-center justify-between bg-white p-4 rounded-2xl shadow-soft border border-gray-50">
+                                <div class="flex items-center gap-3">
+                                  <div class="w-10 h-10 rounded-full bg-brand-light text-brand flex items-center justify-center font-bold">
+                                    ${a.user ? a.user.first_name[0] : '?'}
+                                  </div>
+                                  <div>
+                                      <p class="font-bold text-sm text-textMain">${a.user ? a.user.first_name + ' ' + a.user.last_name : 'Guest User'}</p>
+                                      <p class="text-xs text-textMuted">${a.user ? a.user.email : 'No email provided'}</p>
+                                  </div>
+                                </div>
+                                <span class="${a.status === 'registered' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-600'} text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wide">
+                                    ${a.status}
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="text-center py-12 bg-white rounded-3xl shadow-soft">
+                        <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                          </svg>
+                        </div>
+                        <p class="text-base font-bold text-textMain">No attendees yet</p>
+                        <p class="text-sm text-textMuted mt-1">Users who RSVP will appear here.</p>
+                    </div>
+                `;
+            }
+        } catch (e) {
+            container.innerHTML = '<div class="text-center text-red-500 py-10 text-sm font-bold bg-red-50 rounded-2xl">Failed to load attendees.</div>';
+        }
+    }
+    
+    async function fetchAnalytics(eventId) {
+        const container = document.getElementById('analytics-list-container');
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div class="grid grid-cols-2 gap-4 mt-2">
+                <div class="bg-blue-50/50 rounded-3xl p-6 flex flex-col items-center justify-center shadow-sm">
+                    <div class="w-12 h-12 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mb-3">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" /></svg>
+                    </div>
+                    <h4 class="text-3xl font-extrabold text-blue-600 mb-1">0</h4>
+                    <p class="text-xs font-bold text-blue-400 uppercase tracking-widest">QR Scans</p>
+                </div>
+                <div class="bg-indigo-50/50 rounded-3xl p-6 flex flex-col items-center justify-center shadow-sm">
+                    <div class="w-12 h-12 bg-indigo-100 text-indigo-500 rounded-full flex items-center justify-center mb-3">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2z" /></svg>
+                    </div>
+                    <h4 class="text-3xl font-extrabold text-indigo-600 mb-1">0</h4>
+                    <p class="text-xs font-bold text-indigo-400 uppercase tracking-widest">360° Views</p>
+                </div>
+            </div>
+            <div class="mt-6 bg-brand-light/30 rounded-2xl p-5">
+              <p class="text-sm font-semibold text-brand flex items-center gap-3">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Detailed engagement analytics will appear here as users interact with your event nodes.
+              </p>
+            </div>
+        `;
+    }
+  </script>
+</body>
+</html>
+    </div>
+
+    <!-- Analytics -->
+    <div id="tab-analytics-content" class="tab-content hidden pb-24">
+      <div id="analytics-list-container">
+          <!-- Dynamically loaded -->
+          <div class="text-center text-gray-500 py-6 text-sm">Select 'Analytics' to load data</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Sticky CTA (Organizer Mode) ──────────────────────────────────── -->
+    <div class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-md border-t border-gray-100 px-5 py-4 flex gap-3 z-30" style="max-width:448px;">
+      <a href="/v1/events/<%= event.id %>/edit"
+        class="btn-ripple flex-1 flex items-center justify-center gap-2 border-2 border-brand text-brand font-bold py-3.5 rounded-2xl active:scale-95 transition-all text-sm bg-brand-light/30">
+        Edit Details
+      </a>
+      
+      <!-- Broadcast Button -->
+      <button onclick="toggleBroadcastModal()" class="flex-1 btn-ripple flex items-center justify-center gap-2 bg-blue-500 text-white font-bold py-3.5 rounded-2xl active:scale-95 transition-all text-sm shadow-lg shadow-blue-500/30">
+          Email Broadcast
+      </button>
+      
+      <form action="/v1/events/<%= event.id %>?_method=DELETE" method="POST" class="flex-1 flex" onsubmit="return confirm('Are you sure you want to delete this event?');">
+          <button type="submit" class="w-full btn-ripple bg-red-500 text-white font-bold py-3.5 rounded-2xl active:scale-95 transition-all shadow-lg shadow-red-500/30 text-sm flex items-center justify-center gap-2">
+              Delete
+          </button>
+      </form>
+    </div>
+  
+    <!-- Broadcast Modal -->
+    <div id="broadcastModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto p-5 shadow-2xl">
+          <h3 class="font-bold text-xl mb-1 text-gray-900">Broadcast Message</h3>
+          <p class="text-xs text-gray-500 mb-4">Send an email to all registered attendees.</p>
+          
+          <div class="space-y-4">
+              <div>
+                  <label class="block text-xs font-bold text-gray-700 mb-1">Subject</label>
+                  <input type="text" id="bcSubject" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" placeholder="e.g. Venue Change">
+              </div>
+              <div>
+                  <label class="block text-xs font-bold text-gray-700 mb-1">Message</label>
+                  <textarea id="bcMessage" rows="4" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" placeholder="Type your message here..."></textarea>
+              </div>
+          </div>
+          
+          <div class="mt-5 flex gap-3">
+              <button onclick="toggleBroadcastModal()" class="flex-1 py-2.5 rounded-xl border border-gray-200 font-semibold text-gray-600 text-sm">Cancel</button>
+              <button onclick="sendBroadcast('<%= event.id %>')" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white font-semibold text-sm shadow-md shadow-blue-500/30">Send Email</button>
+          </div>
+      </div>
+    </div>
+  
+    <script>
+      /* ── Tabs ── */
+      function switchTab(name) {
+        ["about", "gallery", "attendees", "analytics"].forEach(t => {
+          document.getElementById(`tab-${t}`).classList.toggle("active", t === name);
+          
+          const content = document.getElementById(`tab-${t}-content`);
+          if (content) {
+            content.classList.toggle("hidden", t !== name);
+            content.classList.toggle("active", t === name);
+          }
+  
+          if (t !== name) {
+            document.getElementById(`tab-${t}`).classList.remove("border-gray-900", "text-gray-900");
+            document.getElementById(`tab-${t}`).classList.add("text-gray-400", "border-transparent");
+          } else {
+            document.getElementById(`tab-${t}`).classList.remove("text-gray-400", "border-transparent");
+            document.getElementById(`tab-${t}`).classList.add("text-gray-900", "border-gray-900");
+          }
+        });
+  
+        if (name === 'attendees') fetchAttendees('<%= event.id %>');
+        if (name === 'analytics') fetchAnalytics('<%= event.id %>'); // Assuming analytics logic
+      }
+      
+      function toggleBroadcastModal() {
+        document.getElementById('broadcastModal').classList.toggle('hidden');
+      }
+  
+      async function sendBroadcast(eventId) {
+          const subject = document.getElementById('bcSubject').value.trim();
+          const message = document.getElementById('bcMessage').value.trim();
+          
+          if (!subject || !message) {
+              alert('Please fill out both subject and message.');
+              return;
+          }
+          
+          try {
+              const res = await fetch(`/organizer/events/${eventId}/broadcast`, {
+                  method: 'POST',
+                  headers: {'Content-Type': 'application/json'},
+                  body: JSON.stringify({ subject, message })
+              });
+              const data = await res.json();
+              if (data.success) {
+                  alert(data.message);
+                  toggleBroadcastModal();
+                  document.getElementById('bcSubject').value = '';
+                  document.getElementById('bcMessage').value = '';
+              } else {
+                  alert(data.error || data.message || 'Error sending broadcast');
+              }
+          } catch (error) {
+              alert('Network error while sending broadcast');
+          }
+      }
+  
+      async function fetchAttendees(eventId) {
+          const container = document.getElementById('attendees-list-container');
+          if (!container) return;
+          container.innerHTML = '<div class="text-center text-gray-500 py-6 text-sm">Loading attendees...</div>';
+          
+          try {
+              const response = await fetch(`/organizer/events/${eventId}/attendees`);
+              const data = await response.json();
+              
+              if (data.attendees && data.attendees.length > 0) {
+                  container.innerHTML = `
+                      <div class="mb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">${data.attendees.length} Registered User(s)</div>
+                      <div class="space-y-3">
+                          ${data.attendees.map(a => `
+                              <div class="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                  <div>
+                                      <p class="font-semibold text-sm text-gray-950">${a.user ? a.user.first_name + ' ' + a.user.last_name : 'Guest'}</p>
+                                      <p class="text-xs text-gray-500">${a.user ? a.user.email : 'No email'}</p>
+                                  </div>
+                                  <span class="badge ${a.status === 'registered' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700'} text-[10px] font-bold px-2 py-1 border rounded-md">
+                                      ${a.status.toUpperCase()}
+                                  </span>
+                              </div>
+                          `).join('')}
+                      </div>
+                  `;
+              } else {
+                  container.innerHTML = `
+                      <div class="text-center text-gray-500 py-10 bg-gray-50 rounded-2xl border border-dashed border-gray-200 mt-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 mx-auto text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                          </svg>
+                          <p class="text-sm font-semibold text-gray-600">No Attendees Yet</p>
+                          <p class="text-xs text-gray-400 mt-1">Users who RSVP will appear here</p>
+                      </div>
+                  `;
+              }
+          } catch (e) {
+              container.innerHTML = '<div class="text-center text-red-500 py-6 text-sm">Failed to load attendees.</div>';
+          }
+      }
+      
+      async function fetchAnalytics(eventId) {
+          const container = document.getElementById('analytics-list-container');
+          if (!container) return;
+          // Just styling a placeholder since there's no complex endpoint yet
+          container.innerHTML = `
+              <div class="grid grid-cols-2 gap-4 mt-2">
+                  <div class="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex flex-col items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-blue-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                      </svg>
+                      <h4 class="text-2xl font-extrabold text-blue-900">0</h4>
+                      <p class="text-xs font-semibold text-blue-600 uppercase tracking-widest mt-1">QR Scans</p>
+                  </div>
+                  <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex flex-col items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-indigo-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      <h4 class="text-2xl font-extrabold text-indigo-900">0</h4>
+                      <p class="text-xs font-semibold text-indigo-600 uppercase tracking-widest mt-1">360° Views</p>
+                  </div>
+              </div>
+          `;
+      }
+
+
+    /* ── Comments ── */
+    function showReplyInput(btn) {
+      const container = btn.closest(".flex-1");
+      const inputBox = container.querySelector(".reply-box");
+      if (inputBox) {
+        inputBox.classList.toggle("hidden");
+        if (!inputBox.classList.contains("hidden")) {
+          inputBox.querySelector("input").focus();
+        }
+      }
+    }
+    
+    function postReply(btn) {
+      const box = btn.closest(".reply-box");
+      const input = box.querySelector("input");
+      const text = input.value.trim();
+      if(!text) return;
+      
+      const newReplyHTML = `
+        <div class="mt-3 pl-4 border-l-2 border-brand space-y-4">
+           <div class="flex gap-2.5">
+             <div class="w-6 h-6 rounded-full bg-brand text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0 shadow-md">ORG</div>
+             <div class="flex-1">
+               <div class="flex items-center justify-between">
+                 <span class="text-xs font-bold text-gray-900">You (Organizer)</span>
+                 <span class="text-[10px] text-gray-400">Just now</span>
+               </div>
+               <p class="text-xs text-gray-600 mt-0.5">${text}</p>
+             </div>
+           </div>
+        </div>
+      `;
+      box.insertAdjacentHTML("beforebegin", newReplyHTML);
+      input.value = "";
+      box.classList.add("hidden");
+    }
+  </script>
+</body>
+</html>
+

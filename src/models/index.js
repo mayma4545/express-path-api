@@ -491,12 +491,32 @@ const NodeVisitAnalytics = sequelize.define('NodeVisitAnalytics', {
 
 // Event Model
 const Event = sequelize.define('Event', {
-    event_id: {
+    id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true
     },
-    event_name: {
+    title: {
+        type: DataTypes.STRING(255),
+        allowNull: false
+    },
+    category_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'categories',
+            key: 'id'
+        }
+    },
+    organizer_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'organizers',
+            key: 'id'
+        }
+    },
+    venue: {
         type: DataTypes.STRING(255),
         allowNull: false
     },
@@ -504,42 +524,273 @@ const Event = sequelize.define('Event', {
         type: DataTypes.TEXT,
         allowNull: true
     },
-    category: {
-        type: DataTypes.STRING(100),
-        allowNull: true,
-        validate: {
-            isIn: [['Academic', 'Social', 'Sports', 'Career', 'Workshop', 'Conference', 'Cultural', 'Other']]
-        }
+    event_date: {
+        type: DataTypes.DATEONLY,
+        allowNull: false
     },
-    node_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: 'nodes',
-            key: 'node_id'
-        }
+    start_time: {
+        type: DataTypes.TIME,
+        allowNull: false
     },
-    start_datetime: {
-        type: DataTypes.DATE,
+    end_time: {
+        type: DataTypes.TIME,
+        allowNull: false
+    },
+    latitude: {
+        type: DataTypes.DECIMAL(10, 8),
         allowNull: true
     },
-    end_datetime: {
-        type: DataTypes.DATE,
+    longitude: {
+        type: DataTypes.DECIMAL(11, 8),
         allowNull: true
     },
-    is_active: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true
+    image_url: {
+        type: DataTypes.STRING(500),
+        allowNull: true
     },
-    is_featured: {
+    is_ongoing: {
         type: DataTypes.BOOLEAN,
         defaultValue: false
+    },
+    status: {
+        type: DataTypes.ENUM('draft', 'published', 'cancelled', 'completed'),
+        defaultValue: 'published'
+    },
+    capacity: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
+    recurrence_type: {
+        type: DataTypes.ENUM('none', 'daily', 'weekly', 'monthly', 'yearly'),
+        defaultValue: 'none'
+    },
+    recurrence_end_date: {
+        type: DataTypes.DATEONLY,
+        allowNull: true
     }
 }, {
     tableName: 'events',
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at'
+});
+
+// Category Model
+const Category = sequelize.define('Category', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    name: {
+        type: DataTypes.STRING(100),
+        allowNull: false
+    },
+    color_hex: {
+        type: DataTypes.STRING(10),
+        allowNull: false
+    }
+}, {
+    tableName: 'categories',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: false
+});
+
+// AppUser Model (renamed from Users to avoid admin conflict)
+const AppUser = sequelize.define('AppUser', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    first_name: {
+        type: DataTypes.STRING(100),
+        allowNull: false
+    },
+    last_name: {
+        type: DataTypes.STRING(100),
+        allowNull: false
+    },
+    email: {
+        type: DataTypes.STRING(255),
+        unique: true,
+        allowNull: false
+    },
+    password_hash: {
+        type: DataTypes.STRING(255),
+        allowNull: false
+    },
+    avatar_url: {
+        type: DataTypes.STRING(500),
+        allowNull: true
+    }
+}, {
+    tableName: 'app_users',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
+});
+
+// Organizer Model
+const Organizer = sequelize.define('Organizer', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        unique: true,
+        references: {
+            model: 'app_users',
+            key: 'id'
+        }
+    },
+    name: {
+        type: DataTypes.STRING(255),
+        allowNull: false
+    },
+    avatar_url: {
+        type: DataTypes.STRING(500),
+        allowNull: true
+    },
+    description: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    average_rating: {
+        type: DataTypes.DECIMAL(3, 2),
+        defaultValue: 0.00
+    }
+}, {
+    tableName: 'organizers',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: false
+});
+
+// Event Likes Model
+const EventLike = sequelize.define('EventLike', {
+    user_id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        references: {
+            model: 'app_users',
+            key: 'id'
+        }
+    },
+    event_id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        references: {
+            model: 'events',
+            key: 'id'
+        }
+    }
+}, {
+    tableName: 'event_likes',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: false
+});
+
+// Event Photos Model
+const EventPhoto = sequelize.define('EventPhoto', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    event_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'events',
+            key: 'id'
+        }
+    },
+    image_url: {
+        type: DataTypes.STRING(500),
+        allowNull: false
+    },
+    caption: {
+        type: DataTypes.STRING(255),
+        allowNull: true
+    }
+}, {
+    tableName: 'event_photos',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: false
+});
+
+// Comments Model
+const Comment = sequelize.define('Comment', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    event_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'events',
+            key: 'id'
+        }
+    },
+    user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'app_users',
+            key: 'id'
+        }
+    },
+    parent_comment_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'comments',
+            key: 'id'
+        }
+    },
+    content: {
+        type: DataTypes.TEXT,
+        allowNull: false
+    }
+}, {
+    tableName: 'comments',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
+});
+
+// Comment Reactions Model
+const CommentReaction = sequelize.define('CommentReaction', {
+    user_id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        references: {
+            model: 'app_users',
+            key: 'id'
+        }
+    },
+    comment_id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        references: {
+            model: 'comments',
+            key: 'id'
+        }
+    }
+}, {
+    tableName: 'comment_reactions',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: false
 });
 
 // Guest Survey Model
@@ -562,6 +813,74 @@ const Guest = sequelize.define('Guest', {
     timestamps: true
 });
 
+// Event Attendee / RSVP Model
+const EventAttendee = sequelize.define('EventAttendee', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    event_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'events',
+            key: 'id'
+        }
+    },
+    user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'app_users',
+            key: 'id'
+        }
+    },
+    status: {
+        type: DataTypes.ENUM('registered', 'attended', 'cancelled'),
+        defaultValue: 'registered'
+    },
+    check_in_time: {
+        type: DataTypes.DATE,
+        allowNull: true
+    }
+}, {
+    tableName: 'event_attendees',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
+});
+
+// Event Analytics Model
+const EventAnalytics = sequelize.define('EventAnalytics', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    event_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'events',
+            key: 'id'
+        }
+    },
+    scan_count: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+    },
+    view_count_360: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+    }
+}, {
+    tableName: 'event_analytics',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
+});
+
 // Define Associations with CASCADE delete
 Edges.belongsTo(Nodes, { foreignKey: 'from_node_id', as: 'from_node', onDelete: 'CASCADE' });
 Edges.belongsTo(Nodes, { foreignKey: 'to_node_id', as: 'to_node', onDelete: 'CASCADE' });
@@ -572,8 +891,9 @@ Annotation.belongsTo(Nodes, { foreignKey: 'panorama_id', as: 'panorama', onDelet
 Annotation.belongsTo(Nodes, { foreignKey: 'target_node_id', as: 'target_node', onDelete: 'SET NULL' });
 Nodes.hasMany(Annotation, { foreignKey: 'panorama_id', as: 'annotations', onDelete: 'CASCADE' });
 
-Event.belongsTo(Nodes, { foreignKey: 'node_id', as: 'location', onDelete: 'CASCADE' });
-Nodes.hasMany(Event, { foreignKey: 'node_id', as: 'events', onDelete: 'CASCADE' });
+// Event associations are disabled because node_id was removed from the new schema
+// Event.belongsTo(Nodes, { foreignKey: 'node_id', as: 'location', onDelete: 'CASCADE' });
+// Nodes.hasMany(Event, { foreignKey: 'node_id', as: 'events', onDelete: 'CASCADE' });
 
 User.hasOne(UserProfile, { foreignKey: 'user_id', as: 'profile', onDelete: 'CASCADE' });
 UserProfile.belongsTo(User, { foreignKey: 'user_id', as: 'user', onDelete: 'CASCADE' });
@@ -589,6 +909,43 @@ NodeVisitAnalytics.belongsTo(User, { foreignKey: 'user_id', as: 'visitor', onDel
 Nodes.hasMany(NodeVisitAnalytics, { foreignKey: 'node_id', as: 'visits', onDelete: 'CASCADE' });
 NodeVisitAnalytics.belongsTo(Nodes, { foreignKey: 'node_id', as: 'node', onDelete: 'CASCADE' });
 
+Event.belongsTo(Category, { foreignKey: 'category_id', as: 'category', onDelete: 'SET NULL' });
+Category.hasMany(Event, { foreignKey: 'category_id', as: 'events', onDelete: 'SET NULL' });
+
+Event.belongsTo(Organizer, { foreignKey: 'organizer_id', as: 'organizer', onDelete: 'CASCADE' });
+Organizer.hasMany(Event, { foreignKey: 'organizer_id', as: 'events', onDelete: 'CASCADE' });
+
+Organizer.belongsTo(AppUser, { foreignKey: 'user_id', as: 'account', onDelete: 'SET NULL' });
+AppUser.hasOne(Organizer, { foreignKey: 'user_id', as: 'organizer_profile', onDelete: 'SET NULL' });
+
+AppUser.belongsToMany(Event, { through: EventLike, foreignKey: 'user_id', as: 'liked_events' });
+Event.belongsToMany(AppUser, { through: EventLike, foreignKey: 'event_id', as: 'liked_by_users' });
+
+EventPhoto.belongsTo(Event, { foreignKey: 'event_id', as: 'event', onDelete: 'CASCADE' });
+Event.hasMany(EventPhoto, { foreignKey: 'event_id', as: 'photos', onDelete: 'CASCADE' });
+
+Comment.belongsTo(Event, { foreignKey: 'event_id', as: 'event', onDelete: 'CASCADE' });
+Event.hasMany(Comment, { foreignKey: 'event_id', as: 'comments', onDelete: 'CASCADE' });
+
+Comment.belongsTo(AppUser, { foreignKey: 'user_id', as: 'user', onDelete: 'CASCADE' });
+AppUser.hasMany(Comment, { foreignKey: 'user_id', as: 'comments', onDelete: 'CASCADE' });
+
+Comment.belongsTo(Comment, { foreignKey: 'parent_comment_id', as: 'parent_comment', onDelete: 'CASCADE' });
+Comment.hasMany(Comment, { foreignKey: 'parent_comment_id', as: 'replies', onDelete: 'CASCADE' });
+
+AppUser.belongsToMany(Comment, { through: CommentReaction, foreignKey: 'user_id', as: 'reacted_comments' });
+Comment.belongsToMany(AppUser, { through: CommentReaction, foreignKey: 'comment_id', as: 'reacted_by_users' });
+
+// EventAttendee Associations
+EventAttendee.belongsTo(Event, { foreignKey: 'event_id', as: 'event', onDelete: 'CASCADE' });
+Event.hasMany(EventAttendee, { foreignKey: 'event_id', as: 'attendees', onDelete: 'CASCADE' });
+EventAttendee.belongsTo(AppUser, { foreignKey: 'user_id', as: 'user', onDelete: 'CASCADE' });
+AppUser.hasMany(EventAttendee, { foreignKey: 'user_id', as: 'attended_events', onDelete: 'CASCADE' });
+
+// EventAnalytics Associations
+EventAnalytics.belongsTo(Event, { foreignKey: 'event_id', as: 'event', onDelete: 'CASCADE' });
+Event.hasOne(EventAnalytics, { foreignKey: 'event_id', as: 'analytics', onDelete: 'CASCADE' });
+
 module.exports = {
     sequelize,
     Sequelize,
@@ -602,5 +959,14 @@ module.exports = {
     UserActivity,
     NodeVisitAnalytics,
     Event,
+    EventAttendee,
+    EventAnalytics,
+    Category,
+    AppUser,
+    Organizer,
+    EventLike,
+    EventPhoto,
+    Comment,
+    CommentReaction,
     Guest
 };
