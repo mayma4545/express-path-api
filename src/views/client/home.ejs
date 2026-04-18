@@ -3,7 +3,6 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
   </head>
   <body>
     <style>
@@ -60,7 +59,6 @@
         display: none;
       }
 
-      /* ── Carousel ── */
       .carousel-wrap {
         position: relative;
         width: 100%;
@@ -91,6 +89,34 @@
         display: block;
         pointer-events: none;
       }
+
+      /* Views badge — top right, glassmorphism */
+      .c-views-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        background: rgba(255, 255, 255, 0.18);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 99px;
+        padding: 5px 10px;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        z-index: 5;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.4s;
+      }
+      .c-views-badge.visible {
+        opacity: 1;
+      }
+
       .c-overlay {
         position: absolute;
         inset: 0;
@@ -160,7 +186,7 @@
       .c-btn:hover {
         background: #e5e7eb;
       }
-      /* dots */
+
       .c-dots {
         display: flex;
         justify-content: center;
@@ -182,7 +208,6 @@
         width: 20px;
       }
 
-      /* Event cards */
       @keyframes fadeUp {
         from {
           opacity: 0;
@@ -254,7 +279,6 @@
         transform: scale(0.95);
       }
 
-      /* Ongoing */
       .ongoing-strip {
         display: flex;
         gap: 12px;
@@ -333,7 +357,6 @@
         cursor: pointer;
       }
 
-      /* skeleton */
       @keyframes pulse-bg {
         0%,
         100% {
@@ -381,22 +404,6 @@
         padding: 32px 16px;
         gap: 8px;
       }
-      .empty-state svg {
-        color: #d1d5db;
-      }
-      .empty-state p {
-        font-size: 13px;
-        font-weight: 700;
-        color: #464646;
-        margin: 0;
-      }
-      .empty-state span {
-        font-size: 11px;
-        color: #747474;
-        margin: 0;
-      }
-
-      /* Empty state for carousel */
       .carousel-empty {
         width: 78%;
         max-width: 320px;
@@ -408,22 +415,6 @@
         justify-content: center;
         gap: 8px;
       }
-      .carousel-empty svg {
-        color: #d1d5db;
-      }
-      .carousel-empty p {
-        font-size: 13px;
-        font-weight: 700;
-        color: #464646;
-        margin: 0;
-      }
-      .carousel-empty span {
-        font-size: 11px;
-        color: #747474;
-        margin: 0;
-      }
-
-      /* Empty state for ongoing strip */
       .ongoing-empty {
         width: 100%;
         border-radius: 18px;
@@ -433,20 +424,6 @@
         justify-content: center;
         gap: 6px;
         padding: 24px 0;
-      }
-      .ongoing-empty svg {
-        color: #d1d5db;
-      }
-      .ongoing-empty p {
-        font-size: 13px;
-        font-weight: 700;
-        color: #464646;
-        margin: 0;
-      }
-      .ongoing-empty span {
-        font-size: 11px;
-        color: #747474;
-        margin: 0;
       }
     </style>
 
@@ -542,16 +519,12 @@
       </header>
 
       <div class="ef-scroll">
-        <!-- HOT EVENTS CAROUSEL -->
         <section>
-          <div class="section-hd">
-            <h2>Hot Events</h2>
-          </div>
+          <div class="section-hd"><h2>Hot Events</h2></div>
           <div class="carousel-wrap" id="carousel-wrap"></div>
           <div class="c-dots" id="c-dots"></div>
         </section>
 
-        <!-- ONGOING -->
         <section style="margin-top: 16px">
           <div class="section-hd">
             <h2>Ongoing Events</h2>
@@ -589,7 +562,6 @@
           </div>
         </section>
 
-        <!-- CATEGORY CHIPS -->
         <section style="margin-top: 16px">
           <div class="section-hd">
             <h2>Upcoming Events</h2>
@@ -598,11 +570,9 @@
           <div class="chip-strip" id="chip-strip"></div>
         </section>
 
-        <!-- EVENT LIST -->
         <div style="padding: 0 16px; margin-top: 8px">
           <div
             id="skeleton-list"
-            class="space-y-4"
             style="display: flex; flex-direction: column; gap: 14px"
           >
             <div class="ev-card">
@@ -652,23 +622,124 @@
 
     <script>
       const HOT = [
-        { id:1, cat:'Music', name:'Neon Nights Festival', desc:'Experience the ultimate cyberpunk rave in the heart of the city with world-class DJs.', img:'https://images.unsplash.com/photo-1542204165-65bf26472b9b?auto=format&fit=crop&q=80&w=800', date:'Apr 25', going:3200 },
-        { id:2, cat:'Gaming', name:'Squid Game Xperience', desc:'Enter the arena — compete in iconic challenges, win big, and survive the night.', img:'https://images.unsplash.com/photo-1634195130430-2be61200b66a?auto=format&fit=crop&q=80&w=800', date:'May 1', going:8100 },
-        { id:3, cat:'Music', name:'Summer Festival 2026', desc:"The biggest outdoor music festival of the year is back. Don't miss a beat.", img:'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=800', date:'Jun 7', going:12500 },
-        { id:4, cat:'Tech', name:'AI Summit Manila', desc:'Leading minds in artificial intelligence converge for talks, demos & networking.', img:'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=80&w=800', date:'May 14', going:2700 },
+        {
+          id: 1,
+          cat: "Music",
+          name: "Neon Nights Festival",
+          desc: "Experience the ultimate cyberpunk rave in the heart of the city with world-class DJs.",
+          img: "https://images.unsplash.com/photo-1542204165-65bf26472b9b?auto=format&fit=crop&q=80&w=800",
+          date: "Apr 25",
+          going: 3200,
+          views: 18400,
+        },
+        {
+          id: 2,
+          cat: "Gaming",
+          name: "Squid Game Xperience",
+          desc: "Enter the arena — compete in iconic challenges, win big, and survive the night.",
+          img: "https://images.unsplash.com/photo-1634195130430-2be61200b66a?auto=format&fit=crop&q=80&w=800",
+          date: "May 1",
+          going: 8100,
+          views: 42300,
+        },
+        {
+          id: 3,
+          cat: "Music",
+          name: "Summer Festival 2026",
+          desc: "The biggest outdoor music festival of the year is back. Don't miss a beat.",
+          img: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=800",
+          date: "Jun 7",
+          going: 12500,
+          views: 61700,
+        },
+        {
+          id: 4,
+          cat: "Tech",
+          name: "AI Summit Manila",
+          desc: "Leading minds in artificial intelligence converge for talks, demos & networking.",
+          img: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=80&w=800",
+          date: "May 14",
+          going: 2700,
+          views: 9800,
+        },
       ];
 
       const UPCOMING = [
-        { id:10, cat:'Food', name:'Night Market Fiesta', venue:'BGC Central Park', date:'Apr 26', start:'5 PM', end:'11 PM', going:980, img:'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&q=80&w=800', liked:false },
-        { id:11, cat:'Sports', name:'Urban Dunk Championship', venue:'Mall of Asia Arena', date:'Apr 30', start:'2 PM', end:'9 PM', going:4400, img:'https://images.unsplash.com/photo-1546519638405-a9f61c8ad1a4?auto=format&fit=crop&q=80&w=800', liked:false },
-        { id:12, cat:'Art', name:'Canvas & Cocktails', venue:'The Collective, Makati', date:'May 3', start:'7 PM', end:'10 PM', going:310, img:'https://images.unsplash.com/photo-1536924940846-227afb31e2a5?auto=format&fit=crop&q=80&w=800', liked:false },
-        { id:13, cat:'Health', name:'Sunrise Yoga Flow', venue:'Luneta Park', date:'May 5', start:'6 AM', end:'8 AM', going:780, img:'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=800', liked:false },
+        {
+          id: 10,
+          cat: "Food",
+          name: "Night Market Fiesta",
+          venue: "BGC Central Park",
+          date: "Apr 26",
+          start: "5 PM",
+          end: "11 PM",
+          going: 980,
+          img: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&q=80&w=800",
+          liked: false,
+        },
+        {
+          id: 11,
+          cat: "Sports",
+          name: "Urban Dunk Championship",
+          venue: "Mall of Asia Arena",
+          date: "Apr 30",
+          start: "2 PM",
+          end: "9 PM",
+          going: 4400,
+          img: "https://images.unsplash.com/photo-1546519638405-a9f61c8ad1a4?auto=format&fit=crop&q=80&w=800",
+          liked: false,
+        },
+        {
+          id: 12,
+          cat: "Art",
+          name: "Canvas & Cocktails",
+          venue: "The Collective, Makati",
+          date: "May 3",
+          start: "7 PM",
+          end: "10 PM",
+          going: 310,
+          img: "https://images.unsplash.com/photo-1536924940846-227afb31e2a5?auto=format&fit=crop&q=80&w=800",
+          liked: false,
+        },
+        {
+          id: 13,
+          cat: "Health",
+          name: "Sunrise Yoga Flow",
+          venue: "Luneta Park",
+          date: "May 5",
+          start: "6 AM",
+          end: "8 AM",
+          going: 780,
+          img: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=800",
+          liked: false,
+        },
       ];
 
       const ONGOING = [
-        { id:20, name:'Jazz in the Park', venue:'Rizal Park Amphitheater', timeLeft:'2 hrs left', attendance:540, img:'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?auto=format&fit=crop&q=80&w=600' },
-        { id:21, name:'Street Art Walk', venue:'Escolta, Binondo', timeLeft:'4 hrs left', attendance:1200, img:'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&q=80&w=600' },
-        { id:22, name:'Food Truck Rally', venue:'Circuit Makati', timeLeft:'1 hr left', attendance:2300, img:'https://images.unsplash.com/photo-1567521464027-f127ff144326?auto=format&fit=crop&q=80&w=600' },
+        {
+          id: 20,
+          name: "Jazz in the Park",
+          venue: "Rizal Park Amphitheater",
+          timeLeft: "2 hrs left",
+          attendance: 540,
+          img: "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?auto=format&fit=crop&q=80&w=600",
+        },
+        {
+          id: 21,
+          name: "Street Art Walk",
+          venue: "Escolta, Binondo",
+          timeLeft: "4 hrs left",
+          attendance: 1200,
+          img: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&q=80&w=600",
+        },
+        {
+          id: 22,
+          name: "Food Truck Rally",
+          venue: "Circuit Makati",
+          timeLeft: "1 hr left",
+          attendance: 2300,
+          img: "https://images.unsplash.com/photo-1567521464027-f127ff144326?auto=format&fit=crop&q=80&w=600",
+        },
       ];
 
       const CATS = [
@@ -691,65 +762,40 @@
           : String(n);
       }
 
-      /* ── Empty state HTML helpers ── */
-      function carouselEmptyHTML() {
-        return `<div class="carousel-empty">
-    <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="3"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01"/></svg>
-    <p>No Events for now</p>
-    <span>Check back soon for hot events!</span>
-  </div>`;
-      }
-
-      function ongoingEmptyHTML() {
-        return `<div class="ongoing-empty">
-    <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-    <p>No Events for now</p>
-    <span>Nothing happening at the moment</span>
-  </div>`;
-      }
-
-      function upcomingEmptyHTML() {
-        return `<div class="empty-state">
-    <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.3" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="3"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>
-    <p>No Events for now</p>
-    <span>No upcoming events in this category</span>
-  </div>`;
-      }
-
-      /* ── Carousel ── */
       function buildCarousel() {
         const wrap = document.getElementById("carousel-wrap");
         const dots = document.getElementById("c-dots");
         wrap.innerHTML = "";
         dots.innerHTML = "";
 
-        if (HOT.length === 0) {
-          wrap.innerHTML = carouselEmptyHTML();
-          return;
-        }
-
         HOT.forEach((ev, i) => {
           const el = document.createElement("div");
           el.className = "c-item";
           el.dataset.i = i;
           el.innerHTML = `
-      <img src="${ev.img}" alt="${ev.name}" loading="lazy"/>
-      <div class="c-overlay hidden-overlay" id="cov-${i}">
-        <span class="c-cat">${ev.cat}</span>
-        <p class="c-title">${ev.name}</p>
-        <p class="c-desc">${ev.desc}</p>
-        <button class="c-btn" onclick="event.stopPropagation()">
-          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          View Details
-        </button>
-      </div>`;
+            <img src="${ev.img}" alt="${ev.name}" loading="lazy"/>
+            <div class="c-views-badge" id="vbadge-${i}">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              ${fmt(ev.views)}
+            </div>
+            <div class="c-overlay hidden-overlay" id="cov-${i}">
+              <span class="c-cat">${ev.cat}</span>
+              <p class="c-title">${ev.name}</p>
+              <p class="c-desc">${ev.desc}</p>
+            </div>`;
           el.addEventListener("click", () => {
-            if (parseInt(el.dataset.i) !== activeIdx) {
-              activeIdx = i;
+            const clickedIdx = parseInt(el.dataset.i);
+
+            if (clickedIdx !== activeIdx) {
+              activeIdx = clickedIdx; // side card → navigate only
+
               updateCarousel();
+            } else {
+              console.log("event id:", HOT[activeIdx].id); // active card → log id
             }
           });
           wrap.appendChild(el);
+
           const d = document.createElement("button");
           d.className = "c-dot";
           d.onclick = () => {
@@ -758,6 +804,7 @@
           };
           dots.appendChild(d);
         });
+
         updateCarousel();
         if (carouselInterval) clearInterval(carouselInterval);
         carouselInterval = setInterval(() => {
@@ -772,6 +819,7 @@
         const n = items.length;
         items.forEach((el, i) => {
           const ov = el.querySelector(".c-overlay");
+          const badge = el.querySelector(".c-views-badge");
           let tx = 0,
             sc = 1,
             op = 1,
@@ -782,24 +830,28 @@
             op = 1;
             zi = 20;
             ov.classList.remove("hidden-overlay");
+            badge.classList.add("visible");
           } else if (i === (activeIdx - 1 + n) % n) {
             tx = -58;
             sc = 0.78;
             op = 0.55;
             zi = 10;
             ov.classList.add("hidden-overlay");
+            badge.classList.remove("visible");
           } else if (i === (activeIdx + 1) % n) {
             tx = 58;
             sc = 0.78;
             op = 0.55;
             zi = 10;
             ov.classList.add("hidden-overlay");
+            badge.classList.remove("visible");
           } else {
             tx = 0;
             sc = 0.55;
             op = 0;
             zi = 0;
             ov.classList.add("hidden-overlay");
+            badge.classList.remove("visible");
           }
           el.style.cssText = `transform:translateX(${tx}%) scale(${sc});opacity:${op};z-index:${zi};`;
         });
@@ -808,7 +860,6 @@
         });
       }
 
-      /* ── Chips ── */
       function buildChips() {
         const strip = document.getElementById("chip-strip");
         strip.innerHTML = "";
@@ -825,7 +876,6 @@
         });
       }
 
-      /* ── Upcoming ── */
       function renderUpcoming() {
         const list = document.getElementById("event-list");
         const evs = UPCOMING.filter(
@@ -834,34 +884,15 @@
         document.getElementById("ev-count").textContent =
           evs.length + " event" + (evs.length !== 1 ? "s" : "");
         list.innerHTML = "";
-
         if (evs.length === 0) {
-          list.innerHTML = upcomingEmptyHTML();
+          list.innerHTML = `<div class="empty-state"><svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.3" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="3"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><p style="font-size:13px;font-weight:700;color:#464646;margin:0;">No Events for now</p><span style="font-size:11px;color:#747474;">No upcoming events in this category</span></div>`;
           return;
         }
-
         evs.forEach((ev, i) => {
           const d = document.createElement("div");
           d.className = "ev-card";
           d.style.animationDelay = i * 60 + "ms";
-          d.innerHTML = `
-      <div style="position:relative;">
-        <img src="${ev.img}" alt="${ev.name}" loading="lazy"/>
-        <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.5),transparent);"></div>
-        <span style="position:absolute;top:10px;left:10px;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;background:rgba(255,255,255,.2);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.3);color:#fff;padding:3px 9px;border-radius:99px;">${ev.cat}</span>
-        <button onclick="toggleHeart(${ev.id})" style="position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;cursor:pointer;">
-          <svg width="13" height="13" fill="${ev.liked ? "#ef4444" : "none"}" stroke="${ev.liked ? "#ef4444" : "white"}" stroke-width="2" viewBox="0 0 24 24"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
-        </button>
-      </div>
-      <div class="ev-body">
-        <p class="ev-title">${ev.name}</p>
-        <p class="ev-meta"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>${ev.venue}</p>
-        <p class="ev-meta" style="margin-top:2px;"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${ev.date} · ${ev.start}–${ev.end}</p>
-        <div class="ev-row">
-          <div class="ev-going"><svg width="12" height="12" fill="#f87171" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg><strong>${fmt(ev.going)}</strong> going</div>
-          <button class="view-btn">View Details</button>
-        </div>
-      </div>`;
+          d.innerHTML = `<div style="position:relative;"><img src="${ev.img}" alt="${ev.name}" loading="lazy"/><div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.5),transparent);"></div><span style="position:absolute;top:10px;left:10px;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;background:rgba(255,255,255,.2);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.3);color:#fff;padding:3px 9px;border-radius:99px;">${ev.cat}</span><button onclick="toggleHeart(${ev.id})" style="position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="13" height="13" fill="${ev.liked ? "#ef4444" : "none"}" stroke="${ev.liked ? "#ef4444" : "white"}" stroke-width="2" viewBox="0 0 24 24"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg></button></div><div class="ev-body"><p class="ev-title">${ev.name}</p><p class="ev-meta"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>${ev.venue}</p><p class="ev-meta" style="margin-top:2px;"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${ev.date} · ${ev.start}–${ev.end}</p><div class="ev-row"><div class="ev-going"><svg width="12" height="12" fill="#f87171" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg><strong>${fmt(ev.going)}</strong> going</div><button class="view-btn">View Details</button></div></div>`;
           list.appendChild(d);
         });
       }
@@ -874,38 +905,17 @@
         renderUpcoming();
       }
 
-      /* ── Ongoing ── */
       function renderOngoing() {
         const strip = document.getElementById("ongoing-list");
         strip.innerHTML = "";
-
-        if (ONGOING.length === 0) {
-          strip.innerHTML = ongoingEmptyHTML();
-          return;
-        }
-
         ONGOING.forEach((ev) => {
           const c = document.createElement("div");
           c.className = "og-card";
-          c.innerHTML = `
-      <div class="og-img">
-        <img src="${ev.img}" alt="${ev.name}" loading="lazy"/>
-        <div class="og-img-overlay"></div>
-        <div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);color:#fff;font-size:9px;font-weight:600;padding:3px 7px;border-radius:99px;display:flex;align-items:center;gap:3px;">
-          <svg width="9" height="9" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="2"/></svg>${fmt(ev.attendance)}
-        </div>
-        <p class="og-name">${ev.name}</p>
-      </div>
-      <div class="og-body">
-        <div class="og-time"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${ev.timeLeft}</div>
-        <p class="og-venue">${ev.venue}</p>
-        <button class="og-btn">View Details</button>
-      </div>`;
+          c.innerHTML = `<div class="og-img"><img src="${ev.img}" alt="${ev.name}" loading="lazy"/><div class="og-img-overlay"></div><div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);color:#fff;font-size:9px;font-weight:600;padding:3px 7px;border-radius:99px;display:flex;align-items:center;gap:3px;"><svg width="9" height="9" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="2"/></svg>${fmt(ev.attendance)}</div><p class="og-name">${ev.name}</p></div><div class="og-body"><div class="og-time"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${ev.timeLeft}</div><p class="og-venue">${ev.venue}</p><button class="og-btn">View Details</button></div>`;
           strip.appendChild(c);
         });
       }
 
-      /* ── Boot ── */
       buildCarousel();
       buildChips();
       renderOngoing();
