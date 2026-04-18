@@ -789,7 +789,7 @@
             if (clickedIdx !== activeIdx) {
               activeIdx = clickedIdx; // side card → navigate only
 
-              updateCarousel();
+              resetCarouselTimer();
             } else {
               console.log("event id:", HOT[activeIdx].id); // active card → log id
             }
@@ -800,7 +800,7 @@
           d.className = "c-dot";
           d.onclick = () => {
             activeIdx = i;
-            updateCarousel();
+            resetCarouselTimer();
           };
           dots.appendChild(d);
         });
@@ -858,6 +858,18 @@
         dots.forEach((d, i) => {
           d.className = "c-dot" + (i === activeIdx ? " active" : "");
         });
+      }
+
+      function resetCarouselTimer() {
+        updateCarousel();
+
+        if (carouselInterval) clearInterval(carouselInterval);
+
+        carouselInterval = setInterval(() => {
+          activeIdx = (activeIdx + 1) % HOT.length;
+
+          updateCarousel();
+        }, 6000);
       }
 
       function buildChips() {
