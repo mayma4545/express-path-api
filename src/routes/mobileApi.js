@@ -331,6 +331,24 @@ router.post('/node-visit', async (req, res) => {
             visited_at: new Date()
         });
 
+        // Add Notification for an ongoing event at this node
+        try {
+            const { Event, OrganizerNotification } = require('../models');
+            const ongoingEvent = await Event.findOne({
+                where: { venue: node.name, is_ongoing: true }
+            });
+            if (ongoingEvent && ongoingEvent.organizer_id) {
+                await OrganizerNotification.create({
+                    organizer_id: ongoingEvent.organizer_id,
+                    event_id: ongoingEvent.id,
+                    type: 'visit',
+                    message: `A visitor just checked the map for your event venue "${ongoingEvent.venue}".`
+                });
+            }
+        } catch (notifError) {
+            console.error('Failed to create visit notification:', notifError);
+        }
+
         res.json({
             success: true,
             message: 'Node visit recorded'
@@ -2050,7 +2068,7 @@ router.put('/admin/events/:event_id/update', requireAuth, async (req, res) => {
         });
     } catch (error) {
         console.error('Update event error:', error);
-        if (error.message === 'Node not found') {
+        if (error.message === 'Node not found' || error.message === 'Event not found') {
             return res.status(404).json({ success: false, error: error.message });
         }
         if (error.message.includes('datetime')) {
@@ -2091,6 +2109,9 @@ router.delete('/admin/events/:event_id/delete', requireAuth, async (req, res) =>
         });
     } catch (error) {
         console.error('Delete event error:', error);
+        if (error.message === 'Event not found') {
+            return res.status(404).json({ success: false, error: error.message });
+        }
         res.status(500).json({ success: false, error: error.message });
     }
 });

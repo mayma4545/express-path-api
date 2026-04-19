@@ -5,6 +5,8 @@ const router = express.Router();
 const { Event, Category, Nodes, AppUser, Organizer, sequelize } = require('../../models');
 const { uploadBufferToCloudinary, imageFilter } = require('../../services/cloudinary');
 
+const { Op } = require('sequelize');
+
 const uploadOrganizerAvatar = multer({
     storage: multer.memoryStorage(),
     fileFilter: imageFilter,
@@ -28,12 +30,66 @@ router.get('/dashboard', async (req, res) => {
             Organizer.count()
         ]);
 
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const upcomingEvents = await Event.findAll({
+            where: {
+                event_date: {
+                    [Op.gte]: today
+                }
+            },
+            order: [['event_date', 'ASC'], ['start_time', 'ASC']],
+            limit: 5
+        });
+
+        // Get recent events and organizers for "Recent Activities"
+        const recentEvents = await Event.findAll({
+            order: [['created_at', 'DESC']],
+            limit: 3
+        });
+        const recentOrganizers = await Organizer.findAll({
+            order: [['created_at', 'DESC']],
+            limit: 3
+        });
+
+        // Merge and sort for activity timeline
+        let activities = [];
+        recentEvents.forEach(e => {
+            activities.push({
+                type: 'event_created',
+                title: 'New Event Created',
+                subtitle: e.title,
+                date: e.created_at || new Date(),
+                icon: 'E',
+                bgColor: 'bg-[#F0F2FF]',
+                textColor: 'text-brand',
+                value: '+ 1'
+            });
+        });
+        recentOrganizers.forEach(o => {
+            activities.push({
+                type: 'organizer_registered',
+                title: 'Organizer Registered',
+                subtitle: o.name,
+                date: o.created_at || new Date(),
+                icon: 'O',
+                bgColor: 'bg-gray-50',
+                textColor: 'text-textMain',
+                value: '+ 1'
+            });
+        });
+        activities.sort((a, b) => b.date - a.date);
+        activities = activities.slice(0, 5);
+
         res.render('admin/dashboard', {
             title: 'Admin Dashboard | Masbate City',
             totalEvents,
             totalCategories,
             totalUsers,
             totalOrganizers,
+            upcomingEvents,
+            activities,
             currentPath: '/admin/dashboard'
         });
     } catch (error) {

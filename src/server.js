@@ -100,6 +100,11 @@ app.set('views', path.join(__dirname, 'views'));
 app.use('/static', express.static(path.join(__dirname, 'public')));
 app.use('/media', express.static(path.join(__dirname, '../media')));
 
+// Favicon handler - suppress 404 errors
+app.get('/favicon.ico', (req, res) => {
+    res.status(204).end();
+});
+
 // Flash messages middleware
 app.use((req, res, next) => {
     res.locals.messages = req.session.messages || [];

@@ -27,11 +27,11 @@
       background: rgba(255, 255, 255, 0.85);
       backdrop-filter: blur(20px);
       border: 1px solid rgba(255, 255, 255, 1);
-      box-shadow: 0 10px 40px -10px rgba(29, 161, 242, 0.1);
+      box-shadow: 0 4px 15px -5px rgba(0, 0, 0, 0.05);
     }
   </style>
 </head>
-<body class="min-h-[100dvh] w-screen text-textMain relative flex flex-col selection:bg-brand selection:text-white">
+<body class="min-h-[100dvh] w-full overflow-x-hidden text-textMain relative flex flex-col selection:bg-brand selection:text-white">
   
   <div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0 fixed">
     <div class="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] rounded-full bg-brand/10 blur-[100px]"></div>
@@ -64,6 +64,13 @@
           <%= activeEvents %>
         </div>
       </div>
+
+      <div class="glass-panel p-4 rounded-3xl col-span-2 flex flex-col justify-between relative overflow-hidden">
+        <span class="text-[11px] text-textMuted font-bold tracking-wide uppercase relative z-10">Total Finished Events</span>
+        <div class="text-4xl font-extrabold text-blue-500 my-auto tracking-tighter relative z-10 border-l-2 border-blue-500/50 pl-2">
+          <%= finishedEvents %>
+        </div>
+      </div>
       
       <div class="glass-panel p-4 rounded-3xl col-span-2 flex flex-col justify-between relative overflow-hidden min-h-[160px]">
         <div class="absolute -right-4 -bottom-4 w-32 h-32 bg-brand/10 rounded-full blur-[20px]"></div>
@@ -76,14 +83,14 @@
           </select>
         </div>
         
-        <div class="w-full mt-4 h-48 relative z-10">
+        <div class="relative w-full mt-4" style="height: 200px;">
           <canvas id="engagementChart"></canvas>
         </div>
       </div>
 
       <div class="glass-panel p-4 rounded-3xl col-span-2 flex flex-col justify-between relative overflow-hidden">
-        <span class="text-[11px] text-textMuted font-bold tracking-wide uppercase mb-3 relative z-10">Recent Categories</span>
-        <div class="w-full h-40 relative z-10 flex justify-center">
+        <span class="text-[11px] text-textMuted font-bold tracking-wide uppercase mb-3 relative z-10">Popular Tags Overview</span>
+        <div class="relative w-full flex justify-center" style="height: 180px;">
           <canvas id="categoryChart"></canvas>
         </div>
       </div>
@@ -91,46 +98,7 @@
 
   </main>
 
-  <!-- 5. Bottom Navigation Tab Bar -->
-  <div class="fixed bottom-0 w-full z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200">
-    <nav class="flex justify-between items-center px-6 py-3.5 max-w-lg mx-auto">
-      <a href="/organizer/dashboard" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain group">
-        <div class="p-1.5 rounded-full group-hover:bg-slate-100 transition-colors">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-        </div>
-        <span class="text-[10px] font-semibold tracking-wide">Home</span>
-      </a>
-      
-      <a href="/organizer/analytics" class="flex flex-col items-center justify-center gap-1 w-12 text-brand transition-colors group">
-        <div class="p-1.5 rounded-full bg-brand-light transition-colors">
-          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
-        </div>
-        <span class="text-[10px] font-semibold tracking-wide">Analytics</span>
-      </a>
-      
-      <a href="/organizer/events/add" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain transition-colors group">
-        <div class="p-1.5 rounded-full bg-brand text-white shadow-lg shadow-brand/30 hover:scale-105 transition-transform">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-        </div>
-        <span class="text-[10px] font-semibold tracking-wide">Add</span>
-      </a>
-      
-      <a href="/organizer/events" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain transition-colors group">
-        <div class="p-1.5 rounded-full group-hover:bg-slate-100 transition-colors">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-        </div>
-        <span class="text-[10px] font-semibold tracking-wide">Scanner</span>
-      </a>
-      
-      <a href="#" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain transition-colors relative group">
-        <div class="p-1.5 rounded-full group-hover:bg-slate-100 transition-colors relative">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
-          <span class="absolute top-1.5 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-        </div>
-        <span class="text-[10px] font-semibold tracking-wide">Alerts</span>
-      </a>
-    </nav>
-  </div>
+  
 
   <script>
     document.addEventListener("DOMContentLoaded", function() {
@@ -160,15 +128,21 @@
         }
       });
 
-      // Category Doughnut Chart
+      // Category Doughnut Chart (Spiral)
+      const tagLabels = <%- tagLabels %>;
+      const tagData = <%- tagData %>;
+      
       const ctx2 = document.getElementById('categoryChart').getContext('2d');
       new Chart(ctx2, {
         type: 'doughnut',
         data: {
-          labels: ['Tech', 'Health', 'Arts'],
+          labels: tagLabels.length ? tagLabels : ['No Tags'],
           datasets: [{
-            data: [40, 30, 30],
-            backgroundColor: ['#1DA1F2', '#34d399', '#fbbf24'],
+            data: tagData.length ? tagData : [100],
+            backgroundColor: tagLabels.length ? [
+              '#1DA1F2', '#34d399', '#fbbf24', '#f87171', '#818cf8', 
+              '#a78bfa', '#f472b6', '#2dd4bf', '#fb923c', '#60a5fa'
+            ] : ['#e2e8f0'],
             borderWidth: 0
           }]
         },
@@ -183,5 +157,46 @@
       });
     });
   </script>
+<!-- 5. Bottom Navigation Tab Bar -->
+  <div class="fixed bottom-0 w-full z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200">
+    <nav class="flex justify-between items-center px-6 py-3.5 max-w-lg mx-auto">
+      <a href="/organizer/dashboard" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain transition-colors group">
+        <div class="p-1.5 rounded-full group-hover:bg-slate-100 transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+        </div>
+        <span class="text-[10px] font-bold tracking-wide">Home</span>
+      </a>
+      
+      <a href="/organizer/analytics" class="flex flex-col items-center justify-center gap-1 w-12 text-brand group transition-colors">
+        <div class="p-1.5 rounded-full bg-brand-light transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+        </div>
+        <span class="text-[10px] font-semibold tracking-wide">Analytics</span>
+      </a>
+      
+      <a href="/organizer/events/add" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain transition-colors group">
+        <div class="p-1.5 rounded-full bg-brand text-white shadow-lg shadow-brand/30 hover:scale-105 transition-transform ">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        </div>
+        <span class="text-[10px] font-semibold tracking-wide">Add</span>
+      </a>
+      
+      <a href="/organizer/events" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain transition-colors group">
+        <div class="p-1.5 rounded-full group-hover:bg-slate-100 transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+        </div>
+        <span class="text-[10px] font-semibold tracking-wide">Event</span>
+      </a>
+      
+      <a href="/organizer/profile" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain transition-colors relative group">
+        <div class="p-1.5 rounded-full group-hover:bg-slate-100 transition-colors relative">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+          </svg>
+        </div>
+        <span class="text-[10px] font-semibold tracking-wide">Profile</span>
+      </a>
+    </nav>
+  </div>
 </body>
 </html>

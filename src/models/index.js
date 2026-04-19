@@ -528,6 +528,10 @@ const Event = sequelize.define('Event', {
         type: DataTypes.DATEONLY,
         allowNull: false
     },
+    end_date: {
+        type: DataTypes.DATEONLY,
+        allowNull: true
+    },
     start_time: {
         type: DataTypes.TIME,
         allowNull: false
@@ -561,11 +565,15 @@ const Event = sequelize.define('Event', {
         allowNull: true
     },
     recurrence_type: {
-        type: DataTypes.ENUM('none', 'daily', 'weekly', 'monthly', 'yearly'),
+        type: DataTypes.ENUM('none', 'daily', 'weekly', 'monthly', 'yearly', 'once'),
         defaultValue: 'none'
     },
     recurrence_end_date: {
         type: DataTypes.DATEONLY,
+        allowNull: true
+    },
+    tags: {
+        type: DataTypes.STRING(255),
         allowNull: true
     }
 }, {
@@ -619,7 +627,7 @@ const AppUser = sequelize.define('AppUser', {
     },
     password_hash: {
         type: DataTypes.STRING(255),
-        allowNull: false
+        allowNull: true // Changed to allow null for Google Sign-Up without password initially
     },
     avatar_url: {
         type: DataTypes.STRING(500),
@@ -873,6 +881,10 @@ const EventAnalytics = sequelize.define('EventAnalytics', {
     view_count_360: {
         type: DataTypes.INTEGER,
         defaultValue: 0
+    },
+    page_view_count: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
     }
 }, {
     tableName: 'event_analytics',
@@ -946,6 +958,89 @@ AppUser.hasMany(EventAttendee, { foreignKey: 'user_id', as: 'attended_events', o
 EventAnalytics.belongsTo(Event, { foreignKey: 'event_id', as: 'event', onDelete: 'CASCADE' });
 Event.hasOne(EventAnalytics, { foreignKey: 'event_id', as: 'analytics', onDelete: 'CASCADE' });
 
+// EventAnnouncement Model
+const EventAnnouncement = sequelize.define('EventAnnouncement', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    event_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'events',
+            key: 'id'
+        }
+    },
+    title: {
+        type: DataTypes.STRING(255),
+        allowNull: false
+    },
+    body: {
+        type: DataTypes.TEXT,
+        allowNull: false
+    }
+}, {
+    tableName: 'event_announcements',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: false
+});
+
+// EventAnnouncement Associations
+EventAnnouncement.belongsTo(Event, { foreignKey: 'event_id', as: 'event', onDelete: 'CASCADE' });
+Event.hasMany(EventAnnouncement, { foreignKey: 'event_id', as: 'announcements', onDelete: 'CASCADE' });
+
+// OrganizerNotification Model
+const OrganizerNotification = sequelize.define('OrganizerNotification', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    organizer_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'organizers',
+            key: 'id'
+        }
+    },
+    event_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'events',
+            key: 'id'
+        }
+    },
+    type: {
+        type: DataTypes.STRING(50),
+        allowNull: false
+    },
+    message: {
+        type: DataTypes.TEXT,
+        allowNull: false
+    },
+    is_read: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    }
+}, {
+    tableName: 'organizer_notifications',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: false
+});
+
+// OrganizerNotification Associations
+OrganizerNotification.belongsTo(Organizer, { foreignKey: 'organizer_id', as: 'organizer', onDelete: 'CASCADE' });
+Organizer.hasMany(OrganizerNotification, { foreignKey: 'organizer_id', as: 'notifications', onDelete: 'CASCADE' });
+
+OrganizerNotification.belongsTo(Event, { foreignKey: 'event_id', as: 'event', onDelete: 'CASCADE' });
+Event.hasMany(OrganizerNotification, { foreignKey: 'event_id', as: 'organizer_notifications', onDelete: 'CASCADE' });
+
 module.exports = {
     sequelize,
     Sequelize,
@@ -968,5 +1063,7 @@ module.exports = {
     EventPhoto,
     Comment,
     CommentReaction,
-    Guest
+    Guest,
+    EventAnnouncement,
+    OrganizerNotification
 };

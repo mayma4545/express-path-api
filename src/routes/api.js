@@ -6,7 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const { Op } = require('sequelize');
-const { Nodes, Edges, Annotation, CampusMap } = require('../models');
+const { Nodes, Edges, Annotation, CampusMap, EventAnnouncement, Event, EventLike, EventPhoto, Comment, CommentReaction, OrganizerNotification, AppUser } = require('../models');
 const { getPathfinder } = require('../services/pathfinding');
 
 // Find path between two nodes
@@ -124,6 +124,168 @@ router.get('/graph-data', async (req, res) => {
         res.json({ nodes: nodesData, edges: edgesData });
     } catch (error) {
         console.error('Get graph data error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get event announcements
+router.get('/events/:id/announcements', async (req, res) => {
+    try {
+        const announcements = await EventAnnouncement.findAll({
+            where: { event_id: req.params.id },
+            order: [['created_at', 'DESC']]
+        });
+        res.json({ announcements });
+    } catch (error) {
+        console.error('Get announcements error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get event photos
+router.get('/events/:id/photos', async (req, res) => {
+    try {
+        const photos = await EventPhoto.findAll({
+            where: { event_id: req.params.id },
+            order: [['created_at', 'ASC']]
+        });
+        res.json({ photos });
+    } catch (error) {
+        console.error('Get photos error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get event comments
+router.get('/events/:id/comments', async (req, res) => {
+    try {
+        const comments = await Comment.findAll({
+            where: { event_id: req.params.id },
+            include: [
+                { model: AppUser, as: 'user', attributes: ['id', 'first_name', 'last_name'] },
+                { model: AppUser, as: 'reacted_by_users', attributes: ['id'] }
+            ],
+            order: [['created_at', 'DESC']]
+        });
+        res.json({ comments });
+    } catch (error) {
+        console.error('Get comments error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Like/Unlike a comment
+router.post('/comments/:id/react', async (req, res) => {
+    try {
+        const commentId = req.params.id;
+        let userId = req.body.user_id || req.query.user_id || (req.session.user && req.session.user.id) || null;
+        
+        if (!userId) {
+            return res.status(401).json({ error: 'You must be logged in to react to a comment' });
+        } else {
+            const userExists = await AppUser.findByPk(userId);
+            if (!userExists) {
+                return res.status(401).json({ error: 'User does not exist' });
+            }
+        }
+        
+        const existing = await CommentReaction.findOne({
+            where: { comment_id: commentId, user_id: userId }
+        });
+        
+        if (existing) {
+            await existing.destroy();
+            res.json({ success: true, reacted: false });
+        } else {
+            await CommentReaction.create({ comment_id: commentId, user_id: userId });
+            res.json({ success: true, reacted: true });
+        }
+    } catch (error) {
+        console.error('React comment error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Like an event
+router.post('/events/:id/like', async (req, res) => {
+    try {
+        const eventId = req.params.id;
+        const userId = req.body.user_id || req.query.user_id || (req.session.user && req.session.user.id) || null;
+
+        const event = await Event.findByPk(eventId);
+        if (!event) return res.status(404).json({ error: 'Event not found' });
+
+        if (userId) {
+            const [like, created] = await EventLike.findOrCreate({
+                where: { event_id: eventId, user_id: userId }
+            });
+            
+            if (created && event.organizer_id) {
+                // Notify Organizer
+                const user = await AppUser.findByPk(userId);
+                const userName = user ? `${user.first_name} ${user.last_name}` : 'A user';
+                await OrganizerNotification.create({
+                    organizer_id: event.organizer_id,
+                    event_id: eventId,
+                    type: 'like',
+                    message: `${userName} liked your event "${event.title}".`
+                });
+            }
+        } else {
+            return res.status(401).json({ error: 'You must be logged in to like an event' });
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Like event error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Comment on an event
+router.post('/events/:id/comment', async (req, res) => {
+    try {
+        const eventId = req.params.id;
+        const { text, parent_comment_id, user_id } = req.body;
+        
+        if (!text) return res.status(400).json({ error: 'Comment text required' });
+
+        const event = await Event.findByPk(eventId);
+        if (!event) return res.status(404).json({ error: 'Event not found' });
+
+        let userId = user_id || (req.session.user && req.session.user.id) || null;
+
+        // Ensure user exists
+        if (!userId) {
+            return res.status(401).json({ error: 'You must be logged in to comment' });
+        } else {
+            const userExists = await AppUser.findByPk(userId);
+            if (!userExists) {
+                return res.status(401).json({ error: 'User does not exist' });
+            }
+        }
+
+        const comment = await Comment.create({
+            event_id: eventId,
+            user_id: userId,
+            parent_comment_id: parent_comment_id || null,
+            content: text
+        });
+
+        if (event.organizer_id) {
+            const user = userId ? await AppUser.findByPk(userId) : null;
+            const userName = user ? `${user.first_name} ${user.last_name}` : 'A user';
+            await OrganizerNotification.create({
+                organizer_id: event.organizer_id,
+                event_id: eventId,
+                type: 'comment',
+                message: `${userName} commented on your event "${event.title}": "${text.substring(0, 30)}..."`
+            });
+        }
+
+        res.json({ success: true, comment });
+    } catch (error) {
+        console.error('Comment event error:', error);
         res.status(500).json({ error: error.message });
     }
 });

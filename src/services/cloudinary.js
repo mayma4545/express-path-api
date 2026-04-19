@@ -23,7 +23,7 @@ if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !pr
 
 // Configure Cloudinary Storage for 360° images
 const image360Storage = CloudinaryStorage({
-    cloudinary: cloudinary,
+    cloudinary: require('cloudinary'),
     params: {
         folder: 'campus-navigator/360-images',
         allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
@@ -34,7 +34,7 @@ const image360Storage = CloudinaryStorage({
 
 // Configure Cloudinary Storage for campus maps
 const campusMapStorage = CloudinaryStorage({
-    cloudinary: cloudinary,
+    cloudinary: require('cloudinary'),
     params: {
         folder: 'campus-navigator/campus-maps',
         allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
@@ -45,7 +45,7 @@ const campusMapStorage = CloudinaryStorage({
 
 // Configure Cloudinary Storage for QR codes
 const qrcodeStorage = CloudinaryStorage({
-    cloudinary: cloudinary,
+    cloudinary: require('cloudinary'),
     params: {
         folder: 'campus-navigator/qrcodes',
         allowed_formats: ['png'],
@@ -84,12 +84,20 @@ const uploadCampusMap = multer({
     }
 });
 
+// Configure Cloudinary Storage for generic uploads
+const genericStorage = CloudinaryStorage({
+    cloudinary: require('cloudinary'),
+    params: {
+        folder: 'campus-navigator/uploads',
+        allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+        transformation: [{ quality: 'auto', fetch_format: 'auto' }],
+        resource_type: 'image'
+    }
+});
+
 // Generic upload middleware (chooses storage based on field name)
 const upload = multer({
-    storage: multer.diskStorage({
-        destination: (req, file, cb) => cb(null, '/tmp'),
-        filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
-    }),
+    storage: genericStorage,
     fileFilter: imageFilter,
     limits: {
         fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024

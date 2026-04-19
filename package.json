@@ -14,6 +14,7 @@
     "db:migrate:organizer-accounts": "node src/scripts/migrateOrganizerAccounts.js",
     "db:migrate:superadmin": "node src/scripts/migrateSuperAdminFeatures.js",
     "db:migrate:mysql": "node src/scripts/migrateToMySQL.js",
+    "db:migrate:recurrence": "node scripts/migrate_recurrence_type.js",
     "db:verify:mysql": "node src/scripts/verifyMySQL.js",
     "db:test:mysql": "node src/scripts/testMySQL.js",
     "test:node-deletion": "node src/scripts/testNodeDeletion.js",

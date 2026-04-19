@@ -149,10 +149,40 @@
       background: #ef4444;
       flex-shrink: 0;
     }
+
+    #loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: #111827;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.5s ease;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-left-color: #1DA1F2;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 
 <body>
+
+  <!-- ── Loading Overlay ─────────────────────────────── -->
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <span class="text-white font-semibold text-sm tracking-widest uppercase">Calculating Route...</span>
+  </div>
 
   <!-- ── Full-screen Map ─────────────────────────────── -->
   <div id="map-container">
@@ -233,7 +263,14 @@
   <script src="/static/js/events-data.js"></script>
   <script>
     const eventId = parseInt(sessionStorage.getItem('currentEventId'), 10);
-    const ev = EVENTS.find(e => e.id === eventId);
+    const eventDataString = sessionStorage.getItem('currentEventData');
+    
+    let ev = null;
+    if (eventDataString) {
+      ev = JSON.parse(eventDataString);
+    } else {
+      ev = EVENTS.find(e => e.id === eventId);
+    }
 
     if (!ev) {
       window.location.href = '/home';
@@ -271,7 +308,9 @@
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     const UL = USER_LOCATION;
-    const EL = ev ? ev.coords : { lat: 14.5995, lng: 120.9842 };
+    const EL = ev && ev.coords && !isNaN(ev.coords.lat) && !isNaN(ev.coords.lng) 
+      ? ev.coords 
+      : { lat: 14.5995, lng: 120.9842 }; // Fallback to Manila if strictly no coordinates or invalid
 
     /* ── User Marker ── */
     const userIcon = L.divIcon({
@@ -288,9 +327,53 @@
       iconAnchor: [9, 9],
     });
 
-    L.marker([UL.lat, UL.lng], { icon: userIcon })
+    let userMarker = L.marker([UL.lat, UL.lng], { icon: userIcon })
       .addTo(map)
       .bindPopup('<b style="font-family:Inter,sans-serif">📍 Your Location</b>');
+
+    /* ── Real User Location (Geoloc API) ── */
+    if (navigator.geolocation) {
+      // 1. Get initial location immediately
+      navigator.geolocation.getCurrentPosition((position) => {
+        UL.lat = position.coords.latitude;
+        UL.lng = position.coords.longitude;
+        
+        userMarker.setLatLng([UL.lat, UL.lng]);
+        map.fitBounds([[UL.lat, UL.lng], [EL.lat, EL.lng]], { padding: [80, 60] });
+        
+        fetchAndDrawOSRMRoute(); // Update the map lines to new geolocated actual path
+      }, (error) => {
+        console.warn('Geolocation failed or denied. Using fallback location.', error);
+        fetchAndDrawOSRMRoute(); // Call it using fallback coordinates immediately
+      }, {
+        enableHighAccuracy: true,
+        maximumAge: 10000,
+        timeout: 10000
+      });
+
+      // 2. Watch for continuous movements
+      navigator.geolocation.watchPosition((position) => {
+        const newLat = position.coords.latitude;
+        const newLng = position.coords.longitude;
+        
+        // Always smoothly update the marker to the new GPS coordinate
+        userMarker.setLatLng([newLat, newLng]);
+
+        // Only redraw the entire path if the user moved more than 15 meters to avoid API spam
+        const distMoved = haversine(UL.lat, UL.lng, newLat, newLng);
+        if (distMoved > 0.015) { 
+          UL.lat = newLat;
+          UL.lng = newLng;
+          if (!simRunning) fetchAndDrawOSRMRoute();
+        }
+      }, (error) => {
+        console.warn('Live tracking failed.', error);
+      }, {
+        enableHighAccuracy: true,
+        maximumAge: 1000,
+        timeout: 5000
+      });
+    }
 
     /* ── Event Marker ── */
     const evIcon = L.divIcon({
@@ -315,17 +398,72 @@
       .bindPopup(`<b style="font-family:Inter,sans-serif">🎟 ${ev ? ev.name : 'Event'}</b>`);
 
     /* ── Route Polyline ── */
-    let routeLine = L.polyline([[UL.lat, UL.lng], [EL.lat, EL.lng]], {
-      color: '#1DA1F2',
-      weight: 4,
-      opacity: 0.85,
-      dashArray: '12 8',
-    }).addTo(map);
+    let routeLine = null;
 
-    /* ── Fit bounds ── */
+    let globalRoutePts = [];
+
+    async function fetchAndDrawOSRMRoute() {
+      try {
+        const url = `https://router.project-osrm.org/route/v1/walking/${UL.lng},${UL.lat};${EL.lng},${EL.lat}?overview=full&geometries=geojson`;
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        if (data && data.routes && data.routes.length > 0) {
+          const route = data.routes[0];
+          // OSRM returns coordinates as [lng, lat]
+          globalRoutePts = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+          
+          if (routeLine) {
+            map.removeLayer(routeLine);
+          }
+          
+          routeLine = L.polyline(globalRoutePts, {
+            color: '#1DA1F2',
+            weight: 4,
+            opacity: 0.85,
+            dashArray: '12 8',
+          }).addTo(map);
+
+          map.fitBounds(routeLine.getBounds(), { padding: [80, 60] });
+
+          // Update stats based on OSRM API real distance (route.distance is meters, route.duration is seconds)
+          const distKm = route.distance / 1000;
+          document.getElementById('map-dist').textContent = route.distance < 1000 ? `${Math.round(route.distance)}m` : `${distKm.toFixed(1)}km`;
+          document.getElementById('map-eta-walk').textContent = fmtEta(Math.round(route.duration / 60)); // Duration is walking seconds
+          document.getElementById('map-eta-drive').textContent = fmtEta(Math.round(distKm / 40 * 60)); // Rough drive estimate
+        }
+      } catch (err) {
+        console.error("OSRM Initial Route Fetch Error:", err);
+        if (!routeLine) {
+          routeLine = L.polyline([[UL.lat, UL.lng], [EL.lat, EL.lng]], {
+            color: '#1DA1F2',
+            weight: 4,
+            opacity: 0.85,
+            dashArray: '12 8',
+          }).addTo(map);
+        }
+      } finally {
+        setTimeout(() => {
+          const loader = document.getElementById('loading-overlay');
+          if (loader) {
+            loader.style.opacity = '0';
+            setTimeout(() => loader.style.display = 'none', 500);
+          }
+        }, 500); // 500ms min delay to let maps render nicely
+      }
+    }
+
+    // We do NOT unconditionally fetch the route here anymore.
+    // Instead, we let the Geolocation handle it if available.
+    if (!navigator.geolocation) {
+      // Only if geoloc isn't supported at all do we fallback to this.
+      fetchAndDrawOSRMRoute();
+    }
+
+    /* ── Fit bounds initial fallback ── */
     map.fitBounds([[UL.lat, UL.lng], [EL.lat, EL.lng]], { padding: [80, 60] });
 
-    /* ── Stats ── */
+    /* ── Stats initial fallback ── */
     const dist = haversine(UL.lat, UL.lng, EL.lat, EL.lng);
     const distTxt = dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`;
     const walkMin = Math.round(dist / 5 * 60);
@@ -339,7 +477,7 @@
     let simRunning = false;
     let simInterval = null;
 
-    function simulatePath() {
+    async function simulatePath() {
       if (simRunning) return;
       simRunning = true;
 
@@ -349,61 +487,57 @@
       toast.classList.remove('hidden');
 
       /* Remove current line */
-      map.removeLayer(routeLine);
-
-      /* Build curved bezier path */
-      const STEPS = 60;
-      const pts = [];
-      const midLat = (UL.lat + EL.lat) / 2 + (EL.lng - UL.lng) * 0.07;
-      const midLng = (UL.lng + EL.lng) / 2 - (EL.lat - UL.lat) * 0.07;
-
-      for (let i = 0; i <= STEPS; i++) {
-        const t = i / STEPS;
-        const lat = (1 - t) ** 2 * UL.lat + 2 * (1 - t) * t * midLat + t ** 2 * EL.lat;
-        const lng = (1 - t) ** 2 * UL.lng + 2 * (1 - t) * t * midLng + t ** 2 * EL.lng;
-        pts.push([lat, lng]);
+      if (routeLine) {
+        map.removeLayer(routeLine);
       }
 
-      /* Animated draw, segment by segment */
-      routeLine = L.polyline([], {
-        color: '#F59E0B',
-        weight: 5,
-        opacity: 1,
+      let pts = globalRoutePts;
+
+      /* Fallback to simple interpolation if OSRM failed */
+      if (!pts || pts.length === 0) {
+        pts = [];
+        const STEPS = 20;
+        const midLat = (UL.lat + EL.lat) / 2 + (EL.lng - UL.lng) * 0.02;
+        const midLng = (UL.lng + EL.lng) / 2 - (EL.lat - UL.lat) * 0.02;
+        for (let i = 0; i <= STEPS; i++) {
+          const t = i / STEPS;
+          const lat = (1 - t) ** 2 * UL.lat + 2 * (1 - t) * t * midLat + t ** 2 * EL.lat;
+          const lng = (1 - t) ** 2 * UL.lng + 2 * (1 - t) * t * midLng + t ** 2 * EL.lng;
+          pts.push([lat, lng]);
+        }
+      }
+
+      routeLine = L.polyline(pts, {
+        color: '#1DA1F2',
+        weight: 4,
+        opacity: 0.85,
+        dashArray: '12 8',
       }).addTo(map);
 
-      /* Dot that moves along path */
-      const dotIcon = L.divIcon({
-        className: '',
-        html: `<div style="width:10px;height:10px;background:#F59E0B;border:2px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.4);"></div>`,
-        iconSize: [10, 10],
-        iconAnchor: [5, 5],
-      });
-      const dot = L.marker([pts[0][0], pts[0][1]], { icon: dotIcon }).addTo(map);
-
       let step = 0;
-      const drawn = [];
-
-      simInterval = setInterval(() => {
+      
+      const updateMarker = () => {
         if (step >= pts.length) {
-          clearInterval(simInterval);
-          dot.remove();
-          map.removeLayer(routeLine);
-          routeLine = L.polyline(pts, {
-            color: '#1DA1F2',
-            weight: 4,
-            opacity: 0.85,
-            dashArray: '12 8',
-          }).addTo(map);
           btn.classList.remove('sim-running');
           toast.classList.add('hidden');
           simRunning = false;
           return;
         }
-        drawn.push(pts[step]);
-        routeLine.setLatLngs(drawn);
-        dot.setLatLng(pts[step]);
+        
+        userMarker.setLatLng(pts[step]);
+        routeLine.setLatLngs(pts.slice(step));
+        
+        const currentDist = haversine(pts[step][0], pts[step][1], EL.lat, EL.lng);
+        const currentDistTxt = currentDist < 1 ? `${Math.round(currentDist * 1000)}m` : `${currentDist.toFixed(1)}km`;
+        document.getElementById('map-dist').textContent = currentDistTxt;
+        document.getElementById('map-eta-walk').textContent = fmtEta(Math.round(currentDist / 5 * 60));
+        document.getElementById('map-eta-drive').textContent = fmtEta(Math.round(currentDist / 40 * 60));
+        
         step++;
-      }, 28);
+        simInterval = setTimeout(updateMarker, 1000);
+      };
+      
+      updateMarker();
     }
   </script>
 </body>
