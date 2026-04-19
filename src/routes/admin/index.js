@@ -300,4 +300,28 @@ router.get('/events/:id', async (req, res) => {
     }
 });
 
+router.get('/activity', async (req, res) => {
+    try {
+        res.render('admin/activity', {
+            title: 'Activity Log | Admin',
+            currentPath: '/admin/activity'
+        });
+    } catch (error) {
+        console.error('Admin Activity error:', error);
+        res.status(500).render('error', { title: 'Error', message: error.message });
+    }
+});
+
+router.get('/reports', async (req, res) => {
+    try {
+        res.render('admin/reports', {
+            title: 'Reports | Admin',
+            currentPath: '/admin/reports'
+        });
+    } catch (error) {
+        console.error('Admin Reports error:', error);
+        res.status(500).render('error', { title: 'Error', message: error.message });
+    }
+});
+
 module.exports = router;
