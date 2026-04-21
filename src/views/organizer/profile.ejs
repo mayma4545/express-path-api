@@ -38,10 +38,7 @@
   <!-- Main Content Wrapper -->
   <main class="max-w-md mx-auto p-4 sm:p-6 md:py-10">
     <!-- Top Bar -->
-    <header class="flex flex-col mb-8">
-      <h1 class="text-2xl sm:text-3xl font-extrabold text-textMain tracking-tight">Profile</h1>
-      <p class="text-xs sm:text-sm font-medium text-textMuted mt-1">Manage your organizer account settings.</p>
-    </header>
+    <%- include('../partials/organizer_header', { headerTitle: 'Profile', headerSubtitle: 'Account Settings', backUrl: '/organizer/dashboard', showPulse: false }) %>
 
     <!-- Profile Header -->
     <div class="glass-panel rounded-3xl p-6 mb-6 flex flex-col items-center">

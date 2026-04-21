@@ -1027,6 +1027,10 @@ const OrganizerNotification = sequelize.define('OrganizerNotification', {
             key: 'id'
         }
     },
+    user_type: {
+        type: DataTypes.ENUM('organizer', 'admin'),
+        defaultValue: 'organizer'
+    },
     type: {
         type: DataTypes.STRING(50),
         allowNull: false
@@ -1034,6 +1038,10 @@ const OrganizerNotification = sequelize.define('OrganizerNotification', {
     message: {
         type: DataTypes.TEXT,
         allowNull: false
+    },
+    target_id: {
+        type: DataTypes.STRING(100),
+        allowNull: true
     },
     is_read: {
         type: DataTypes.BOOLEAN,

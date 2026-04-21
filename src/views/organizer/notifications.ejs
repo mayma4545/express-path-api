@@ -35,17 +35,14 @@
 </head>
 <body class="text-textMain pb-20 overflow-x-hidden bg-[#f4f8fd]">
 
-  <!-- Top Nav -->
-  <div class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 flex items-center px-4 h-14">
-    <a href="/organizer/profile" class="p-2 -ml-2 text-gray-500 hover:text-brand transition-colors rounded-full hover:bg-gray-50">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
-      </svg>
-    </a>
-    <h1 class="mx-auto text-[15px] font-bold text-gray-900 pr-5">Notifications</h1>
-  </div>
-
   <main class="max-w-md mx-auto p-4 sm:p-6 pb-24">
+    <%- include('../partials/organizer_header', { 
+      headerTitle: 'Notifications', 
+      headerSubtitle: 'Alert preferences',
+      backUrl: '/organizer/profile',
+      showPulse: false
+    }) %>
+
     <div class="glass-panel p-6 rounded-3xl">
       <h2 class="text-xl font-extrabold mb-1">Preferences</h2>
       <p class="text-xs text-textMuted mb-6">Manage how you receive alerts and updates.</p>

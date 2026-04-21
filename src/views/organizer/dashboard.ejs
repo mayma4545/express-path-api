@@ -27,28 +27,14 @@
       -webkit-tap-highlight-color: transparent;
       overscroll-behavior-y: none;
     }
-    /* Hide scrollbar for Chrome, Safari and Opera */
-    .no-scrollbar::-webkit-scrollbar {
-      display: none;
-    }
-    /* Hide scrollbar for IE, Edge and Firefox */
-    .no-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     .glass-panel {
       background: rgba(255, 255, 255, 0.85);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border: 1px solid rgba(255, 255, 255, 1);
       box-shadow: 0 4px 15px -5px rgba(0, 0, 0, 0.05);
-    }
-    .glass-nav {
-      background: rgba(255, 255, 255, 0.9);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      border: 1px solid rgba(255, 255, 255, 1);
-      box-shadow: 0 -10px 40px -15px rgba(0, 0, 0, 0.1);
     }
   </style>
 </head>
@@ -60,31 +46,12 @@
     <div class="absolute bottom-[20%] -right-[10%] w-[60%] h-[60%] rounded-full bg-blue-300/10 blur-[100px]"></div>
   </div>
 
-  <!-- Main Layout -->
   <main class="relative z-10 flex flex-col h-full w-full p-4 gap-4 pb-24 max-w-lg mx-auto">
     
     <!-- 1. Header -->
-    <header class="flex justify-between items-center shrink-0 pt-2">
-      <div>
-        <h1 class="text-xl font-bold tracking-tight text-textMain flex items-center gap-2">
-          Command Center
-          <span class="flex h-2.5 w-2.5 relative">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></span>
-          </span>
-        </h1>
-        <p class="text-xs text-textMuted mt-0.5">Ongoing View • <%= organizer.name %></p>
-      </div>
-      <div class="h-10 w-10 rounded-full bg-white border border-brand/20 flex items-center justify-center text-brand font-bold text-lg shadow-[0_4px_15px_rgba(29,161,242,0.15)] overflow-hidden">
-        <% if (organizer.avatar_url) { %>
-          <img src="<%= organizer.avatar_url %>" alt="Profile" class="w-full h-full object-cover">
-        <% } else { %>
-          <%= organizer.name.charAt(0).toUpperCase() %>
-        <% } %>
-      </div>
-    </header>
+    <%- include('../partials/organizer_header', { headerTitle: 'Command Center', headerSubtitle: 'Ongoing View' }) %>
 
-    <!-- 2. "Active Now" Zone Carousel -->
+    <!-- 2. Ongoing Events Zone -->
     <% if (activeEventsList && activeEventsList.length > 0) { %>
       <div class="flex overflow-x-auto snap-x snap-mandatory gap-4 no-scrollbar pb-2">
         <% activeEventsList.forEach(function(event, index) { %>
@@ -93,7 +60,7 @@
             <div class="flex justify-between items-start relative z-10">
               <span class="text-[10px] font-bold text-brand uppercase tracking-widest flex items-center gap-1.5 px-2 py-1 bg-brand-light rounded-md">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                Active Event
+                Ongoing Event
               </span>
               <span class="text-[10px] font-mono bg-slate-100 px-2 py-1 rounded text-textMuted border border-slate-200">EVT-<%= String(event.id).padStart(3, '0') %></span>
             </div>
@@ -103,27 +70,26 @@
                 <span class="text-[10px] text-textMuted uppercase tracking-wider font-bold">Location</span>
                 <span class="text-sm text-slate-700 font-semibold mt-0.5 truncate max-w-[150px]"><%= event.venue %></span>
               </div>
-              <span class="text-lg font-mono font-bold text-brand tracking-tight">Ongoing</span>
+              <span class="text-lg font-mono font-bold text-brand tracking-tight">Active</span>
             </div>
           </div>
         <% }) %>
       </div>
       
-      <!-- Carousel Indicators if more than 1 -->
       <% if (activeEventsList.length > 1) { %>
         <div class="flex justify-center gap-1.5 mt-[-8px] z-10">
           <% activeEventsList.forEach(function(_, i) { %>
             <div class="w-1.5 h-1.5 rounded-full <%= i === 0 ? 'bg-brand' : 'bg-slate-300' %>"></div>
           <% }) %>
-        Ongoing Event
-        </span>
-        ...
-        <div class="glass-panel p-4 rounded-3xl flex flex-col gap-2 shrink-0 relative overflow-hidden items-center justify-center min-h-[140px]">
-        <span class="text-textMuted text-sm font-medium">No ongoing events currently running.</span>
         </div>
+      <% } %>
+    <% } else { %>
+      <div class="glass-panel p-4 rounded-3xl flex flex-col gap-2 shrink-0 relative overflow-hidden items-center justify-center min-h-[140px]">
+        <span class="text-textMuted text-sm font-medium">No ongoing events currently running.</span>
+      </div>
     <% } %>
 
-    <!-- Announcement Feed -->
+    <!-- Activity Feed -->
     <div class="glass-panel p-4 rounded-3xl shrink-0 flex flex-col gap-3 mt-2 relative overflow-hidden">
       <div class="flex justify-between items-center relative z-10">
         <span class="text-[11px] font-bold text-textMuted uppercase tracking-wider">Recent Activity Feed</span>
@@ -142,14 +108,12 @@
                 if (activity.type === 'comment' || activity.type === 'reply') {
                   redirectUrl += '?tab=about&action=scrollToComments';
                 }
-                
-                // Add query parameter to mark notification as read
                 if (activity.id) {
                     redirectUrl += (redirectUrl.includes('?') ? '&' : '?') + 'read_notif=' + activity.id;
                 }
               }
             %>
-            <a href="<%= redirectUrl %>" class="flex items-start gap-3 hover:bg-slate-50 p-1.5 -mx-1.5 rounded-xl transition-colors relative z-20" onclick="if(this.href.includes('read_notif=')){fetch('/organizer/notifications/'+<%= activity.id %>+'/read',{method:'POST'}).catch(e=>console.error(e));}">
+            <a href="<%= redirectUrl %>" class="flex items-start gap-3 hover:bg-slate-50 p-1.5 -mx-1.5 rounded-xl transition-colors relative z-20" onclick="<% if (activity.id) { %>event.preventDefault(); window.markAsRead('<%= activity.id %>', this.href);<% } %>">
               <div class="w-2 h-2 rounded-full <%= activity.color %> mt-1.5 shrink-0 shadow-[0_0_5px_rgba(16,185,129,0.3)]"></div>
               <div class="flex flex-col flex-1 overflow-hidden">
                 <span class="text-sm text-textMain font-semibold truncate"><%= activity.eventName %>: <%= activity.message %></span>
@@ -161,10 +125,9 @@
       </div>
     </div>
 
-    <!-- 3. Real-Time Metric Grid (Bento Box / 4 items) -->
+    <!-- Metric Grid -->
     <div class="grid grid-cols-2 gap-3 flex-1 min-h-0">
       
-      <!-- Metric A: Entry Velocity (Crowd Control) -->
       <div class="glass-panel p-4 rounded-3xl flex flex-col justify-between relative group overflow-hidden">
         <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-brand/10 rounded-full blur-[20px]"></div>
         <span class="text-[11px] text-textMuted font-bold tracking-wide uppercase relative z-10">Recent Visits</span>
@@ -177,7 +140,6 @@
         </div>
       </div>
 
-      <!-- Metric B: Navigation Utility -->
       <div class="glass-panel p-4 rounded-3xl flex flex-col justify-between relative overflow-hidden">
         <div class="absolute -right-4 -top-4 w-16 h-16 bg-brand/10 rounded-full blur-[20px]"></div>
         <span class="text-[11px] text-textMuted font-bold tracking-wide uppercase relative z-10">Venue Navigation Hits</span>
@@ -188,7 +150,6 @@
         </div>
       </div>
 
-      <!-- Metric C: Resource Management (Gap) -->
       <div class="glass-panel p-4 rounded-3xl flex flex-col justify-between relative overflow-hidden">
         <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-brand/10 rounded-full blur-[20px]"></div>
         <div class="flex justify-between items-center mb-1 relative z-10">
@@ -209,7 +170,6 @@
         <div class="text-[10px] text-textMuted font-medium relative z-10">Gap: <%= missing %> missing</div>
       </div>
 
-      <!-- Metric D: Issue Response (Live Pulse) -->
       <div class="glass-panel p-4 rounded-3xl flex flex-col justify-between relative overflow-hidden">
         <div class="absolute -left-4 -bottom-4 w-20 h-20 bg-brand/10 rounded-full blur-[20px]"></div>
         <div class="flex justify-between items-center relative z-10">
@@ -234,9 +194,7 @@
 
   </main>
 
-  
-
-<!-- 5. Bottom Navigation Tab Bar -->
+  <!-- Bottom Navigation Tab Bar -->
   <div class="fixed bottom-0 w-full z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200">
     <nav class="flex justify-between items-center px-6 py-3.5 max-w-lg mx-auto">
       <a href="/organizer/dashboard" class="flex flex-col items-center justify-center gap-1 w-12 text-brand group transition-colors">
@@ -281,5 +239,42 @@
       </a>
     </nav>
   </div>
+
+  <!-- Success Login Popup -->
+  <div id="login-success-popup" class="fixed top-6 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none opacity-0 translate-y-[-20px] transition-all duration-500">
+    <div class="bg-white/90 backdrop-blur-xl border border-emerald-100 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.15)] rounded-3xl p-4 flex items-center gap-4 min-w-[300px]">
+      <div class="w-12 h-12 bg-emerald-500 text-white rounded-2xl flex items-center justify-center shadow-[0_8px_15px_-3px_rgba(16,185,129,0.4)]">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+      </div>
+      <div>
+        <h4 class="text-sm font-extrabold text-slate-900">Welcome Back!</h4>
+        <p class="text-[11px] text-slate-500 font-medium">Successfully logged in to your portal.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('loginSuccess') === 'true') {
+        const popup = document.getElementById('login-success-popup');
+        // Show popup
+        setTimeout(() => {
+          popup.classList.remove('opacity-0', 'translate-y-[-20px]');
+          popup.classList.add('opacity-100', 'translate-y-0');
+        }, 300);
+
+        // Hide popup after 4 seconds
+        setTimeout(() => {
+          popup.classList.remove('opacity-100', 'translate-y-0');
+          popup.classList.add('opacity-0', 'translate-y-[-20px]');
+        }, 4000);
+
+        // Clean up URL without refreshing
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+      }
+    });
+  </script>
 </body>
 </html>

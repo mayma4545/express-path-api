@@ -447,7 +447,7 @@
     /* ─── Google sign-in ────────────────────────────── */
     document.getElementById('google-btn').addEventListener('click', () => {
       showToast('Redirecting to Google…');
-      window.location.href = '/auth/google';
+      window.location.href = '/auth/google?flow=signup';
     });
 
   </script>

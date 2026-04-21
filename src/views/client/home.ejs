@@ -503,8 +503,10 @@
             </svg>
           </span>
           <input
+            id="event-search"
             type="search"
             placeholder="Search events, venues…"
+            value="<%= typeof search !== 'undefined' ? search : '' %>"
             style="
               width: 100%;
               padding: 11px 14px 11px 36px;
@@ -546,27 +548,21 @@
                 <div class="sk" style="height: 28px; border-radius: 12px"></div>
               </div>
             </div>
-            <div class="og-card">
-              <div class="og-img sk" style="height: 110px"></div>
-              <div class="og-body">
-                <div
-                  class="sk"
-                  style="height: 10px; width: 55%; margin-bottom: 6px"
-                ></div>
-                <div
-                  class="sk"
-                  style="height: 9px; width: 35%; margin-bottom: 10px"
-                ></div>
-                <div class="sk" style="height: 28px; border-radius: 12px"></div>
-              </div>
-            </div>
           </div>
         </section>
 
         <section style="margin-top: 16px">
           <div class="section-hd">
             <h2>Upcoming Events</h2>
-            <span style="font-size: 11px; color: #9ca3af" id="ev-count"></span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <select id="event-sort" style="font-size: 11px; background: #f3f4f6; border: none; border-radius: 8px; padding: 4px 8px; color: #4b5563; outline: none;">
+                    <option value="date_asc" <%= (typeof sort !== 'undefined' && sort === 'date_asc') ? 'selected' : '' %>>Date: Earliest</option>
+                    <option value="date_desc" <%= (typeof sort !== 'undefined' && sort === 'date_desc') ? 'selected' : '' %>>Date: Latest</option>
+                    <option value="title_asc" <%= (typeof sort !== 'undefined' && sort === 'title_asc') ? 'selected' : '' %>>Name: A-Z</option>
+                    <option value="title_desc" <%= (typeof sort !== 'undefined' && sort === 'title_desc') ? 'selected' : '' %>>Name: Z-A</option>
+                </select>
+                <span style="font-size: 11px; color: #9ca3af" id="ev-count"></span>
+            </div>
           </div>
           <div class="chip-strip" id="chip-strip"></div>
         </section>
@@ -857,6 +853,30 @@
         el.style.display = "flex";
         renderUpcoming();
       }, 800);
+
+      // --- Search and Sort Logic ---
+      const searchInput = document.getElementById("event-search");
+      const sortSelect = document.getElementById("event-sort");
+      let searchTimeout;
+
+      function updateFilters() {
+        const search = searchInput.value;
+        const sort = sortSelect.value;
+        const url = new URL(window.location);
+        
+        if (search) url.searchParams.set('search', search);
+        else url.searchParams.delete('search');
+        
+        url.searchParams.set('sort', sort);
+        window.location.href = url.toString();
+      }
+
+      searchInput.addEventListener("input", () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(updateFilters, 600); // Debounce search
+      });
+
+      sortSelect.addEventListener("change", updateFilters);
     </script>
   </body>
 </html>

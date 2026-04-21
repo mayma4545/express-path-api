@@ -41,15 +41,12 @@
 
   <main class="relative z-10 flex flex-col w-full p-4 gap-4 pb-24 max-w-lg mx-auto">
     
-    <header class="flex items-center gap-4 pt-2 mb-2">
-      <a href="<%= typeof event !== 'undefined' && event ? '/organizer/events/' + event.id : '/organizer/dashboard' %>" class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-textMain shadow-sm border border-slate-200">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-      </a>
-      <div>
-        <h1 class="text-xl font-bold tracking-tight text-textMain"><%= typeof event !== 'undefined' && event ? 'Edit Event' : 'Create Event' %></h1>
-        <p class="text-xs text-textMuted mt-0.5">Fill in the event details</p>
-      </div>
-    </header>
+    <%- include('../partials/organizer_header', { 
+      headerTitle: typeof event !== 'undefined' && event ? 'Edit Event' : 'Create Event', 
+      headerSubtitle: 'Fill in the event details',
+      backUrl: typeof event !== 'undefined' && event ? '/organizer/events/' + event.id : '/organizer/dashboard',
+      showPulse: false
+    }) %>
 
     <div class="glass-panel p-5 rounded-3xl flex flex-col gap-4">
       <form action="<%= typeof event !== 'undefined' && event ? '/organizer/events/' + event.id + '/update' : '/organizer/events/add' %>" method="POST" enctype="multipart/form-data" class="flex flex-col gap-4">

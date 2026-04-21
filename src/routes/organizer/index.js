@@ -2,7 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const router = express.Router();
-const { sequelize, Event, Category, Nodes, Organizer, AppUser, EventAttendee, EventAnalytics, EventAnnouncement, EventPhoto, EventSystemActivityLog, Sequelize } = require('../../models');
+const { sequelize, Event, Category, Nodes, Organizer, AppUser, EventAttendee, EventAnalytics, EventAnnouncement, EventPhoto, EventSystemActivityLog, OrganizerNotification, Sequelize } = require('../../models');
 const { sendEmail } = require('../../services/mailer');
 const { upload, uploadBufferToCloudinary } = require('../../services/cloudinary'); // Import uploadBufferToCloudinary function
 
@@ -143,39 +143,39 @@ router.post('/login', async (req, res) => {
         });
 
         if (!account) {
-            return res.status(401).render('error', {
-                title: 'Login Failed',
-                message: 'Invalid email or password.'
+            return res.render('organizer/login', {
+                title: 'Organizer Login',
+                error: 'Invalid email or password.'
             });
         }
 
         const isValid = await bcrypt.compare(password, account.password_hash);
         if (!isValid) {
-            return res.status(401).render('error', {
-                title: 'Login Failed',
-                message: 'Invalid email or password.'
+            return res.render('organizer/login', {
+                title: 'Organizer Login',
+                error: 'Invalid email or password.'
             });
         }
 
         const organizer = await Organizer.findOne({ where: { user_id: account.id } });
         if (!organizer) {
-            return res.status(403).render('error', {
-                title: 'Access Denied',
-                message: 'This account is not linked to an organizer profile.'
+            return res.render('organizer/login', {
+                title: 'Organizer Login',
+                error: 'This account is not linked to an organizer profile.'
             });
         }
 
         if (organizer.status === 'pending') {
-            return res.status(403).render('error', {
-                title: 'Account Pending',
-                message: 'Your account is currently under review by our administrators. You will receive an email once it is approved.'
+            return res.render('organizer/login', {
+                title: 'Organizer Login',
+                error: 'Your account is currently under review by our administrators.'
             });
         }
 
         if (organizer.status === 'rejected') {
-            return res.status(403).render('error', {
-                title: 'Account Rejected',
-                message: 'Your organizer account application has been rejected. Please contact support for more information.'
+            return res.render('organizer/login', {
+                title: 'Organizer Login',
+                error: 'Your organizer account application has been rejected.'
             });
         }
 
@@ -197,10 +197,10 @@ router.post('/login', async (req, res) => {
             });
         } catch(e) { console.error('Log error', e); }
 
-        return res.redirect('/organizer/dashboard');
+        return res.redirect('/organizer/dashboard?loginSuccess=true');
     } catch (error) {
         console.error('Organizer login error:', error);
-        return res.status(500).render('error', { title: 'Error', message: error.message });
+        return res.render('organizer/login', { title: 'Organizer Login', error: 'An unexpected error occurred. Please try again.' });
     }
 });
 
@@ -256,7 +256,7 @@ router.get('/dashboard', requireOrganizerAuth, async (req, res) => {
             }
         }
 
-        const [totalMyEvents, activeEventsCount, events, activeEventsList, upcomingEventsList, unreadNotifs] = await Promise.all([
+        const [totalMyEvents, activeEventsCount, events, activeEventsList, upcomingEventsList, unreadNotifs, totalUnreadCount] = await Promise.all([
             Event.count({ where: { organizer_id: organizer.id } }),
             Event.count({ where: { organizer_id: organizer.id, is_ongoing: true } }),
             Event.findAll({ where: { organizer_id: organizer.id }, attributes: ['id', 'title', 'status', 'is_ongoing', 'start_time', 'capacity'], order: [['start_time', 'ASC']] }),
@@ -264,8 +264,10 @@ router.get('/dashboard', requireOrganizerAuth, async (req, res) => {
             Event.findAll({ where: { organizer_id: organizer.id, status: 'published', is_ongoing: false }, order: [['start_time', 'ASC']], limit: 5 }),
             OrganizerNotification.findAll({
                 where: { organizer_id: organizer.id, is_read: false },
-                order: [['created_at', 'DESC']],
-                limit: 10
+                order: [['created_at', 'DESC']]
+            }),
+            OrganizerNotification.count({
+                where: { organizer_id: organizer.id, is_read: false }
             })
         ]);
 
@@ -378,7 +380,7 @@ router.get('/dashboard', requireOrganizerAuth, async (req, res) => {
                 livePathHits,
                 totalRSVP,
                 totalActual,
-                alerts: unreadNotifs.length
+                alerts: totalUnreadCount
             }
         });
     } catch (error) {
@@ -865,29 +867,16 @@ router.post('/events/bulk-action', requireOrganizerAuth, async (req, res) => {
 // Notification Read Endpoint
 router.post('/notifications/:id/read', requireOrganizerAuth, async (req, res) => {
     try {
+        const organizerId = req.session.organizerAuth.organizerId;
         const notif = await OrganizerNotification.findOne({
             where: {
                 id: req.params.id,
-                organizer_id: req.organizer.id
+                organizer_id: organizerId
             }
         });
         
         if (notif) {
             await notif.update({ is_read: true });
-            try {
-                if (req.body.eventIds) {
-                    for (let id of req.body.eventIds) {
-                        await EventSystemActivityLog.create({
-                            organizer_id: req.session.organizerAuth.organizerId,
-                            activity_type: 'DELETE_EVENT',
-                            target_type: 'Event',
-                            target_id: id.toString(),
-                            metadata: { action: 'bulk_delete' }
-                        });
-                    }
-                }
-            } catch(e) { console.error('Log error', e); }
-
             res.json({ success: true });
         } else {
             res.status(404).json({ error: 'Notification not found' });
@@ -895,6 +884,21 @@ router.post('/notifications/:id/read', requireOrganizerAuth, async (req, res) =>
     } catch (error) {
         console.error('Error marking notification as read:', error);
         res.status(500).json({ error: 'Failed to update notification' });
+    }
+});
+
+// Mark All Notifications as Read
+router.post('/notifications/mark-all-read', requireOrganizerAuth, async (req, res) => {
+    try {
+        const organizerId = req.session.organizerAuth.organizerId;
+        await OrganizerNotification.update(
+            { is_read: true },
+            { where: { organizer_id: organizerId, is_read: false } }
+        );
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error marking all notifications as read:', error);
+        res.status(500).json({ error: 'Failed to update notifications' });
     }
 });
 
@@ -1043,6 +1047,28 @@ router.get('/profile', requireOrganizerAuth, async (req, res) => {
     } catch (error) {
         console.error('Error loading profile page:', error);
         res.status(500).render('error', { title: 'Error', message: error.message });
+    }
+});
+
+// Get organizer notifications (JSON API)
+router.get('/api/notifications', requireOrganizerAuth, async (req, res) => {
+    try {
+        const organizerId = req.session.organizerAuth.organizerId;
+        const { OrganizerNotification } = require('../../models');
+
+        const notifications = await OrganizerNotification.findAll({
+            where: { organizer_id: organizerId },
+            order: [['created_at', 'DESC']]
+        });
+
+        const unreadCount = await OrganizerNotification.count({
+            where: { organizer_id: organizerId, is_read: false }
+        });
+
+        res.json({ notifications, unreadCount });
+    } catch (error) {
+        console.error('Error fetching notifications API:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 

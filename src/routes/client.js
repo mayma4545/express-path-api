@@ -4,21 +4,29 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const { AppUser } = require('../models');
+const { AppUser, Organizer } = require('../models');
 const { sendEmail } = require('../services/mailer');
 
-// Load Google settings based on provided json
-const ObjectEnvGoogle = {
-    client_id: process.env.GOOGLE_CLIENT_ID,
-    client_secret: process.env.GOOGLE_CLIENT_SECRET,
-    auth_uri: process.env.GOOGLE_AUTH_URI || 'https://accounts.google.com/o/oauth2/auth',
-    token_uri: process.env.GOOGLE_TOKEN_URI || 'https://oauth2.googleapis.com/token',
-    redirect_uris: [
-        process.env.GOOGLE_REDIRECT_URI_PROD || 'https://express-path-api.onrender.com/',
-        process.env.GOOGLE_REDIRECT_URI_DEV || 'http://localhost:3000/login/'
-    ]
+// Helper to get Google settings
+const getGoogleSettings = () => {
+    if (!process.env.GOOGLE_CLIENT_ID) {
+        console.log('[DEBUG] GOOGLE_CLIENT_ID not found in environment');
+        return null;
+    }
+    
+    return {
+        client_id: process.env.GOOGLE_CLIENT_ID.trim(),
+        client_secret: (process.env.GOOGLE_CLIENT_SECRET || '').trim(),
+        auth_uri: process.env.GOOGLE_AUTH_URI || 'https://accounts.google.com/o/oauth2/auth',
+        token_uri: process.env.GOOGLE_TOKEN_URI || 'https://oauth2.googleapis.com/token',
+        redirect_uris: [
+            process.env.GOOGLE_REDIRECT_URI_PROD || 'https://express-path-api.onrender.com/',
+            process.env.GOOGLE_REDIRECT_URI_DEV || 'http://localhost:3000/login/'
+        ]
+    };
 };
-let googleSecrets = process.env.GOOGLE_CLIENT_ID ? ObjectEnvGoogle : null;
+
+console.log('[DEBUG] Google Auth configured:', !!process.env.GOOGLE_CLIENT_ID);
 
 // Landing page (was index.html)
 router.get('/', (req, res) => {
@@ -32,24 +40,46 @@ router.get('/index', (req, res) => {
 router.get('/home', async (req, res) => {
     try {
         const { Event, Category } = require('../models');
+        const { search, sort } = req.query;
+        
+        let where = { status: 'published' };
+        
+        // Basic server-side filtering if search is provided
+        if (search) {
+            const { Op } = require('sequelize');
+            where[Op.or] = [
+                { title: { [Op.like]: `%${search}%` } },
+                { description: { [Op.like]: `%${search}%` } },
+                { venue: { [Op.like]: `%${search}%` } }
+            ];
+        }
+
+        let order = [['event_date', 'ASC']];
+        if (sort === 'date_desc') order = [['event_date', 'DESC']];
+        if (sort === 'title_asc') order = [['title', 'ASC']];
+        if (sort === 'title_desc') order = [['title', 'DESC']];
+
         const dbEvents = await Event.findAll({
-            where: {
-                status: 'published'
-            },
+            where,
             include: [{ model: Category, as: 'category' }],
-            order: [['event_date', 'ASC']]
+            order
         });
-        res.render('client/home', { dbEvents });
+        
+        res.render('client/home', { 
+            dbEvents, 
+            search: search || '', 
+            sort: sort || 'date_asc' 
+        });
     } catch (error) {
         console.error('Error loading events:', error);
-        res.render('client/home', { dbEvents: [] });
+        res.render('client/home', { dbEvents: [], search: '', sort: 'date_asc' });
     }
 });
 
 // Details view
 router.get('/details', async (req, res) => {
     try {
-        const { Event, Category, Nodes, Organizer } = require('../models');
+        const { Event, Category, Nodes } = require('../models');
         const eventId = req.query.id;
         
         if (!eventId) {
@@ -77,6 +107,7 @@ router.get('/details', async (req, res) => {
 // Login view and Google OAuth Callback
 router.get('/login', async (req, res) => {
     const { code, error, message } = req.query;
+    const googleSettings = getGoogleSettings();
 
     // Handle Google OAuth error
     if (error && !message) {
@@ -85,18 +116,18 @@ router.get('/login', async (req, res) => {
 
     // Handle Google OAuth callback successfully returning a code
     if (code) {
-        if (!googleSecrets) return res.redirect('/signup?error=Google Auth not configured');
+        if (!googleSettings) return res.redirect('/login?error=' + encodeURIComponent('Google Auth not configured'));
 
         const isProd = process.env.NODE_ENV === 'production';
-        const redirectUri = isProd ? googleSecrets.redirect_uris[0] : googleSecrets.redirect_uris[1];
+        const redirectUri = isProd ? googleSettings.redirect_uris[0] : googleSettings.redirect_uris[1];
 
         try {
-            const tokenResponse = await fetch(googleSecrets.token_uri, {
+            const tokenResponse = await fetch(googleSettings.token_uri, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: new URLSearchParams({
-                    client_id: googleSecrets.client_id,
-                    client_secret: googleSecrets.client_secret,
+                    client_id: googleSettings.client_id,
+                    client_secret: googleSettings.client_secret,
                     code,
                     grant_type: 'authorization_code',
                     redirect_uri: redirectUri
@@ -111,19 +142,51 @@ router.get('/login', async (req, res) => {
             });
             
             const userInfo = await userInfoResponse.json();
-            
-            // Save Google profile to session
-            req.session.googleAuth = {
-                email: userInfo.email,
-                firstName: userInfo.given_name || '',
-                lastName: userInfo.family_name || ''
-            };
-            
-            // Redirect to new password setup form
-            return res.redirect('/signup/google-pwd');
+            const email = userInfo.email;
+
+            // Check if user exists and is not an organizer
+            const user = await AppUser.findOne({
+                where: { email },
+                include: [{ model: Organizer, as: 'organizer_profile' }]
+            });
+
+            const flow = req.session.authFlow || 'login';
+            delete req.session.authFlow;
+
+            if (user) {
+                // If user is an organizer, they shouldn't log in through the client portal
+                if (user.organizer_profile) {
+                    return res.redirect('/login?error=' + encodeURIComponent('Invalid user account'));
+                }
+
+                // Auto-login existing non-organizer user
+                req.session.user = {
+                    id: user.id,
+                    email: user.email,
+                    first_name: user.first_name,
+                    last_name: user.last_name
+                };
+                req.session.userId = user.id;
+
+                return res.redirect('/home');
+            } else {
+                // User doesn't exist
+                if (flow === 'signup') {
+                    // Save Google profile to session for registration
+                    req.session.googleAuth = {
+                        email: userInfo.email,
+                        firstName: userInfo.given_name || '',
+                        lastName: userInfo.family_name || ''
+                    };
+                    return res.redirect('/signup/google-pwd');
+                } else {
+                    // Email not registered — show generic error on login page
+                    return res.redirect('/login?error=' + encodeURIComponent('Invalid user account'));
+                }
+            }
         } catch (err) {
             console.error('Google Auth Error:', err);
-            return res.redirect('/signup?error=Failed to authenticate with Google');
+            return res.redirect('/login?error=Failed to authenticate with Google');
         }
     }
 
@@ -139,8 +202,17 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Missing email or password' });
         }
 
-        const user = await AppUser.findOne({ where: { email } });
+        const user = await AppUser.findOne({ 
+            where: { email },
+            include: [{ model: Organizer, as: 'organizer_profile' }]
+        });
+
         if (!user) {
+            return res.status(401).json({ success: false, error: 'Invalid email or password' });
+        }
+
+        // If user has an organizer profile, they shouldn't log in here
+        if (user.organizer_profile) {
             return res.status(401).json({ success: false, error: 'Invalid email or password' });
         }
 
@@ -293,22 +365,28 @@ router.post('/signup/google-pwd', async (req, res) => {
 
 // Google OAuth Authorization Redirection
 router.get('/auth/google', (req, res) => {
-    if (!googleSecrets) return res.redirect('/signup?error=Google Auth not configured');
+    const googleSettings = getGoogleSettings();
+    if (!googleSettings) return res.redirect('/login?error=Google Auth not configured');
     
+    const { flow } = req.query; // 'login' or 'signup'
+    if (flow) {
+        req.session.authFlow = flow;
+    }
+
     // Select the appropriate redirect URI
     const isProd = process.env.NODE_ENV === 'production';
-    const redirectUri = isProd ? googleSecrets.redirect_uris[0] : googleSecrets.redirect_uris[1];
+    const redirectUri = isProd ? googleSettings.redirect_uris[0] : googleSettings.redirect_uris[1];
     
     const params = new URLSearchParams({
-        client_id: googleSecrets.client_id,
+        client_id: googleSettings.client_id,
         redirect_uri: redirectUri,
         response_type: 'code',
         scope: 'email profile',
         access_type: 'offline',
-        prompt: 'consent'
+        prompt: 'select_account'
     });
     
-    res.redirect(`${googleSecrets.auth_uri}?${params.toString()}`);
+    res.redirect(`${googleSettings.auth_uri}?${params.toString()}`);
 });
 
 module.exports = router;

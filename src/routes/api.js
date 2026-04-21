@@ -201,6 +201,27 @@ router.post('/comments/:id/react', async (req, res) => {
             res.json({ success: true, reacted: false });
         } else {
             await CommentReaction.create({ comment_id: commentId, user_id: userId });
+            
+            // Notify Organizer
+            try {
+                const comment = await Comment.findByPk(commentId, {
+                    include: [{ model: Event, as: 'event' }]
+                });
+                if (comment && comment.event && comment.event.organizer_id) {
+                    const user = await AppUser.findByPk(userId);
+                    const userName = user ? `${user.first_name} ${user.last_name}` : 'A user';
+                    await OrganizerNotification.create({
+                        organizer_id: comment.event.organizer_id,
+                        event_id: comment.event_id,
+                        type: 'comment_reaction',
+                        message: `${userName} liked a comment on your event "${comment.event.title}".`,
+                        target_id: commentId.toString()
+                    });
+                }
+            } catch (notifyError) {
+                console.error('Error notifying organizer of comment reaction:', notifyError);
+            }
+
             res.json({ success: true, reacted: true });
         }
     } catch (error) {
@@ -282,7 +303,8 @@ router.post('/events/:id/comment', async (req, res) => {
                 organizer_id: event.organizer_id,
                 event_id: eventId,
                 type: 'comment',
-                message: `${userName} commented on your event "${event.title}": "${text.substring(0, 30)}..."`
+                message: `${userName} commented on your event "${event.title}": "${text.substring(0, 30)}..."`,
+                target_id: comment.id.toString()
             });
         }
 

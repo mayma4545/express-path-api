@@ -40,15 +40,12 @@
 
   <main class="relative z-10 flex flex-col w-full p-4 gap-4 pb-24 max-w-lg mx-auto">
     
-    <header class="flex items-center gap-4 pt-2 mb-2">
-      <a href="/organizer/dashboard" class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-textMain shadow-sm border border-slate-200">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-      </a>
-      <div>
-        <h1 class="text-xl font-bold tracking-tight text-textMain">Analytics</h1>
-        <p class="text-xs text-textMuted mt-0.5">Overview of your events' performance</p>
-      </div>
-    </header>
+    <%- include('../partials/organizer_header', { 
+      headerTitle: 'Analytics', 
+      headerSubtitle: "Overview of your events' performance",
+      backUrl: '/organizer/dashboard',
+      showPulse: false
+    }) %>
 
     <div class="grid grid-cols-2 gap-3 flex-1">
       <div class="glass-panel p-4 rounded-3xl flex flex-col justify-between relative overflow-hidden">
