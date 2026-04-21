@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Notifications | EventFlow</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  </head>
+  <body>
+    <style>
+      .ef-body {
+        font-family: "Inter", ui-sans-serif, system-ui;
+        background: #f8fafc;
+        min-height: 100vh;
+        max-width: 430px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+      }
+      .ef-header {
+        background: #fff;
+        padding: 20px 16px 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .back-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        background: #f3f4f6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        cursor: pointer;
+        color: #111;
+      }
+      .content {
+        padding: 8px 16px;
+        flex: 1;
+      }
+      .notif-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 8px;
+        display: flex;
+        gap: 12px;
+        border: 1px solid #f1f5f9;
+        position: relative;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .notif-card:active {
+        background: #f8fafc;
+      }
+      .notif-card.unread::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 16px;
+        bottom: 16px;
+        width: 4px;
+        background: #1da1f2;
+        border-radius: 0 4px 4px 0;
+      }
+      .notif-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .notif-body {
+        flex: 1;
+      }
+      .notif-msg {
+        font-size: 14px;
+        font-weight: 500;
+        color: #1e293b;
+        margin: 0 0 4px;
+        line-height: 1.4;
+      }
+      .notif-time {
+        font-size: 11px;
+        color: #94a3b8;
+      }
+      .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 64px 16px;
+        text-align: center;
+      }
+    </style>
+
+    <div class="ef-body">
+      <header class="ef-header">
+        <button class="back-btn" onclick="window.location.href='/profile'">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <h1 style="font-size: 18px; font-weight: 800; margin: 0;">Notifications</h1>
+      </header>
+
+      <div class="content">
+        <% if (notifications.length === 0) { %>
+          <div class="empty-state">
+            <h3 style="margin: 0 0 8px; color: #1e293b;">All caught up!</h3>
+            <p style="margin: 0; font-size: 14px; color: #64748b;">No new notifications at the moment.</p>
+          </div>
+        <% } else { %>
+          <% notifications.forEach(notif => { %>
+            <div class="notif-card <%= notif.is_read ? '' : 'unread' %>" 
+                 onclick="window.location.href='/details?id=<%= notif.event_id %>'">
+              <div class="notif-icon" style="
+                background: <%= notif.type === 'reaction' ? '#fef2f2' : (notif.type === 'reply' ? '#e0f2fe' : '#f0fdf4') %>;
+                color: <%= notif.type === 'reaction' ? '#ef4444' : (notif.type === 'reply' ? '#0ea5e9' : '#22c55e') %>;
+              ">
+                <% if (notif.type === 'reaction') { %>
+                  <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                <% } else if (notif.type === 'reply') { %>
+                  <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 10h10a8 8 0 018 8v2M3 10l5 5m-5-5l5-5"/></svg>
+                <% } else { %>
+                  <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <% } %>
+              </div>
+              <div class="notif-body">
+                <p class="notif-msg"><%= notif.message %></p>
+                <span class="notif-time">
+                  <%= new Date(notif.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) %>
+                </span>
+              </div>
+            </div>
+          <% }); %>
+        <% } %>
+      </div>
+    </div>
+  </body>
+</html>

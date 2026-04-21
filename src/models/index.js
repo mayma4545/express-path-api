@@ -716,6 +716,96 @@ const EventLike = sequelize.define('EventLike', {
     updatedAt: false
 });
 
+// Event Bookmarks Model
+const EventBookmark = sequelize.define('EventBookmark', {
+    user_id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        references: {
+            model: 'app_users',
+            key: 'id'
+        }
+    },
+    event_id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        references: {
+            model: 'events',
+            key: 'id'
+        }
+    }
+}, {
+    tableName: 'event_bookmarks',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: false
+});
+
+// Event Visits Model (tracking for analytics)
+const EventVisit = sequelize.define('EventVisit', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    event_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'events',
+            key: 'id'
+        }
+    },
+    user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'app_users',
+            key: 'id'
+        }
+    }
+}, {
+    tableName: 'event_visits',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: false
+});
+
+// Event Ratings Model
+const EventRating = sequelize.define('EventRating', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    event_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'events',
+            key: 'id'
+        }
+    },
+    user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'app_users',
+            key: 'id'
+        }
+    },
+    rating: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        validate: { min: 1, max: 5 }
+    }
+}, {
+    tableName: 'event_ratings',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
+});
+
 // Event Photos Model
 const EventPhoto = sequelize.define('EventPhoto', {
     id: {
@@ -945,6 +1035,27 @@ AppUser.hasOne(Organizer, { foreignKey: 'user_id', as: 'organizer_profile', onDe
 AppUser.belongsToMany(Event, { through: EventLike, foreignKey: 'user_id', as: 'liked_events' });
 Event.belongsToMany(AppUser, { through: EventLike, foreignKey: 'event_id', as: 'liked_by_users' });
 
+EventLike.belongsTo(AppUser, { foreignKey: 'user_id', as: 'user' });
+EventLike.belongsTo(Event, { foreignKey: 'event_id', as: 'event' });
+
+// Bookmark Associations
+EventBookmark.belongsTo(AppUser, { foreignKey: 'user_id', as: 'user', onDelete: 'CASCADE' });
+AppUser.hasMany(EventBookmark, { foreignKey: 'user_id', as: 'bookmarks', onDelete: 'CASCADE' });
+EventBookmark.belongsTo(Event, { foreignKey: 'event_id', as: 'event', onDelete: 'CASCADE' });
+Event.hasMany(EventBookmark, { foreignKey: 'event_id', as: 'bookmarks', onDelete: 'CASCADE' });
+
+// Visit Associations
+EventVisit.belongsTo(Event, { foreignKey: 'event_id', as: 'event', onDelete: 'CASCADE' });
+Event.hasMany(EventVisit, { foreignKey: 'event_id', as: 'visits', onDelete: 'CASCADE' });
+EventVisit.belongsTo(AppUser, { foreignKey: 'user_id', as: 'user', onDelete: 'SET NULL' });
+AppUser.hasMany(EventVisit, { foreignKey: 'user_id', as: 'visits', onDelete: 'SET NULL' });
+
+// Rating Associations
+EventRating.belongsTo(Event, { foreignKey: 'event_id', as: 'event', onDelete: 'CASCADE' });
+Event.hasMany(EventRating, { foreignKey: 'event_id', as: 'ratings', onDelete: 'CASCADE' });
+EventRating.belongsTo(AppUser, { foreignKey: 'user_id', as: 'user', onDelete: 'CASCADE' });
+AppUser.hasMany(EventRating, { foreignKey: 'user_id', as: 'ratings', onDelete: 'CASCADE' });
+
 EventPhoto.belongsTo(Event, { foreignKey: 'event_id', as: 'event', onDelete: 'CASCADE' });
 Event.hasMany(EventPhoto, { foreignKey: 'event_id', as: 'photos', onDelete: 'CASCADE' });
 
@@ -1061,6 +1172,59 @@ Organizer.hasMany(OrganizerNotification, { foreignKey: 'organizer_id', as: 'noti
 OrganizerNotification.belongsTo(Event, { foreignKey: 'event_id', as: 'event', onDelete: 'CASCADE' });
 Event.hasMany(OrganizerNotification, { foreignKey: 'event_id', as: 'organizer_notifications', onDelete: 'CASCADE' });
 
+// UserNotification Model
+const UserNotification = sequelize.define('UserNotification', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'app_users',
+            key: 'id'
+        }
+    },
+    event_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'events',
+            key: 'id'
+        }
+    },
+    type: {
+        type: DataTypes.STRING(50),
+        allowNull: false
+    },
+    message: {
+        type: DataTypes.TEXT,
+        allowNull: false
+    },
+    target_id: {
+        type: DataTypes.STRING(100),
+        allowNull: true
+    },
+    is_read: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    }
+}, {
+    tableName: 'user_notifications',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: false
+});
+
+// UserNotification Associations
+UserNotification.belongsTo(AppUser, { foreignKey: 'user_id', as: 'user', onDelete: 'CASCADE' });
+AppUser.hasMany(UserNotification, { foreignKey: 'user_id', as: 'notifications', onDelete: 'CASCADE' });
+
+UserNotification.belongsTo(Event, { foreignKey: 'event_id', as: 'event', onDelete: 'CASCADE' });
+Event.hasMany(UserNotification, { foreignKey: 'event_id', as: 'user_notifications', onDelete: 'CASCADE' });
+
 
 // Event System Activity Log (tracks organizer actions)
 const EventSystemActivityLog = sequelize.define('EventSystemActivityLog', {
@@ -1132,10 +1296,14 @@ module.exports = {
     AppUser,
     Organizer,
     EventLike,
+    EventBookmark,
+    EventVisit,
+    EventRating,
     EventPhoto,
     Comment,
     CommentReaction,
     Guest,
     EventAnnouncement,
+    UserNotification,
     OrganizerNotification
 };

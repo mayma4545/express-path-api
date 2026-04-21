@@ -149,13 +149,12 @@
         <h1 id="detail-name" class="text-2xl font-extrabold text-white leading-tight mt-1 drop-shadow-lg"></h1>
       </div>
       <div class="flex flex-col items-center bg-white/20 backdrop-blur-sm rounded-2xl px-3 py-2 border border-white/30">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-red-400 mb-0.5" fill="currentColor"
-          viewBox="0 0 24 24">
-          <path
-            d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
         </svg>
         <p id="detail-going" class="text-sm font-bold text-white leading-none"></p>
-        <p class="text-[10px] text-white/70 font-medium">going</p>
+        <p class="text-[10px] text-white/70 font-medium">visited</p>
       </div>
     </div>
   </div>
@@ -210,7 +209,19 @@
       <div id="detail-tags" class="flex flex-wrap gap-2 mt-4"></div>
 
       <!-- Comments Section -->
-      <div class="mt-8 border-t border-gray-100 pt-6 pb-2">
+      <div id="rating-section" class="mt-6 border-t border-gray-100 pt-6">
+        <h3 class="text-lg font-bold text-gray-900 mb-1">Event Rating</h3>
+        <p id="rating-text" class="text-xs text-gray-500 mb-3">Loading ratings...</p>
+        <div class="flex items-center gap-1 mb-4">
+          <svg class="w-8 h-8 star text-gray-300 cursor-pointer transition" data-val="1" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27l-5.18 3.73 1.64-6.81L3.64 9.64l6.81-.59L12 3l1.55 6.05 6.81.59-4.82 4.55 1.64 6.81z"/></svg>
+          <svg class="w-8 h-8 star text-gray-300 cursor-pointer transition" data-val="2" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27l-5.18 3.73 1.64-6.81L3.64 9.64l6.81-.59L12 3l1.55 6.05 6.81.59-4.82 4.55 1.64 6.81z"/></svg>
+          <svg class="w-8 h-8 star text-gray-300 cursor-pointer transition" data-val="3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27l-5.18 3.73 1.64-6.81L3.64 9.64l6.81-.59L12 3l1.55 6.05 6.81.59-4.82 4.55 1.64 6.81z"/></svg>
+          <svg class="w-8 h-8 star text-gray-300 cursor-pointer transition" data-val="4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27l-5.18 3.73 1.64-6.81L3.64 9.64l6.81-.59L12 3l1.55 6.05 6.81.59-4.82 4.55 1.64 6.81z"/></svg>
+          <svg class="w-8 h-8 star text-gray-300 cursor-pointer transition" data-val="5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27l-5.18 3.73 1.64-6.81L3.64 9.64l6.81-.59L12 3l1.55 6.05 6.81.59-4.82 4.55 1.64 6.81z"/></svg>
+        </div>
+      </div>
+
+      <div class="mt-4 border-t border-gray-100 pt-6 pb-2">
         <h3 class="text-lg font-bold text-gray-900 mb-4">Comments (<span id="comment-count">2</span>)</h3>
         
         <!-- Add Comment -->
@@ -286,7 +297,7 @@
       </svg>
       Add to Cal
     </button>
-    <a id="map-btn" href="/map"
+    <button id="map-btn" onclick="checkLocationBeforeMap()"
       class="btn-ripple flex-[2] bg-brand text-white font-bold py-3.5 rounded-2xl active:scale-95 transition-all shadow-lg shadow-brand/30 text-sm flex items-center justify-center gap-2">
       <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
         stroke-width="2">
@@ -295,7 +306,36 @@
         <line x1="16" y1="6" x2="16" y2="22" />
       </svg>
       View in Map
-    </a>
+    </button>
+  </div>
+
+  <!-- ── Location Prompt Modal ──────────────────────── -->
+  <div id="location-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-6">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeLocationModal()"></div>
+    <div class="relative bg-white w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl animate-fade-up">
+      <div class="bg-brand/10 p-8 flex justify-center">
+        <div class="w-20 h-20 bg-brand rounded-full flex items-center justify-center shadow-lg shadow-brand/20">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </div>
+      </div>
+      <div class="p-6 text-center">
+        <h3 class="text-xl font-extrabold text-gray-900 mb-2">Enable Location</h3>
+        <p class="text-sm text-gray-500 leading-relaxed mb-6">
+          To show your position on the map and get accurate directions, please enable your device's location services.
+        </p>
+        <div class="flex flex-col gap-2">
+          <button onclick="requestLocationAccess()" class="w-full bg-brand text-white font-bold py-3.5 rounded-2xl active:scale-95 transition-all shadow-md">
+            Enable Now
+          </button>
+          <button onclick="closeLocationModal()" class="w-full text-sm text-gray-400 font-semibold py-3 hover:text-gray-600 transition-colors">
+            Maybe Later
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ── Calendar Modal ──────────────────────────────── -->
@@ -356,10 +396,10 @@
           date: RAW_EVENT.event_date ? new Date(RAW_EVENT.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "TBA",
           start: RAW_EVENT.start_time ? RAW_EVENT.start_time.substring(0, 5) : "",
           end: RAW_EVENT.end_time ? RAW_EVENT.end_time.substring(0, 5) : "",
-          going: RAW_EVENT.capacity || 0,
+          going: (RAW_EVENT.analytics ? RAW_EVENT.analytics.page_view_count : 0),
           organizer: RAW_EVENT.organizer ? RAW_EVENT.organizer.name : "Event Organizer",
           liked: false,
-          views: 0,
+          views: (RAW_EVENT.analytics ? RAW_EVENT.analytics.page_view_count : 0),
           coords: RAW_EVENT.latitude && RAW_EVENT.longitude ? { lat: parseFloat(RAW_EVENT.latitude), lng: parseFloat(RAW_EVENT.longitude) } : null
         };
         sessionStorage.setItem('currentEventId', ev.id);
@@ -436,28 +476,32 @@
     function toggleHeart() {
       if (!ev) return;
       ev.liked = !ev.liked;
-      ev.going += ev.liked ? 1 : -1;
-      document.getElementById('heart-btn').classList.toggle('liked', ev.liked);
-      document.getElementById('detail-going').textContent = formatGoing(ev.going);
-      
-      // Notify backend about like toggle
-      fetch(`/api/events/${ev.id}/like`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: ev.liked ? 'like' : 'unlike' })
-      }).catch(err => console.error('Error toggling like:', err));
+        // Commented out going changes for bookmarks
+        // ev.going += ev.liked ? 1 : -1;
+        document.getElementById('heart-btn').classList.toggle('liked', ev.liked);
+        document.getElementById('detail-going').textContent = formatGoing(ev.going);
+        
+        // Notify backend about bookmark toggle
+        fetch(`/api/events/${ev.id}/bookmark`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: ev.liked ? 'bookmark' : 'unbookmark' })
+        }).catch(err => console.error('Error toggling bookmark:', err));
     }
 
-    /* ── Tabs ── */
     function switchTab(name) {
       ['about', 'organizer', 'gallery', 'announcements'].forEach(t => {
-        document.getElementById(`tab-${t}`).classList.toggle('active', t === name);
-        document.getElementById(`tab-${t}-content`).classList.toggle('active', t === name);
-        if (t !== name) {
-          document.getElementById(`tab-${t}`).classList.remove('active');
-          document.getElementById(`tab-${t}`).classList.add('text-gray-400');
+        const btn = document.getElementById(`tab-${t}`);
+        const content = document.getElementById(`tab-${t}-content`);
+        
+        if (t === name) {
+          btn.classList.add('active', 'text-brand');
+          btn.classList.remove('text-gray-400');
+          content.classList.add('active');
         } else {
-          document.getElementById(`tab-${t}`).classList.remove('text-gray-400');
+          btn.classList.remove('active', 'text-brand');
+          btn.classList.add('text-gray-400');
+          content.classList.remove('active');
         }
       });
     }
@@ -737,6 +781,136 @@
     // Call loaders on init!
     loadComments();
     loadPhotos();
+
+    // Auto-log visit and grab status
+    fetch(`/api/events/${ev.id}/status`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.bookmarked) {
+          ev.liked = true;
+          document.getElementById('heart-btn').classList.add('liked');
+        } else {
+          ev.liked = false;
+          document.getElementById('heart-btn').classList.remove('liked');
+        }
+        
+        if (data.visits !== undefined) {
+           document.getElementById('detail-going').textContent = formatGoing(data.visits);
+        }
+
+        // Setup Rating UI
+        setupRating(data.rating, data.avgRating, data.totalRatings);
+      }).catch(console.error);
+
+    // Log the visit independently and update UI
+    fetch(`/api/events/${ev.id}/visit`, { method: 'POST' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.visits !== undefined) {
+           document.getElementById('detail-going').textContent = formatGoing(data.visits);
+        }
+      });
+
+    function setupRating(userRating, avgRating, total) {
+      const parent = document.getElementById('rating-section');
+      if (!parent) return;
+
+      const stars = parent.querySelectorAll('.star');
+      const text = document.getElementById('rating-text');
+      
+      if (userRating) {
+        text.innerHTML = `You rated this <b>${userRating} stars</b>! (Avg: ${avgRating}★ from ${total})`;
+        highlightStars(stars, userRating);
+      } else {
+        text.innerHTML = `Click to rate! (Avg: ${avgRating}★ from ${total})`;
+      }
+      
+      stars.forEach(star => {
+        star.onclick = () => {
+          if (userRating) return; // already rated
+          const val = parseInt(star.getAttribute('data-val'));
+          fetch(`/api/events/${ev.id}/rate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rating: val })
+          }).then(r => r.json()).then(d => {
+            if (d.success) {
+              userRating = val;
+              text.innerHTML = `You rated this <b>${val} stars</b>!`;
+              highlightStars(stars, val);
+            } else {
+              alert(d.error);
+            }
+          });
+        }
+      });
+    }
+
+    function highlightStars(stars, val) {
+      stars.forEach(s => {
+        if (parseInt(s.getAttribute('data-val')) <= val) {
+          s.classList.add('text-yellow-400');
+          s.classList.remove('text-gray-300');
+        } else {
+          s.classList.remove('text-yellow-400');
+          s.classList.add('text-gray-300');
+        }
+      });
+    }
+
+    /* ── Location Logic ── */
+    function checkLocationBeforeMap() {
+      if (!navigator.geolocation) {
+        // Fallback for browsers that don't support geolocation
+        window.location.href = '/map';
+        return;
+      }
+
+      // Check permission status if API is available
+      if (navigator.permissions && navigator.permissions.query) {
+        navigator.permissions.query({ name: 'geolocation' }).then(result => {
+          if (result.state === 'granted') {
+            // Already granted, proceed to map
+            window.location.href = '/map';
+          } else {
+            // Not granted or prompt needed, show our custom modal
+            document.getElementById('location-modal').classList.remove('hidden');
+          }
+        });
+      } else {
+        // Fallback: just show the modal to be safe
+        document.getElementById('location-modal').classList.remove('hidden');
+      }
+    }
+
+    function closeLocationModal() {
+      document.getElementById('location-modal').classList.add('hidden');
+    }
+
+    function requestLocationAccess() {
+      // Trigger the browser's native location prompt
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          // Success! Permission granted and location retrieved.
+          // We don't necessarily need the coordinates here as the map page will fetch them.
+          closeLocationModal();
+          window.location.href = '/map';
+        },
+        (error) => {
+          // User denied or error occurred
+          console.error('Location error:', error);
+          // Even if they deny, we might want to let them view the map without their current location,
+          // OR we show a message. Usually, navigation apps need location.
+          // For now, let's just proceed to the map - the map page should handle the empty state.
+          // But based on user request: "prompt first... if not turn on"
+          alert("Please enable location services in your device settings to use the navigation features.");
+          closeLocationModal();
+          // We still let them go to the map, but they've been warned.
+          window.location.href = '/map';
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    }
   </script>
 </body>
 

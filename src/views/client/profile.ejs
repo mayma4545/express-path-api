@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>My Profile � EventFlow</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { brand: '#1DA1F2', 'brand-dark': '#0d8de0', 'brand-light': '#e8f5fe' },
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] },
+        },
+      },
+    };
+  </script>
+  <style>
+    * { -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+    .fade-up { animation: fadeUp .4s ease forwards; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .tab-btn { transition: all .2s; }
+    .tab-btn.active { color: #1DA1F2; border-bottom: 2px solid #1DA1F2; font-weight: bold; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+  </style>
+</head>
+<body class="min-h-screen max-w-md mx-auto overflow-x-hidden relative pb-[90px]">
+
+  <!-- Header -->
+  <div class="bg-white px-5 pt-6 pb-6 shadow-sm sticky top-0 z-40">
+    <div class="flex items-center justify-between">
+      <a href="/home" class="bg-gray-100 rounded-full p-2.5 text-gray-700 active:scale-95 transition-all">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+      </a>
+      <h1 class="text-lg font-bold text-gray-900">My Profile</h1>
+      <button class="bg-gray-100 rounded-full p-2.5 text-gray-700 active:scale-95 transition-all" onclick="switchTab('edit')">
+         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+           <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+           <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+         </svg>
+      </button>
+    </div>
+    
+    <!-- Profile Info -->
+    <div class="flex items-center gap-4 mt-6">
+      <div class="w-16 h-16 rounded-full bg-brand text-white flex items-center justify-center text-xl font-bold shadow-md">
+        <%= user.first_name ? user.first_name[0].toUpperCase() : 'U' %>
+      </div>
+      <div>
+        <h2 class="text-xl font-extrabold text-gray-900"><%= user.first_name %> <%= user.last_name %></h2>
+        <p class="text-xs text-gray-500 font-medium mt-0.5"><%= user.email %></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-2 bg-white px-5 pt-3 shadow-sm mb-4">
+    <!-- Tabs -->
+    <div class="flex border-b border-gray-100 overflow-x-auto no-scrollbar">
+      <button id="tab-bookmarks" class="tab-btn active flex-1 py-3 text-sm text-center whitespace-nowrap" onclick="switchTab('bookmarks')">Bookmarks</button>
+      <button id="tab-history" class="tab-btn flex-1 py-3 text-sm text-gray-400 text-center whitespace-nowrap" onclick="switchTab('history')">History</button>
+      <button id="tab-edit" class="tab-btn flex-1 py-3 text-sm text-gray-400 text-center whitespace-nowrap" onclick="switchTab('edit')">Edit Profile</button>
+    </div>
+  </div>
+
+  <div class="px-5 fade-up">
+    <!-- Bookmarks Tab -->
+    <div id="tab-bookmarks-content" class="tab-content active space-y-4">
+      <% if (bookmarkedEvents && bookmarkedEvents.length > 0) { %>
+        <% bookmarkedEvents.forEach(ev => { %>
+          <div id="bookmark-<%= ev.id %>" class="bg-white rounded-2xl p-4 flex flex-col gap-3 shadow-sm border border-gray-100 active:scale-[0.99] transition cursor-pointer" onclick="window.location.href='/details?id=<%= ev.id %>'">
+            <div class="flex gap-4">
+              <img src="<%= ev.image_url %>" class="w-20 h-20 rounded-xl object-cover shadow-sm" alt="Event Image" />
+              <div class="flex-1 py-1">
+                <span class="text-[10px] font-bold text-brand uppercase tracking-wider bg-brand-light px-2 py-0.5 rounded-full"><%= new Date(ev.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></span>
+                <h4 class="text-sm font-extrabold text-gray-900 mt-1.5 leading-tight"><%= ev.title %></h4>
+                <div class="flex items-start gap-1 mt-2 text-gray-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <p class="text-xs font-medium leading-relaxed"><%= ev.venue %></p>
+                </div>
+              </div>
+            </div>
+            <div class="flex gap-2 pt-1 border-t border-gray-50 mt-1">
+               <button class="flex-1 bg-brand-light text-brand text-[11px] font-bold py-2 rounded-xl transition hover:bg-brand/10" onclick="event.stopPropagation(); window.location.href='/details?id=<%= ev.id %>'">View Details</button>
+               <button class="px-4 bg-red-50 text-red-500 text-[11px] font-bold py-2 rounded-xl transition hover:bg-red-100 flex items-center gap-1" onclick="unbookmarkEvent(event, <%= ev.id %>)">
+                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                 Unbookmark
+               </button>
+            </div>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div class="text-center py-10">
+          <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+             <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+          </div>
+          <p class="text-sm font-bold text-gray-900">No bookmarks yet</p>
+          <p class="text-xs text-gray-500 mt-1">Tap the heart on an event to save it here.</p>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- History Tab -->
+    <div id="tab-history-content" class="tab-content space-y-4">
+      <% if (visitedEvents && visitedEvents.length > 0) { %>
+        <% visitedEvents.forEach(ev => { %>
+          <div class="bg-white rounded-2xl p-3 flex gap-4 shadow-sm border border-gray-100 active:scale-[0.98] transition cursor-pointer" onclick="window.location.href='/details?id=<%= ev.id %>'">
+            <img src="<%= ev.image_url %>" class="w-16 h-16 rounded-xl object-cover opacity-80" alt="Event Image" />
+            <div class="flex-1 py-1">
+              <h4 class="text-sm font-bold text-gray-700 leading-tight"><%= ev.title %></h4>
+              <p class="text-[10px] bg-gray-100 text-gray-500 inline-block px-2 py-0.5 rounded mt-1 flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Visited Recently
+              </p>
+            </div>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div class="text-center py-10">
+          <p class="text-sm font-bold text-gray-900">No events visited</p>
+          <p class="text-xs text-gray-500 mt-1">Explore the campus and find events.</p>
+        </div>
+      <% } %>
+      
+      <div class="mt-8 border-t border-gray-200 pt-6">
+        <a href="/logout" class="block w-full bg-red-50 text-red-600 text-center py-3 rounded-xl font-bold text-sm transition hover:bg-red-100">Sign Out</a>
+      </div>
+    </div>
+
+    <!-- Edit Profile Tab -->
+    <div id="tab-edit-content" class="tab-content">
+      <form id="edit-profile-form" class="space-y-5 bg-white p-6 rounded-3xl border border-gray-100 shadow-sm" onsubmit="updateProfile(event)">
+        <div>
+          <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">First Name</label>
+          <input type="text" name="first_name" value="<%= user.first_name %>" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3.5 text-sm font-medium focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all" required />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Last Name</label>
+          <input type="text" name="last_name" value="<%= user.last_name %>" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3.5 text-sm font-medium focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all" required />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Email Address</label>
+          <input type="email" value="<%= user.email %>" class="w-full bg-gray-100 border border-gray-100 rounded-2xl px-4 py-3.5 text-sm font-medium text-gray-400 cursor-not-allowed outline-none" readonly />
+          <p class="text-[10px] text-gray-400 mt-2 ml-1 italic">Email cannot be changed.</p>
+        </div>
+        <div class="pt-4">
+          <button type="submit" id="save-btn" class="w-full bg-brand text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand/20 active:scale-95 transition-all text-sm">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function switchTab(name) {
+      ['bookmarks', 'history', 'edit'].forEach(t => {
+        const btn = document.getElementById('tab-' + t);
+        const content = document.getElementById('tab-' + t + '-content');
+        if (!btn || !content) return;
+
+        if (t === name) {
+          btn.classList.add('active', 'text-brand');
+          btn.classList.remove('text-gray-400');
+          content.classList.add('active');
+        } else {
+          btn.classList.remove('active', 'text-brand');
+          btn.classList.add('text-gray-400');
+          content.classList.remove('active');
+        }
+      });
+    }
+
+    async function unbookmarkEvent(e, id) {
+      e.stopPropagation();
+      if (!confirm('Remove this event from your bookmarks?')) return;
+
+      try {
+        const res = await fetch(`/api/events/${id}/bookmark`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (data.success && !data.bookmarked) {
+          const card = document.getElementById(`bookmark-${id}`);
+          card.style.opacity = '0';
+          card.style.transform = 'translateY(10px)';
+          setTimeout(() => {
+            card.remove();
+            if (document.querySelectorAll('#tab-bookmarks-content > div[id^="bookmark-"]').length === 0) {
+              location.reload(); // Show empty state
+            }
+          }, 300);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function updateProfile(e) {
+      e.preventDefault();
+      const btn = document.getElementById('save-btn');
+      const oldText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+
+      const formData = new FormData(e.target);
+      const data = Object.fromEntries(formData.entries());
+
+      try {
+        const res = await fetch('/profile/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const result = await res.json();
+        if (result.success) {
+          alert('Profile updated successfully!');
+          location.reload();
+        } else {
+          alert(result.error || 'Update failed');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('An error occurred');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = oldText;
+      }
+    }
+  </script>
+</body>
+</html>
