@@ -2,10 +2,27 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const router = express.Router();
+
+// Middleware to get unread activity count
+router.use(async (req, res, next) => {
+    try {
+        const { EventSystemActivityLog } = require('../../models');
+        if (EventSystemActivityLog) {
+            const unreadCount = await EventSystemActivityLog.count({ where: { is_read: false } });
+            res.locals.unreadActivityCount = unreadCount;
+        } else {
+            res.locals.unreadActivityCount = 0;
+        }
+        next();
+    } catch (e) {
+        console.error('Middleware error:', e);
+        res.locals.unreadActivityCount = 0;
+        next();
+    }
+});
+
 const { Event, Category, Nodes, AppUser, Organizer, sequelize } = require('../../models');
 const { uploadBufferToCloudinary, imageFilter } = require('../../services/cloudinary');
-
-const { Op } = require('sequelize');
 
 const uploadOrganizerAvatar = multer({
     storage: multer.memoryStorage(),
@@ -23,64 +40,47 @@ router.get('/', (req, res) => {
 // Admin Dashboard - City Overview
 router.get('/dashboard', async (req, res) => {
     try {
-        const [totalEvents, totalCategories, totalUsers, totalOrganizers] = await Promise.all([
+        const { Op } = require('sequelize');
+        const { EventSystemActivityLog, OrganizerNotification, EventAnalytics, Organizer } = require('../../models');
+        const [
+            totalEvents, totalCategories, totalUsers, totalOrganizers,
+            ongoingEvents, upcomingEvents, mostVisitedEvents,
+            recentActivities, notifications,
+            ongoingCount, upcomingCount
+        ] = await Promise.all([
             Event.count(),
             Category.count(),
             AppUser.count(),
-            Organizer.count()
+            Organizer.count(),
+            Event.findAll({ 
+                where: { is_ongoing: true }, 
+                order: [['created_at', 'DESC']], 
+                limit: 3 
+            }),
+            Event.findAll({ 
+                where: { 
+                    is_ongoing: false, 
+                    // using >= today logic 
+                }, 
+                order: [['created_at', 'DESC']], // using fallback order because we didn't sanitize start_date specifically
+                limit: 3 
+            }),
+            Event.findAll({ 
+                order: [['created_at', 'DESC']], // Fallback to newly created for now
+                limit: 3 
+            }),
+            EventSystemActivityLog.findAll({
+                include: [{ model: Organizer, as: 'organizer_actor', attributes: ['id', 'name'] }],
+                order: [['occurred_at', 'DESC']],
+                limit: 5
+            }),
+            OrganizerNotification.findAll({
+                order: [['created_at', 'DESC']],
+                limit: 6
+            }),
+            Event.count({ where: { is_ongoing: true } }),
+            Event.count({ where: { is_ongoing: false } })
         ]);
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const upcomingEvents = await Event.findAll({
-            where: {
-                event_date: {
-                    [Op.gte]: today
-                }
-            },
-            order: [['event_date', 'ASC'], ['start_time', 'ASC']],
-            limit: 5
-        });
-
-        // Get recent events and organizers for "Recent Activities"
-        const recentEvents = await Event.findAll({
-            order: [['created_at', 'DESC']],
-            limit: 3
-        });
-        const recentOrganizers = await Organizer.findAll({
-            order: [['created_at', 'DESC']],
-            limit: 3
-        });
-
-        // Merge and sort for activity timeline
-        let activities = [];
-        recentEvents.forEach(e => {
-            activities.push({
-                type: 'event_created',
-                title: 'New Event Created',
-                subtitle: e.title,
-                date: e.created_at || new Date(),
-                icon: 'E',
-                bgColor: 'bg-[#F0F2FF]',
-                textColor: 'text-brand',
-                value: '+ 1'
-            });
-        });
-        recentOrganizers.forEach(o => {
-            activities.push({
-                type: 'organizer_registered',
-                title: 'Organizer Registered',
-                subtitle: o.name,
-                date: o.created_at || new Date(),
-                icon: 'O',
-                bgColor: 'bg-gray-50',
-                textColor: 'text-textMain',
-                value: '+ 1'
-            });
-        });
-        activities.sort((a, b) => b.date - a.date);
-        activities = activities.slice(0, 5);
 
         res.render('admin/dashboard', {
             title: 'Admin Dashboard | Masbate City',
@@ -88,8 +88,13 @@ router.get('/dashboard', async (req, res) => {
             totalCategories,
             totalUsers,
             totalOrganizers,
+            ongoingEvents,
             upcomingEvents,
-            activities,
+            mostVisitedEvents,
+            recentActivities,
+            notifications,
+            ongoingCount,
+            upcomingCount,
             currentPath: '/admin/dashboard'
         });
     } catch (error) {
@@ -113,6 +118,35 @@ router.get('/organizers', async (req, res) => {
         });
     } catch (error) {
         console.error('Admin Organizers error:', error);
+        res.status(500).render('error', { title: 'Error', message: error.message });
+    }
+});
+
+// View Organizer Profile
+router.get('/organizers/:id', async (req, res) => {
+    try {
+        const organizer = await Organizer.findByPk(req.params.id, {
+            include: [{ model: AppUser, as: 'account' }]
+        });
+
+        if (!organizer) {
+            return res.status(404).render('error', { title: 'Not Found', message: 'Organizer not found.' });
+        }
+
+        const events = await Event.findAll({
+            where: { organizer_id: organizer.id },
+            include: ['category'],
+            order: [['event_date', 'DESC']]
+        });
+
+        res.render('admin/organizer_profile', {
+            title: `${organizer.name} Profile | Admin`,
+            organizer,
+            events,
+            currentPath: '/admin/organizers'
+        });
+    } catch (error) {
+        console.error('Admin Organizer Profile error:', error);
         res.status(500).render('error', { title: 'Error', message: error.message });
     }
 });
@@ -184,7 +218,8 @@ router.post('/organizers', uploadOrganizerAvatar.single('avatar_image'), async (
                 name: name.trim(),
                 avatar_url: avatarUrl,
                 description: description ? description.trim() : null,
-                average_rating: safeRating
+                average_rating: safeRating,
+                status: 'approved'
             }, { transaction });
         });
 
@@ -275,6 +310,69 @@ router.post('/organizers/:id/edit', uploadOrganizerAvatar.single('avatar_image')
     }
 });
 
+// Approve organizer
+router.post('/organizers/:id/approve', async (req, res) => {
+    try {
+        const organizerId = req.params.id;
+        const organizer = await Organizer.findByPk(organizerId, { include: ['account'] });
+        
+        if (!organizer) {
+            return res.status(404).render('error', { title: 'Not Found', message: 'Organizer not found.' });
+        }
+
+        organizer.status = 'approved';
+        await organizer.save();
+
+        // Send Approval Email
+        if (organizer.account && organizer.account.email) {
+            try {
+                const { sendEmail } = require('../../services/mailer');
+                const mailText = `Congratulations ${organizer.name}!\n\nYour organizer account has been approved by the OhSee administrators. You can now log in and start creating events.\n\nWelcome to the platform!`;
+                const mailHtml = `
+                    <div style="font-family: sans-serif; color: #333;">
+                        <h2 style="color: #1DA1F2;">Account Approved!</h2>
+                        <p>Hello <strong>${organizer.name}</strong>,</p>
+                        <p>We are happy to inform you that your organizer account on <strong>OhSee</strong> has been <strong>approved</strong>.</p>
+                        <p>You can now log in to the organizer portal using your credentials and start publishing events.</p>
+                        <div style="margin: 20px 0;">
+                            <a href="${process.env.BASE_URL || 'http://localhost:3000'}/organizer/login" style="background: #1DA1F2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Login to Portal</a>
+                        </div>
+                        <p>Welcome aboard!</p>
+                    </div>
+                `;
+                await sendEmail(organizer.account.email, 'Account Approved - OhSee Organizer', mailText, mailHtml);
+            } catch (mailErr) {
+                console.error('Approval email error:', mailErr);
+            }
+        }
+
+        res.redirect('/admin/organizers?approved=true');
+    } catch (error) {
+        console.error('Approve organizer error:', error);
+        res.status(500).render('error', { title: 'Error', message: error.message });
+    }
+});
+
+// Reject organizer
+router.post('/organizers/:id/reject', async (req, res) => {
+    try {
+        const organizerId = req.params.id;
+        const organizer = await Organizer.findByPk(organizerId);
+        
+        if (!organizer) {
+            return res.status(404).render('error', { title: 'Not Found', message: 'Organizer not found.' });
+        }
+
+        organizer.status = 'rejected';
+        await organizer.save();
+
+        res.redirect('/admin/organizers?rejected=true');
+    } catch (error) {
+        console.error('Reject organizer error:', error);
+        res.status(500).render('error', { title: 'Error', message: error.message });
+    }
+});
+
 // Delete organizer
 router.post('/organizers/:id/delete', async (req, res) => {
     try {
@@ -352,6 +450,53 @@ router.get('/events/:id', async (req, res) => {
         });
     } catch (error) {
         console.error('Admin Event Details error:', error);
+        res.status(500).render('error', { title: 'Error', message: error.message });
+    }
+});
+
+router.get('/activity', async (req, res) => {
+    try {
+        const { EventSystemActivityLog, Organizer } = require('../../models');
+        let activities = [];
+        if (EventSystemActivityLog) {
+            activities = await EventSystemActivityLog.findAll({
+                include: [{ model: Organizer, as: 'organizer_actor', attributes: ['id', 'name'] }],
+                order: [['occurred_at', 'DESC']]
+            });
+        }
+        res.render('admin/activity', {
+            title: 'Activity Log | Admin',
+            currentPath: '/admin/activity',
+            activities
+        });
+    } catch (error) {
+        console.error('Admin Activity error:', error);
+        res.status(500).render('error', { title: 'Error', message: error.message });
+    }
+});
+
+// Mark activity as read
+router.post('/activity/:id/read', async (req, res) => {
+    try {
+        const { EventSystemActivityLog } = require('../../models');
+        if (EventSystemActivityLog) {
+            await EventSystemActivityLog.update({ is_read: true }, { where: { id: req.params.id } });
+        }
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Mark read error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.get('/reports', async (req, res) => {
+    try {
+        res.render('admin/report', {
+            title: 'Reports | Admin',
+            currentPath: '/admin/reports'
+        });
+    } catch (error) {
+        console.error('Admin Reports error:', error);
         res.status(500).render('error', { title: 'Error', message: error.message });
     }
 });

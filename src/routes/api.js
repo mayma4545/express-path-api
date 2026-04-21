@@ -159,15 +159,18 @@ router.get('/events/:id/photos', async (req, res) => {
 // Get event comments
 router.get('/events/:id/comments', async (req, res) => {
     try {
+        const event = await Event.findByPk(req.params.id);
+        if (!event) return res.status(404).json({ error: 'Event not found' });
+
         const comments = await Comment.findAll({
             where: { event_id: req.params.id },
             include: [
                 { model: AppUser, as: 'user', attributes: ['id', 'first_name', 'last_name'] },
                 { model: AppUser, as: 'reacted_by_users', attributes: ['id'] }
             ],
-            order: [['created_at', 'DESC']]
+            order: [['created_at', 'ASC']]
         });
-        res.json({ comments });
+        res.json({ comments, organizer_id: event.organizer_id });
     } catch (error) {
         console.error('Get comments error:', error);
         res.status(500).json({ error: error.message });
@@ -210,7 +213,7 @@ router.post('/comments/:id/react', async (req, res) => {
 router.post('/events/:id/like', async (req, res) => {
     try {
         const eventId = req.params.id;
-        const userId = req.body.user_id || req.query.user_id || (req.session.user && req.session.user.id) || null;
+        const userId = req.body.user_id || req.query.user_id || (req.session.user && req.session.user.id) || (req.session.organizerAuth && req.session.organizerAuth.appUserId) || null;
 
         const event = await Event.findByPk(eventId);
         if (!event) return res.status(404).json({ error: 'Event not found' });
@@ -253,7 +256,7 @@ router.post('/events/:id/comment', async (req, res) => {
         const event = await Event.findByPk(eventId);
         if (!event) return res.status(404).json({ error: 'Event not found' });
 
-        let userId = user_id || (req.session.user && req.session.user.id) || null;
+        let userId = user_id || (req.session.user && req.session.user.id) || (req.session.organizerAuth && req.session.organizerAuth.appUserId) || null;
 
         // Ensure user exists
         if (!userId) {

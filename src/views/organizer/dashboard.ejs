@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Live Event Command Center</title>
+  <title>Event Command Center</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script>
@@ -73,10 +73,14 @@
             <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></span>
           </span>
         </h1>
-        <p class="text-xs text-textMuted mt-0.5">Live View • <%= organizer.name %></p>
+        <p class="text-xs text-textMuted mt-0.5">Ongoing View • <%= organizer.name %></p>
       </div>
-      <div class="h-10 w-10 rounded-full bg-white border border-brand/20 flex items-center justify-center text-brand font-bold text-lg shadow-[0_4px_15px_rgba(29,161,242,0.15)]">
-        <%= organizer.name.charAt(0).toUpperCase() %>
+      <div class="h-10 w-10 rounded-full bg-white border border-brand/20 flex items-center justify-center text-brand font-bold text-lg shadow-[0_4px_15px_rgba(29,161,242,0.15)] overflow-hidden">
+        <% if (organizer.avatar_url) { %>
+          <img src="<%= organizer.avatar_url %>" alt="Profile" class="w-full h-full object-cover">
+        <% } else { %>
+          <%= organizer.name.charAt(0).toUpperCase() %>
+        <% } %>
       </div>
     </header>
 
@@ -111,18 +115,18 @@
           <% activeEventsList.forEach(function(_, i) { %>
             <div class="w-1.5 h-1.5 rounded-full <%= i === 0 ? 'bg-brand' : 'bg-slate-300' %>"></div>
           <% }) %>
+        Ongoing Event
+        </span>
+        ...
+        <div class="glass-panel p-4 rounded-3xl flex flex-col gap-2 shrink-0 relative overflow-hidden items-center justify-center min-h-[140px]">
+        <span class="text-textMuted text-sm font-medium">No ongoing events currently running.</span>
         </div>
-      <% } %>
-    <% } else { %>
-      <div class="glass-panel p-4 rounded-3xl flex flex-col gap-2 shrink-0 relative overflow-hidden items-center justify-center min-h-[140px]">
-        <span class="text-textMuted text-sm font-medium">No active events currently running.</span>
-      </div>
     <% } %>
 
     <!-- Announcement Feed -->
     <div class="glass-panel p-4 rounded-3xl shrink-0 flex flex-col gap-3 mt-2 relative overflow-hidden">
       <div class="flex justify-between items-center relative z-10">
-        <span class="text-[11px] font-bold text-textMuted uppercase tracking-wider">Live Activity Feed</span>
+        <span class="text-[11px] font-bold text-textMuted uppercase tracking-wider">Recent Activity Feed</span>
         <span class="flex items-center gap-1 text-[10px] text-brand font-medium">
           <span class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></span>
           Syncing
@@ -176,7 +180,7 @@
       <!-- Metric B: Navigation Utility -->
       <div class="glass-panel p-4 rounded-3xl flex flex-col justify-between relative overflow-hidden">
         <div class="absolute -right-4 -top-4 w-16 h-16 bg-brand/10 rounded-full blur-[20px]"></div>
-        <span class="text-[11px] text-textMuted font-bold tracking-wide uppercase relative z-10">Live Venue A* Hits</span>
+        <span class="text-[11px] text-textMuted font-bold tracking-wide uppercase relative z-10">Venue Navigation Hits</span>
         <div class="text-4xl font-extrabold text-brand my-auto tracking-tighter relative z-10 border-l-2 border-brand/50 pl-2"><%= dashboardMetrics.livePathHits || 0 %></div>
         <div class="flex items-center justify-between mt-1 text-[10px] text-textMuted relative z-10 bg-slate-50 p-1.5 rounded-lg border border-slate-100 shadow-sm">
           <span class="truncate pr-1 font-medium">Gate &rarr; Venue</span>
@@ -264,10 +268,14 @@
       </a>
       
       <a href="/organizer/profile" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain transition-colors relative group">
-        <div class="p-1.5 rounded-full group-hover:bg-slate-100 transition-colors relative">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-          </svg>
+        <div class="p-1.5 rounded-full group-hover:bg-slate-100 transition-colors relative overflow-hidden">
+          <% if (organizer.avatar_url) { %>
+            <img src="<%= organizer.avatar_url %>" alt="Profile" class="w-6 h-6 rounded-full object-cover">
+          <% } else { %>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+          <% } %>
         </div>
         <span class="text-[10px] font-semibold tracking-wide">Profile</span>
       </a>

@@ -167,8 +167,21 @@ router.post('/login', async (req, res) => {
 
 // Logout endpoint
 router.get('/logout', (req, res) => {
-    req.session.destroy();
-    res.redirect('/home');
+    // Clear session from server
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('Session destruction error:', err);
+        }
+        
+        // Clear session cookie
+        res.clearCookie('connect.sid'); // Default express-session cookie name
+        
+        // Instruct browser to clear all security cache/storage
+        res.set('Clear-Site-Data', '"cache", "cookies", "storage", "executionContexts"');
+        
+        // Redirect back to landing page (root)
+        res.redirect('/');
+    });
 });
 
 // Signup view

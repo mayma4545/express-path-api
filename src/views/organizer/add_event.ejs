@@ -42,7 +42,7 @@
   <main class="relative z-10 flex flex-col w-full p-4 gap-4 pb-24 max-w-lg mx-auto">
     
     <header class="flex items-center gap-4 pt-2 mb-2">
-      <a href="/organizer/dashboard" class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-textMain shadow-sm border border-slate-200">
+      <a href="<%= typeof event !== 'undefined' && event ? '/organizer/events/' + event.id : '/organizer/dashboard' %>" class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-textMain shadow-sm border border-slate-200">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
       </a>
       <div>
@@ -68,7 +68,8 @@
           <div>
             <label class="block text-xs font-bold text-textMuted uppercase tracking-wider mb-1.5">Recurrence Pattern</label>
             <select name="recurrence_type" id="recurrence-type" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/50 text-sm cursor-pointer">
-              <option value="once" selected>Once Only</option>
+              <option value="none">Once Only</option>
+              <option value="once">Once Only</option>
               <option value="daily">Daily</option>
               <option value="weekly">Weekly</option>
               <option value="monthly">Monthly</option>
@@ -76,7 +77,7 @@
           </div>
           <div id="recurrence-end-container" style="display: none;">
             <label class="block text-xs font-bold text-textMuted uppercase tracking-wider mb-1.5">Repeat Until <span class="text-[10px] text-textMuted">(end date)</span></label>
-            <input type="date" name="recurrence_end_date" id="recurrence-end-date" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/50 text-sm">
+            <input type="date" name="recurrence_end_date" id="recurrence-end-date" value="<%= typeof event !== 'undefined' && event ? event.recurrence_end_date : '' %>" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/50 text-sm">
             <p class="text-[10px] text-textMuted mt-1">When this recurring event should stop</p>
           </div>
         </div>
@@ -119,7 +120,7 @@
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-bold text-textMuted uppercase tracking-wider mb-1.5">Category</label>
-            <select name="category_id" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/50 text-sm">
+            <select name="category_id" id="category-id" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/50 text-sm">
               <option value="">Select Category</option>
               <% categories.forEach(function(category) { %>
                 <option value="<%= category.id %>"><%= category.name %></option>
@@ -212,45 +213,11 @@
         </button>
       </form>
     </div>
-  
-  <% if (typeof event !== 'undefined' && event) { %>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const categorySelect = document.querySelector('select[name="category_id"]');
-      if (categorySelect && "<%= event.category_id %>") {
-        categorySelect.value = "<%= event.category_id %>";
-      }
-
-      const recType = document.getElementById('recurrence-type');
-      if (recType && "<%= event.recurrence_type %>") {
-        recType.value = "<%= event.recurrence_type %>";
-      }
-
-      const tagsStr = "<%= event.tags || '' %>";
-      if (tagsStr) {
-        const eventTags = tagsStr.split(',').map(t => t.trim());
-        const tagInputs = document.querySelectorAll('input[name="tags"]');
-        tagInputs.forEach(input => {
-          if (eventTags.includes(input.value)) {
-            input.checked = true;
-          }
-        });
-      }
-      
-      const endRec = document.getElementById('recurrence-end-date');
-      if (endRec && "<%= event.recurrence_end_date %>") {
-        endRec.value = "<%= event.recurrence_end_date %>";
-      }
-    });
-  </script>
-  <% } %>
-\n</main>
-
-  
+  </main>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // Recurrence type handler
+      // 1. Recurrence UI Logic
       const recurrenceTypeSelect = document.getElementById('recurrence-type');
       const recurrenceEndContainer = document.getElementById('recurrence-end-container');
       const recurrenceEndDate = document.getElementById('recurrence-end-date');
@@ -268,8 +235,8 @@
         
         // Reset visibility
         eventStartDate.classList.remove('hidden');
-        dayOfWeekSelect.classList.remove('hidden');
-        dayOfMonthInput.classList.remove('hidden');
+        dayOfWeekSelect.classList.add('hidden');
+        dayOfMonthInput.classList.add('hidden');
         eventEndDateContainer.style.display = 'block';
         startDateContainer.style.display = 'block';
         
@@ -278,14 +245,11 @@
         dayOfWeekSelect.removeAttribute('required');
         dayOfMonthInput.removeAttribute('required');
 
-        if (type === 'once') {
+        if (type === 'once' || type === 'none') {
           recurrenceEndContainer.style.display = 'none';
-          recurrenceEndDate.value = '';
           recurrenceEndDate.removeAttribute('required');
           
           startDateLabel.textContent = 'Start Date';
-          dayOfWeekSelect.classList.add('hidden');
-          dayOfMonthInput.classList.add('hidden');
           eventStartDate.setAttribute('required', 'required');
         } else {
           recurrenceEndContainer.style.display = 'block';
@@ -295,98 +259,85 @@
           eventEndDateContainer.style.display = 'none';
           
           if (type === 'daily') {
-            startDateContainer.style.display = 'none'; // No start date needed for daily
-            eventStartDate.classList.add('hidden');
-            dayOfWeekSelect.classList.add('hidden');
-            dayOfMonthInput.classList.add('hidden');
+            startDateContainer.style.display = 'none';
           } else if (type === 'weekly') {
             startDateLabel.textContent = 'Day of Week';
             eventStartDate.classList.add('hidden');
-            dayOfMonthInput.classList.add('hidden');
+            dayOfWeekSelect.classList.remove('hidden');
             dayOfWeekSelect.setAttribute('required', 'required');
           } else if (type === 'monthly') {
             startDateLabel.textContent = 'Day of Month';
             eventStartDate.classList.add('hidden');
-            dayOfWeekSelect.classList.add('hidden');
+            dayOfMonthInput.classList.remove('hidden');
             dayOfMonthInput.setAttribute('required', 'required');
-          }
-          
-          // Auto-set repeat until date to 3 months from today if not set
-          if (!recurrenceEndDate.value) {
-            const today = new Date();
-            const endDate = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000);
-            recurrenceEndDate.value = endDate.toISOString().split('T')[0];
           }
         }
       }
       
-      // Update visibility on change
       recurrenceTypeSelect.addEventListener('change', updateRecurrenceVisibility);
-      
-      // Initialize on page load
+
+      // 2. Data Population (if editing)
+      <% if (typeof event !== 'undefined' && event) { %>
+        const categoryId = "<%= event.category_id %>";
+        if (categoryId) document.getElementById('category-id').value = categoryId;
+
+        const recType = "<%= event.recurrence_type %>";
+        if (recType) recurrenceTypeSelect.value = recType;
+
+        const tagsStr = "<%= event.tags || '' %>";
+        if (tagsStr) {
+          const eventTags = tagsStr.split(',').map(t => t.trim());
+          document.querySelectorAll('input[name="tags"]').forEach(input => {
+            if (eventTags.includes(input.value)) input.checked = true;
+          });
+        }
+      <% } %>
+
+      // Initialize Recurrence UI
       updateRecurrenceVisibility();
 
-      // Default to a generic location or Masbate City approximate bounds
-      const defaultLat = 12.3700;
-      const defaultLng = 123.6300;
+      // 3. Map Initialization
+      const savedLat = document.getElementById('latitude').value;
+      const savedLng = document.getElementById('longitude').value;
+      
+      const defaultLat = savedLat ? parseFloat(savedLat) : 12.3700;
+      const defaultLng = savedLng ? parseFloat(savedLng) : 123.6300;
 
-      const map = L.map('map', {
-        zoomControl: false,
-        attributionControl: false
-      }).setView([defaultLat, defaultLng], 14);
+      const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([defaultLat, defaultLng], savedLat ? 17 : 14);
 
-      // Smooth CARTO light tiles similar to map.ejs style
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        maxZoom: 19,
-      }).addTo(map);
-
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-      // Custom marker icon from map.ejs
       const evIcon = L.divIcon({
         className: '',
         html: `<div style="display:flex;flex-direction:column;align-items:center;gap:0;">
-        <div style="
-          width:28px;height:28px;
-          background:#1DA1F2;
-          border:3px solid white;
-          border-radius:50% 50% 50% 0;
-          transform:rotate(-45deg);
-          box-shadow:0 6px 16px rgba(29,161,242,0.5);
-        "></div>
-        <div style="width:4px;height:8px;background:#1DA1F2;border-radius:2px;margin-top:-2px;"></div>
-      </div>`,
+          <div style="width:28px;height:28px;background:#1DA1F2;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 6px 16px rgba(29,161,242,0.5);"></div>
+          <div style="width:4px;height:8px;background:#1DA1F2;border-radius:2px;margin-top:-2px;"></div>
+        </div>`,
         iconSize: [28, 38],
         iconAnchor: [14, 38],
       });
 
       let marker = null;
+      if (savedLat && savedLng) {
+        marker = L.marker([defaultLat, defaultLng], { icon: evIcon }).addTo(map);
+      }
 
-      map.on('click', function(e) {
-        const lat = e.latlng.lat;
-        const lng = e.latlng.lng;
-
-        if (marker) {
-          marker.setLatLng(e.latlng);
-        } else {
-          marker = L.marker(e.latlng, { icon: evIcon }).addTo(map);
-        }
+      map.on('click', (e) => {
+        const { lat, lng } = e.latlng;
+        if (marker) marker.setLatLng(e.latlng);
+        else marker = L.marker(e.latlng, { icon: evIcon }).addTo(map);
 
         document.getElementById('latitude').value = lat;
         document.getElementById('longitude').value = lng;
 
-        // Perform reverse geocoding to auto-fill address
         fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`)
           .then(res => res.json())
-          .then(data => {
-            if (data && data.display_name) {
-              document.getElementById('venue-input').value = data.display_name;
-            }
-          })
-          .catch(err => console.error('Reverse geocoding error:', err));
+          .then(data => { if (data && data.display_name) document.getElementById('venue-input').value = data.display_name; })
+          .catch(console.error);
       });
 
-      // Fullscreen functionality
+      // 4. Map UI (Fullscreen & Autocomplete)
       const mapContainer = document.getElementById('map-container');
       const fullscreenBtn = document.getElementById('fullscreen-toggle');
       const closeFullscreenBtn = document.getElementById('close-fullscreen');
@@ -395,31 +346,24 @@
       function toggleFullscreen(e) {
         if(e) { e.preventDefault(); e.stopPropagation(); }
         const isFullscreen = mapContainer.classList.contains('fixed');
-        
         if (!isFullscreen) {
           mapContainer.classList.remove('relative', 'h-48', 'rounded-xl');
-          mapContainer.classList.add('fixed', 'inset-0', 'h-[100dvh]', 'w-full', 'overflow-x-hidden', 'z-[1000]', 'rounded-none');
+          mapContainer.classList.add('fixed', 'inset-0', 'h-[100dvh]', 'w-full', 'z-[1000]', 'rounded-none');
           fullscreenBtn.classList.add('hidden');
           closeFullscreenBtn.classList.remove('hidden');
           if (bottomNav) bottomNav.classList.add('hidden');
         } else {
-          mapContainer.classList.remove('fixed', 'inset-0', 'h-[100dvh]', 'w-full', 'overflow-x-hidden', 'z-[1000]', 'rounded-none');
+          mapContainer.classList.remove('fixed', 'inset-0', 'h-[100dvh]', 'w-full', 'z-[1000]', 'rounded-none');
           mapContainer.classList.add('relative', 'h-48', 'rounded-xl');
           fullscreenBtn.classList.remove('hidden');
           closeFullscreenBtn.classList.add('hidden');
           if (bottomNav) bottomNav.classList.remove('hidden');
         }
-
-        // Delay invalidatesize to let transition finish
-        setTimeout(() => {
-          map.invalidateSize();
-        }, 100);
+        setTimeout(() => map.invalidateSize(), 100);
       }
-
       fullscreenBtn.addEventListener('click', toggleFullscreen);
       closeFullscreenBtn.addEventListener('click', toggleFullscreen);
 
-      // Address Autocomplete Logic using Nominatim (OpenStreetMap)
       const venueInput = document.getElementById('venue-input');
       const suggestionsBox = document.getElementById('address-suggestions');
       let debounceTimeout;
@@ -427,18 +371,11 @@
       venueInput.addEventListener('input', function() {
         clearTimeout(debounceTimeout);
         const query = this.value.trim();
-        
-        if (query.length < 3) {
-          suggestionsBox.classList.add('hidden');
-          return;
-        }
+        if (query.length < 3) return suggestionsBox.classList.add('hidden');
         
         debounceTimeout = setTimeout(() => {
           fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5&countrycodes=ph`, {
-            headers: {
-              'Accept-Language': 'en',
-              'User-Agent': 'ExpressPathAPI/1.0'
-            }
+            headers: { 'Accept-Language': 'en', 'User-Agent': 'ExpressPathAPI/1.0' }
           })
           .then(res => res.json())
           .then(data => {
@@ -447,45 +384,28 @@
               data.forEach(place => {
                 const item = document.createElement('div');
                 item.className = 'px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0 transition-colors text-sm';
-                item.innerHTML = `
-                  <div class="font-semibold text-textMain truncate">${place.display_name.split(',')[0]}</div>
-                  <div class="text-[10px] text-textMuted mt-0.5 truncate">${place.display_name}</div>
-                `;
+                item.innerHTML = `<div class="font-semibold text-textMain truncate">${place.display_name.split(',')[0]}</div><div class="text-[10px] text-textMuted mt-0.5 truncate">${place.display_name}</div>`;
                 item.addEventListener('click', () => {
                   venueInput.value = place.display_name;
                   document.getElementById('latitude').value = place.lat;
                   document.getElementById('longitude').value = place.lon;
-                  
-                  // Update map
                   const newLatLng = [place.lat, place.lon];
                   map.setView(newLatLng, 17);
-                  if (marker) {
-                    marker.setLatLng(newLatLng);
-                  } else {
-                    marker = L.marker(newLatLng, { icon: evIcon }).addTo(map);
-                  }
-                  
+                  if (marker) marker.setLatLng(newLatLng);
+                  else marker = L.marker(newLatLng, { icon: evIcon }).addTo(map);
                   suggestionsBox.classList.add('hidden');
                 });
                 suggestionsBox.appendChild(item);
               });
               suggestionsBox.classList.remove('hidden');
-            } else {
-              suggestionsBox.classList.add('hidden');
-            }
+            } else suggestionsBox.classList.add('hidden');
           })
-          .catch(err => {
-            console.error('Geocoder error:', err);
-            suggestionsBox.classList.add('hidden');
-          });
-        }, 500); // 500ms debounce
+          .catch(console.error);
+        }, 500);
       });
 
-      // Hide suggestions when clicking outside
       document.addEventListener('click', (e) => {
-        if (!venueInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
-          suggestionsBox.classList.add('hidden');
-        }
+        if (!venueInput.contains(e.target) && !suggestionsBox.contains(e.target)) suggestionsBox.classList.add('hidden');
       });
     });
   </script>
@@ -521,10 +441,14 @@
       </a>
       
       <a href="/organizer/profile" class="flex flex-col items-center justify-center gap-1 w-12 text-textMuted hover:text-textMain transition-colors relative group">
-        <div class="p-1.5 rounded-full group-hover:bg-slate-100 transition-colors relative">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-          </svg>
+        <div class="p-1.5 rounded-full group-hover:bg-slate-100 transition-colors relative overflow-hidden">
+          <% if (sessionAuth && sessionAuth.avatarUrl) { %>
+            <img src="<%= sessionAuth.avatarUrl %>" alt="Profile" class="w-6 h-6 rounded-full object-cover">
+          <% } else { %>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+          <% } %>
         </div>
         <span class="text-[10px] font-semibold tracking-wide">Profile</span>
       </a>

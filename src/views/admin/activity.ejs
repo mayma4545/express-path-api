@@ -136,9 +136,13 @@
           <a href="/admin/organizers" class="p-3 rounded-xl text-textMuted hover:bg-gray-50">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
           </a>
-          <a href="/admin/activity" class="p-3 rounded-xl text-textMuted hover:bg-gray-50">
+          <a href="/admin/activity" class="relative p-3 rounded-xl text-textMuted hover:bg-gray-50">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-          </a>
+          
+  <% if(locals.unreadActivityCount > 0) { %>
+    <span class="absolute top-2 right-2 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full activity-badge" id="desktop-activity-badge"><%= locals.unreadActivityCount %></span>
+  <% } %>
+</a>
           <a href="/admin/events" class="p-3 rounded-xl text-textMuted hover:bg-gray-50">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
           </a>
@@ -156,9 +160,13 @@
       <a href="/admin/organizers" class="flex flex-col items-center gap-1 text-textMuted hover:text-textMain transition">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
       </a>
-      <a href="/admin/activity" class="flex flex-col items-center gap-1 text-brand">
+      <a href="/admin/activity" class="relative flex flex-col items-center gap-1 text-brand">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-      </a>
+      
+  <% if(locals.unreadActivityCount > 0) { %>
+    <span class="absolute top-0 right-2 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full activity-badge" id="mobile-activity-badge"><%= locals.unreadActivityCount %></span>
+  <% } %>
+</a>
       <a href="/admin/events" class="flex flex-col items-center gap-1 text-textMuted hover:text-textMain transition">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
       </a>
@@ -221,28 +229,101 @@
     </main>
 
     <script>
-      const ALL_LOGS = [
-        { day: "Today", icon: "calendar", iconClass: "icon-blue", title: "Tech Conf '26 Created", sub: "by Maria Santos · Auditorium A", badge: "Event", badgeClass: "badge-blue", time: "03:02 PM", organizer: "Baby" },
-        { day: "Today", icon: "user", iconClass: "icon-green", title: "Organizer Approved", sub: "Juan dela Cruz · verified", badge: "Approved", badgeClass: "badge-green", time: "02:45 PM", organizer: "Hannah" },
-        { day: "Today", icon: "warn", iconClass: "icon-amber", title: "Event Flagged for Review", sub: "VIP Meetup · capacity issue", badge: "Flagged", badgeClass: "badge-amber", time: "01:30 PM", organizer: "Denielle" },
-        { day: "Today", icon: "cancel", iconClass: "icon-red", title: "Event Cancelled", sub: "Design Summit · by admin", badge: "Cancelled", badgeClass: "badge-red", time: "11:15 AM", organizer: "Pimentel" },
-        { day: "Today", icon: "check", iconClass: "icon-gray", title: "Report Generated", sub: "Monthly Summary · Q2 2026", badge: "Report", badgeClass: "badge-gray", time: "09:00 AM", organizer: "Teodoro" },
-        { day: "Yesterday", icon: "users", iconClass: "icon-blue", title: "New Organizer Registered", sub: "Ana Reyes · pending review", badge: "New", badgeClass: "badge-blue", time: "04:12 PM", organizer: "Baby" },
-        { day: "Yesterday", icon: "calendar", iconClass: "icon-green", title: "VIP Meetup Published", sub: "by Carlos Tan · Room 401", badge: "Published", badgeClass: "badge-green", time: "10:08 AM", organizer: "Hannah" },
-        { day: "Yesterday", icon: "warn", iconClass: "icon-amber", title: "Budget Limit Reached", sub: "Annual Gala · overage alert", badge: "Flagged", badgeClass: "badge-amber", time: "08:55 AM", organizer: "Denielle" },
-        { day: "Yesterday", icon: "check", iconClass: "icon-gray", title: "Weekly Report Sent", sub: "Digest · 3 organizers notified", badge: "Report", badgeClass: "badge-gray", time: "07:30 AM", organizer: "Pimentel" },
-        { day: "Apr 16", icon: "calendar", iconClass: "icon-blue", title: "Spring Fair Created", sub: "by Liza Ong · Grounds B", badge: "Event", badgeClass: "badge-blue", time: "05:20 PM", organizer: "Teodoro" },
-        { day: "Apr 16", icon: "user", iconClass: "icon-green", title: "Organizer Verified", sub: "Rico Villanueva · ID confirmed", badge: "Approved", badgeClass: "badge-green", time: "03:45 PM", organizer: "Baby" },
-        { day: "Apr 16", icon: "cancel", iconClass: "icon-red", title: "Event Rejected", sub: "Night Market · policy breach", badge: "Cancelled", badgeClass: "badge-red", time: "02:10 PM", organizer: "Hannah" },
-        { day: "Apr 16", icon: "users", iconClass: "icon-blue", title: "Bulk Import Done", sub: "22 attendees · CSV upload", badge: "New", badgeClass: "badge-blue", time: "11:00 AM", organizer: "Denielle" },
-        { day: "Apr 16", icon: "check", iconClass: "icon-gray", title: "System Backup", sub: "Automated · all data synced", badge: "Report", badgeClass: "badge-gray", time: "02:00 AM", organizer: "Pimentel" },
-        { day: "Apr 15", icon: "calendar", iconClass: "icon-blue", title: "Hackathon 2026 Created", sub: "by Dev Team · Hall C", badge: "Event", badgeClass: "badge-blue", time: "04:00 PM", organizer: "Teodoro" },
-        { day: "Apr 15", icon: "warn", iconClass: "icon-amber", title: "Low Attendance Warning", sub: "Open Mic Night · 12 RSVPs", badge: "Flagged", badgeClass: "badge-amber", time: "01:15 PM", organizer: "Baby" },
-        { day: "Apr 15", icon: "user", iconClass: "icon-green", title: "Organizer Reinstated", sub: "Mark Sy · appeal approved", badge: "Approved", badgeClass: "badge-green", time: "10:30 AM", organizer: "Hannah" },
-        { day: "Apr 15", icon: "cancel", iconClass: "icon-red", title: "Account Suspended", sub: "Jane Uy · ToS violation", badge: "Cancelled", badgeClass: "badge-red", time: "09:05 AM", organizer: "Denielle" },
-        { day: "Apr 15", icon: "check", iconClass: "icon-gray", title: "Q1 Report Archived", sub: "Finance · 4 admins CC'd", badge: "Report", badgeClass: "badge-gray", time: "08:00 AM", organizer: "Pimentel" },
-        { day: "Apr 15", icon: "users", iconClass: "icon-blue", title: "Role Updated", sub: "Ben Cruz · promoted to Manager", badge: "New", badgeClass: "badge-blue", time: "06:45 AM", organizer: "Teodoro" },
-      ];
+      const ALL_LOGS = <%- JSON.stringify(locals.activities ? locals.activities.map(a => {
+        let icon = 'calendar';
+        let iconClass = 'icon-blue';
+        let badgeClass = 'badge-blue';
+        
+        let type = a.activity_type || 'System Action';
+        let title = type.replace(/_/g, ' ');
+        
+        let extraInfo = '';
+        if (a.metadata && a.metadata.title) {
+            extraInfo = ' · ' + a.metadata.title;
+        } else if (a.target_type === 'Event' && a.target_id) {
+            extraInfo = ' · Event ID ' + a.target_id;
+        }
+        let sub = (a.organizer_actor ? a.organizer_actor.name : 'System') + extraInfo;
+
+        let badge = a.target_type || 'Action';
+        
+        if (title.includes('CANCEL') || title.includes('DELETE') || title.includes('REJECT')) {
+            icon = 'cancel'; iconClass = 'icon-red'; badgeClass = 'badge-red';
+        } else if (title.includes('WARN') || title.includes('FLAG') || title.includes('ERROR')) {
+            icon = 'warn'; iconClass = 'icon-amber'; badgeClass = 'badge-amber';
+        } else if (title.includes('APPROVE') || title.includes('VERIFY') || title.includes('CREATE')) {
+            icon = 'check'; iconClass = 'icon-green'; badgeClass = 'badge-green';
+        } else if (title.includes('USER') || title.includes('LOGIN')) {
+            icon = 'user';
+        }
+        
+        let dateObj = new Date(a.occurred_at);
+        let today = new Date();
+        let yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        
+        let day;
+        if (dateObj.toDateString() === today.toDateString()) {
+            day = 'Today';
+        } else if (dateObj.toDateString() === yesterday.toDateString()) {
+            day = 'Yesterday';
+        } else {
+            day = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+        
+        let time = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        let organizer = a.organizer_actor ? a.organizer_actor.name : 'System';
+        
+        return {
+            id: a.id,
+            is_read: a.is_read,
+            day: day,
+            icon: icon,
+            iconClass: iconClass,
+            title: title,
+            sub: sub,
+            badge: badge,
+            badgeClass: badgeClass,
+            time: time,
+            organizer: organizer
+        };
+      }) : []) %>;
+
+      function markAsRead(id, element) {
+        if (!element.classList.contains('unread-log')) return;
+        
+        fetch('/admin/activity/' + id + '/read', { method: 'POST' })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              element.classList.remove('unread-log');
+              element.style.backgroundColor = '';
+              const titleEl = element.querySelector('.log-title');
+              if (titleEl) {
+                titleEl.style.fontWeight = '';
+                titleEl.style.color = '';
+              }
+              // Update badge count
+              const badges = document.querySelectorAll('.activity-badge');
+              badges.forEach(b => {
+                let count = parseInt(b.innerText, 10);
+                if (!isNaN(count) && count > 0) {
+                    count--;
+                    if (count === 0) {
+                        b.style.display = 'none';
+                    } else {
+                        b.innerText = count;
+                    }
+                }
+              });
+              // Update in ALL_LOGS
+              const log = ALL_LOGS.find(l => l.id === id);
+              if (log) log.is_read = true;
+            }
+          })
+          .catch(err => console.error(err));
+      }
+
 
       const ICONS = {
         calendar: `<svg fill="none" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`,

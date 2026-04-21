@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { light: '#E9E4FF', DEFAULT: '#7C43FE', dark: '#5A26ED' },
+            textMain: '#111827',
+            textMuted: '#6B7280'
+          },
+          fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+          boxShadow: {
+            soft: '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+            float: '0 8px 16px -4px rgba(124, 67, 254, 0.35)'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="min-h-screen bg-[#F8F9FE] text-textMain font-sans flex items-center justify-center p-6">
+  <div class="w-full max-w-md my-10">
+    <div class="bg-white rounded-3xl shadow-soft border border-gray-100 p-7">
+      <div class="mb-6 text-center">
+        <div class="mx-auto mb-3 w-12 h-12 rounded-2xl bg-brand text-white text-xl font-bold flex items-center justify-center shadow-float">O</div>
+        <h1 class="text-2xl font-extrabold tracking-tight">Join as Organizer</h1>
+        <p class="text-sm text-textMuted mt-1">Create an account to start managing events.</p>
+      </div>
+
+      <form action="/organizer/signup" method="POST" class="space-y-4">
+        <div>
+          <label for="name" class="block text-sm font-bold mb-1.5">Organizer/Organization Name</label>
+          <input id="name" name="name" type="text" required class="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-light focus:border-brand" placeholder="e.g. Masbate City Council">
+        </div>
+
+        <div>
+          <label for="email" class="block text-sm font-bold mb-1.5">Email Address</label>
+          <input id="email" name="email" type="email" required class="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-light focus:border-brand" placeholder="organizer@email.com">
+        </div>
+
+        <div>
+          <label for="password" class="block text-sm font-bold mb-1.5">Password</label>
+          <input id="password" name="password" type="password" required class="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-light focus:border-brand" placeholder="Create a password">
+        </div>
+
+        <div>
+          <label for="address" class="block text-sm font-bold mb-1.5">Office Address</label>
+          <input id="address" name="address" type="text" required class="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-light focus:border-brand" placeholder="City Hall, Masbate City">
+        </div>
+
+        <div>
+          <label for="description" class="block text-sm font-bold mb-1.5">About (Optional)</label>
+          <textarea id="description" name="description" rows="3" class="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-light focus:border-brand resize-none" placeholder="Briefly describe your events..."></textarea>
+        </div>
+
+        <div class="pt-2">
+            <button type="submit" id="submitBtn" class="w-full rounded-xl bg-brand text-white px-4 py-3 text-sm font-bold shadow-float hover:bg-brand-dark active:scale-[0.99] transition flex items-center justify-center gap-2">
+              <span id="btnText">Create Account</span>
+              <div id="btnLoader" class="hidden w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+            </button>
+        </div>
+      </form>
+
+      <div class="mt-8 text-center pt-4 border-t border-gray-50">
+        <p class="text-sm text-textMuted">Already have an account?</p>
+        <a href="/organizer/login" class="text-sm font-bold text-brand hover:underline mt-1 inline-block">Back to Login</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.querySelector('form').addEventListener('submit', function(e) {
+      const btn = document.getElementById('submitBtn');
+      const text = document.getElementById('btnText');
+      const loader = document.getElementById('btnLoader');
+      
+      // Disable button and show loader
+      btn.disabled = true;
+      btn.classList.add('opacity-80', 'cursor-not-allowed');
+      text.textContent = 'Registering...';
+      loader.classList.remove('hidden');
+    });
+  </script>
+</body>
+</html>

@@ -80,7 +80,7 @@
           </a>
           <a
             href="/admin/activity"
-            class="p-3 rounded-xl text-textMuted hover:bg-gray-50"
+            class="relative p-3 rounded-xl text-textMuted hover:bg-gray-50"
           >
             <svg
               class="w-6 h-6"
@@ -95,7 +95,11 @@
                 d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
               />
             </svg>
-          </a>
+          
+  <% if(locals.unreadActivityCount > 0) { %>
+    <span class="absolute top-2 right-2 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full activity-badge" id="desktop-activity-badge"><%= locals.unreadActivityCount %></span>
+  <% } %>
+</a>
           <a
             href="/admin/events"
             class="p-3 rounded-xl text-textMuted hover:bg-gray-50"
@@ -145,9 +149,13 @@
       <a href="/admin/organizers" class="flex flex-col items-center gap-1 text-brand">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
       </a>
-      <a href="/admin/activity" class="flex flex-col items-center gap-1 text-textMuted hover:text-textMain transition">
+      <a href="/admin/activity" class="relative flex flex-col items-center gap-1 text-textMuted hover:text-textMain transition">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-      </a>
+      
+  <% if(locals.unreadActivityCount > 0) { %>
+    <span class="absolute top-0 right-2 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full activity-badge" id="mobile-activity-badge"><%= locals.unreadActivityCount %></span>
+  <% } %>
+</a>
       <a href="/admin/events" class="flex flex-col items-center gap-1 text-textMuted hover:text-textMain transition">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
       </a>
@@ -158,6 +166,41 @@
 
   <!-- Main Content Wrapper -->
   <main class="max-w-2xl mx-auto p-4 sm:p-6 md:py-10">
+    
+    <!-- Status Alerts -->
+    <div id="approved-alert" class="hidden mb-6 bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex items-center gap-3 fade-up">
+        <div class="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>
+          <h4 class="text-emerald-900 font-bold text-sm">Account Approved</h4>
+          <p class="text-emerald-600 text-xs">The organizer has been notified and can now log in.</p>
+        </div>
+        <button onclick="this.parentElement.remove()" class="ml-auto text-emerald-400 hover:text-emerald-600 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+    </div>
+
+    <div id="rejected-alert" class="hidden mb-6 bg-red-50 border border-red-100 rounded-2xl p-4 flex items-center gap-3 fade-up">
+        <div class="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center flex-shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </div>
+        <div>
+          <h4 class="text-red-900 font-bold text-sm">Account Rejected</h4>
+          <p class="text-red-600 text-xs">The application has been declined.</p>
+        </div>
+        <button onclick="this.parentElement.remove()" class="ml-auto text-red-400 hover:text-red-600 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+    </div>
     
     <!-- Top Bar -->
     <header class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6 sm:mb-8">
@@ -183,23 +226,42 @@
               <% } %>
             </div>
             <div class="min-w-0 flex-1">
-              <p class="font-bold text-textMain text-sm truncate"><%= org.name %></p>
+              <div class="flex items-center gap-2">
+                <p class="font-bold text-textMain text-sm truncate"><%= org.name %></p>
+                <% if(org.status === 'pending') { %>
+                  <span class="text-[9px] font-black uppercase tracking-tighter bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-md border border-amber-200">Pending</span>
+                <% } else if(org.status === 'approved') { %>
+                  <span class="text-[9px] font-black uppercase tracking-tighter bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded-md border border-emerald-200">Approved</span>
+                <% } else if(org.status === 'rejected') { %>
+                  <span class="text-[9px] font-black uppercase tracking-tighter bg-red-100 text-red-600 px-1.5 py-0.5 rounded-md border border-red-200">Rejected</span>
+                <% } %>
+              </div>
               <p class="text-xs text-textMuted mt-0.5 truncate"><%= org.description || 'No description provided' %></p>
               <p class="text-[11px] font-medium text-brand-dark mt-1 truncate"><%= (org.account && org.account.email) ? org.account.email : 'No linked account yet' %></p>
+              <% if(org.address) { %>
+                <p class="text-[10px] text-textMuted mt-1 truncate flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                  <%= org.address %>
+                </p>
+              <% } %>
             </div>
           </div>
-          <div class="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-gray-50 justify-end">
-            <button class="edit-btn flex-1 sm:flex-none text-xs font-bold text-brand bg-brand-light px-4 py-2 sm:py-1.5 rounded-xl sm:rounded-lg hover:bg-[#D7C9FF] active:scale-95 transition"
-              data-id="<%= org.id %>"
-              data-name="<%= org.name %>"
-              data-email="<%= (org.account && org.account.email) ? org.account.email : '' %>"
-              data-description="<%= org.description || '' %>"
-              data-avatar="<%= org.avatar_url || '' %>">
-              Edit
-            </button>
-            <form action="/admin/organizers/<%= org.id %>/delete" method="POST" class="delete-org-form flex-1 sm:flex-none m-0">
-              <button type="submit" class="w-full text-xs font-bold text-red-500 bg-[#FFF0F0] px-4 py-2 sm:py-1.5 rounded-xl sm:rounded-lg hover:bg-red-100 active:scale-95 transition">Revoke</button>
-            </form>
+          <div class="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-gray-50 justify-end items-center">
+            <% if(org.status === 'pending') { %>
+              <form action="/admin/organizers/<%= org.id %>/approve" method="POST" class="m-0">
+                <button type="submit" class="text-xs font-bold text-white bg-emerald-500 px-4 py-1.5 rounded-xl sm:rounded-lg hover:bg-emerald-600 active:scale-95 transition shadow-sm">Confirm</button>
+              </form>
+              <form action="/admin/organizers/<%= org.id %>/reject" method="POST" class="m-0">
+                <button type="submit" class="text-xs font-bold text-red-500 bg-red-50 px-4 py-1.5 rounded-xl sm:rounded-lg hover:bg-red-100 active:scale-95 transition">Reject</button>
+              </form>
+            <% } else { %>
+              <a href="/admin/organizers/<%= org.id %>" class="flex-1 sm:flex-none text-xs font-bold text-brand bg-brand-light px-4 py-2 sm:py-1.5 rounded-xl sm:rounded-lg hover:bg-[#D7C9FF] active:scale-95 transition text-center">
+                Profile
+              </a>
+              <form action="/admin/organizers/<%= org.id %>/delete" method="POST" class="delete-org-form flex-1 sm:flex-none m-0">
+                <button type="submit" class="w-full text-xs font-bold text-red-500 bg-[#FFF0F0] px-4 py-2 sm:py-1.5 rounded-xl sm:rounded-lg hover:bg-red-100 active:scale-95 transition">Revoke</button>
+              </form>
+            <% } %>
           </div>
         </div>
       <% }); %>
@@ -375,6 +437,20 @@
 
   <script>
     (function () {
+      // Show alerts based on URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('approved') === 'true') {
+        const alert = document.getElementById('approved-alert');
+        alert.classList.remove('hidden');
+        alert.classList.add('flex');
+        setTimeout(() => alert.remove(), 5000);
+      } else if (urlParams.get('rejected') === 'true') {
+        const alert = document.getElementById('rejected-alert');
+        alert.classList.remove('hidden');
+        alert.classList.add('flex');
+        setTimeout(() => alert.remove(), 5000);
+      }
+
       // --- Global Loader Setup ---
       const globalLoader = document.getElementById('globalLoader');
       const loaderText = document.getElementById('loaderText');

@@ -379,7 +379,7 @@
           </a>
           <a
             href="/admin/activity"
-            class="p-3 rounded-xl text-textMuted hover:bg-gray-50"
+            class="relative p-3 rounded-xl text-textMuted hover:bg-gray-50"
           >
             <svg
               class="w-6 h-6"
@@ -394,7 +394,11 @@
                 d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
               />
             </svg>
-          </a>
+          
+  <% if(locals.unreadActivityCount > 0) { %>
+    <span class="absolute top-2 right-2 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full activity-badge" id="desktop-activity-badge"><%= locals.unreadActivityCount %></span>
+  <% } %>
+</a>
           <a
             href="/admin/events"
             class="p-3 rounded-xl text-textMuted hover:bg-gray-50"
@@ -469,7 +473,7 @@
       </a>
       <a
         href="/admin/activity"
-        class="flex flex-col items-center gap-1 text-textMuted hover:text-textMain transition"
+        class="relative flex flex-col items-center gap-1 text-textMuted hover:text-textMain transition"
       >
         <svg
           class="w-6 h-6"
@@ -484,7 +488,11 @@
             d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
           />
         </svg>
-      </a>
+      
+  <% if(locals.unreadActivityCount > 0) { %>
+    <span class="absolute top-0 right-2 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full activity-badge" id="mobile-activity-badge"><%= locals.unreadActivityCount %></span>
+  <% } %>
+</a>
       <a
         href="/admin/events"
         class="flex flex-col items-center gap-1 text-textMuted hover:text-textMain transition"

@@ -434,6 +434,10 @@ const UserActivity = sequelize.define('UserActivity', {
         type: DataTypes.DATE,
         allowNull: false,
         defaultValue: DataTypes.NOW
+    },
+    is_read: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
     }
 }, {
     tableName: 'user_activities',
@@ -659,6 +663,14 @@ const Organizer = sequelize.define('Organizer', {
     name: {
         type: DataTypes.STRING(255),
         allowNull: false
+    },
+    address: {
+        type: DataTypes.STRING(500),
+        allowNull: true
+    },
+    status: {
+        type: DataTypes.ENUM('pending', 'approved', 'rejected'),
+        defaultValue: 'pending'
     },
     avatar_url: {
         type: DataTypes.STRING(500),
@@ -1041,7 +1053,59 @@ Organizer.hasMany(OrganizerNotification, { foreignKey: 'organizer_id', as: 'noti
 OrganizerNotification.belongsTo(Event, { foreignKey: 'event_id', as: 'event', onDelete: 'CASCADE' });
 Event.hasMany(OrganizerNotification, { foreignKey: 'event_id', as: 'organizer_notifications', onDelete: 'CASCADE' });
 
+
+// Event System Activity Log (tracks organizer actions)
+const EventSystemActivityLog = sequelize.define('EventSystemActivityLog', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    organizer_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'organizers',
+            key: 'id'
+        }
+    },
+    activity_type: {
+        type: DataTypes.STRING(50),
+        allowNull: false
+    },
+    target_type: {
+        type: DataTypes.STRING(100),
+        allowNull: true
+    },
+    target_id: {
+        type: DataTypes.STRING(100),
+        allowNull: true
+    },
+    metadata: {
+        type: DataTypes.JSON,
+        allowNull: true
+    },
+    is_read: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    occurred_at: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW
+    }
+}, {
+    tableName: 'event_system_activity_logs',
+    timestamps: false
+});
+
+// Associations for EventSystemActivityLog
+EventSystemActivityLog.belongsTo(Organizer, { foreignKey: 'organizer_id', as: 'organizer_actor', onDelete: 'SET NULL' });
+Organizer.hasMany(EventSystemActivityLog, { foreignKey: 'organizer_id', as: 'event_system_activities', onDelete: 'SET NULL' });
+
+
 module.exports = {
+    EventSystemActivityLog,
     sequelize,
     Sequelize,
     CampusMap,

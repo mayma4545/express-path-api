@@ -560,27 +560,30 @@
           commentsCount.textContent = data.comments.length;
           
           // Separate top-level comments and replies
+          const organizerId = data.organizer_id;
           const topLevel = data.comments.filter(c => !c.parent_comment_id);
           const replies = data.comments.filter(c => c.parent_comment_id);
           
           topLevel.forEach(c => {
              const userInitials = (c.user && c.user.first_name) ? c.user.first_name.substring(0, 2).toUpperCase() : 'AN';
                const userName = (c.user && c.user.first_name) ? c.user.first_name + ' ' + (c.user.last_name || '') : 'Anonymous';
+               const isOrganizer = c.user && (c.user.id === organizerId);
                const reactionCount = c.reacted_by_users ? c.reacted_by_users.length : 0;
                const currentUserId = <%= user ? user.id : 'null' %>;
                const isReacted = c.reacted_by_users && c.reacted_by_users.some(r => r.id === currentUserId);
              const cReplies = replies.filter(r => r.parent_comment_id === c.id);
              
              const div = document.createElement('div');
-             div.className = 'flex gap-3';
+             div.className = `flex gap-3 ${isOrganizer ? 'bg-brand-light/30 p-2 rounded-2xl -mx-2' : ''}`;
              div.innerHTML = `
-              <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs flex-shrink-0">
+              <div class="w-8 h-8 rounded-full ${isOrganizer ? 'bg-brand text-white' : 'bg-blue-100 text-blue-600'} flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-sm">
                 ${userInitials}
               </div>
               <div class="flex-1">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
                   <span class="text-sm font-bold text-gray-900">${userName}</span>
-                  <span class="text-xs text-gray-400">${new Date(c.created_at).toLocaleDateString()}</span>
+                  ${isOrganizer ? '<span class="text-[9px] font-black uppercase tracking-tighter bg-brand text-white px-1.5 py-0.5 rounded-md">Organizer</span>' : ''}
+                  <span class="text-xs text-gray-400 ml-auto">${new Date(c.created_at).toLocaleDateString()}</span>
                 </div>
                 <p class="text-sm text-gray-600 mt-1">${c.content.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
                 <div class="flex items-center gap-4 mt-2">
@@ -619,20 +622,22 @@
              cReplies.forEach(r => {
                const rUserInitials = (r.user && r.user.first_name) ? r.user.first_name.substring(0, 2).toUpperCase() : 'AN';
                  const rUserName = (r.user && r.user.first_name) ? r.user.first_name + ' ' + (r.user.last_name || '') : 'Anonymous';
+                 const rIsOrganizer = r.user && (r.user.id === organizerId);
                  const rReactCount = r.reacted_by_users ? r.reacted_by_users.length : 0;
                  const currentUserId = <%= user ? user.id : 'null' %>;
                  const rIsReacted = r.reacted_by_users && r.reacted_by_users.some(x => x.id === currentUserId);
                
                const rDiv = document.createElement('div');
-               rDiv.className = 'flex gap-2.5';
+               rDiv.className = `flex gap-2.5 ${rIsOrganizer ? 'bg-brand-light/20 p-1.5 rounded-xl' : ''}`;
                rDiv.innerHTML = `
-                  <div class="w-6 h-6 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center font-bold text-[10px] flex-shrink-0">
+                  <div class="w-6 h-6 rounded-full ${rIsOrganizer ? 'bg-brand text-white' : 'bg-gray-200 text-gray-700'} flex items-center justify-center font-bold text-[10px] flex-shrink-0 shadow-sm">
                     ${rUserInitials}
                   </div>
                   <div class="flex-1">
-                    <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
                       <span class="text-xs font-bold text-gray-900">${rUserName}</span>
-                      <span class="text-[10px] text-gray-400">${new Date(r.created_at).toLocaleDateString()}</span>
+                      ${rIsOrganizer ? '<span class="text-[8px] font-black uppercase tracking-tighter bg-brand text-white px-1 py-0.5 rounded-md">Organizer</span>' : ''}
+                      <span class="text-[10px] text-gray-400 ml-auto">${new Date(r.created_at).toLocaleDateString()}</span>
                     </div>
                     <p class="text-xs text-gray-600 mt-0.5">${r.content.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
                     <div class="flex items-center gap-3 mt-1.5">

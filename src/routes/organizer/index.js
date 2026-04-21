@@ -2,7 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const router = express.Router();
-const { Event, Category, Nodes, Organizer, AppUser, EventAttendee, EventAnalytics, EventAnnouncement, EventPhoto } = require('../../models');
+const { sequelize, Event, Category, Nodes, Organizer, AppUser, EventAttendee, EventAnalytics, EventAnnouncement, EventPhoto, EventSystemActivityLog, Sequelize } = require('../../models');
 const { sendEmail } = require('../../services/mailer');
 const { upload, uploadBufferToCloudinary } = require('../../services/cloudinary'); // Import uploadBufferToCloudinary function
 
@@ -16,12 +16,103 @@ const requireOrganizerAuth = (req, res, next) => {
     return next();
 };
 
+// Middleware to inject sessionAuth into all templates in this router
+router.use((req, res, next) => {
+    res.locals.sessionAuth = req.session.organizerAuth || null;
+    next();
+});
+
 // Redirect /organizer to /organizer/dashboard
 router.get('/', (req, res) => {
     if (req.session.organizerAuth && req.session.organizerAuth.organizerId) {
         return res.redirect('/organizer/dashboard');
     }
     return res.redirect('/organizer/login');
+});
+
+// Organizer signup view
+router.get('/signup', (req, res) => {
+    if (req.session.organizerAuth && req.session.organizerAuth.organizerId) {
+        return res.redirect('/organizer/dashboard');
+    }
+
+    return res.render('organizer/signup', {
+        title: 'Register as Organizer'
+    });
+});
+
+// Organizer signup submit
+router.post('/signup', async (req, res) => {
+    try {
+        const { name, email, password, address, description } = req.body;
+
+        if (!name || !email || !password) {
+            return res.status(400).render('error', {
+                title: 'Registration Error',
+                message: 'Name, Email and Password are required.'
+            });
+        }
+
+        const emailValue = email.trim().toLowerCase();
+        const existingAccount = await AppUser.findOne({ where: { email: emailValue } });
+        
+        if (existingAccount) {
+            return res.status(409).render('error', {
+                title: 'Duplicate Account',
+                message: 'An account with that email already exists.'
+            });
+        }
+
+        const passwordHash = await bcrypt.hash(password, 10);
+        const nameParts = name.trim().split(' ');
+        const first_name = nameParts[0] || 'Organizer';
+        const last_name = nameParts.slice(1).join(' ') || 'Account';
+
+        await sequelize.transaction(async (transaction) => {
+            const appUser = await AppUser.create({
+                first_name,
+                last_name,
+                email: emailValue,
+                password_hash: passwordHash
+            }, { transaction });
+
+            await Organizer.create({
+                user_id: appUser.id,
+                name: name.trim(),
+                address: address ? address.trim() : null,
+                description: description ? description.trim() : null,
+                status: 'pending'
+            }, { transaction });
+        });
+
+        // Send "Under Review" email
+        try {
+            const mailText = `Hello ${name},\n\nThank you for registering as an organizer on OhSee. Your account is currently under review by our administrators. You will receive another email once your account has been approved.\n\nThank you for your patience!`;
+            const mailHtml = `
+                <div style="font-family: sans-serif; color: #333;">
+                    <h2 style="color: #1DA1F2;">Registration Received!</h2>
+                    <p>Hello <strong>${name}</strong>,</p>
+                    <p>Thank you for registering as an organizer on <strong>OhSee</strong>.</p>
+                    <p>Your account is currently <strong>under review</strong> by our administrators. This usually takes 24-48 hours.</p>
+                    <p>You will receive another email notification once your account has been approved and you can start creating events.</p>
+                    <br>
+                    <p>Thank you for your patience!</p>
+                </div>
+            `;
+            await sendEmail(emailValue, 'Account Under Review - OhSee Organizer', mailText, mailHtml);
+        } catch (mailError) {
+            console.error('Email sending error:', mailError);
+        }
+
+        return res.render('organizer/signup_success', {
+            title: 'Registration Received',
+            name: name.trim(),
+            email: emailValue
+        });
+    } catch (error) {
+        console.error('Organizer registration error:', error);
+        return res.status(500).render('error', { title: 'Error', message: error.message });
+    }
 });
 
 // Organizer login view
@@ -74,12 +165,37 @@ router.post('/login', async (req, res) => {
             });
         }
 
+        if (organizer.status === 'pending') {
+            return res.status(403).render('error', {
+                title: 'Account Pending',
+                message: 'Your account is currently under review by our administrators. You will receive an email once it is approved.'
+            });
+        }
+
+        if (organizer.status === 'rejected') {
+            return res.status(403).render('error', {
+                title: 'Account Rejected',
+                message: 'Your organizer account application has been rejected. Please contact support for more information.'
+            });
+        }
+
         req.session.organizerAuth = {
             appUserId: account.id,
             organizerId: organizer.id,
             organizerName: organizer.name,
-            email: account.email
+            email: account.email,
+            avatarUrl: organizer.avatar_url
         };
+
+        try {
+            await EventSystemActivityLog.create({
+                organizer_id: organizer.id,
+                activity_type: 'LOGIN',
+                target_type: 'System',
+                target_id: account.id.toString(),
+                metadata: { email: account.email }
+            });
+        } catch(e) { console.error('Log error', e); }
 
         return res.redirect('/organizer/dashboard');
     } catch (error) {
@@ -421,6 +537,16 @@ router.post('/events/add', requireOrganizerAuth, multer({ storage: memoryStorage
             recurrence_end_date: recurrence_end_date && recurrence_type !== 'once' && recurrence_type !== 'none' ? recurrence_end_date : null
         });
         
+        try {
+            await EventSystemActivityLog.create({
+                organizer_id: organizerId,
+                activity_type: 'CREATE_EVENT',
+                target_type: 'Event',
+                target_id: title,
+                metadata: { title: title }
+            });
+        } catch(e) { console.error('Log error', e); }
+        
         res.redirect('/organizer/events');
     } catch (error) {
         console.error('Add event error:', error);
@@ -639,6 +765,37 @@ router.post('/events/:id/update', requireOrganizerAuth, multer({ storage: memory
     }
 });
 
+// Delete Event
+router.delete('/events/:id/delete', requireOrganizerAuth, async (req, res) => {
+    try {
+        const organizerId = req.session.organizerAuth.organizerId;
+        const event = await Event.findOne({ 
+            where: { id: req.params.id, organizer_id: organizerId }
+        });
+        
+        if (!event) {
+            return res.status(404).json({ success: false, message: 'Event not found or unauthorized' });
+        }
+        
+        // Log the activity
+        if (EventSystemActivityLog) {
+            await EventSystemActivityLog.create({
+                organizer_id: organizerId,
+                activity_type: 'delete_event',
+                target_type: 'event',
+                target_id: event.id.toString(),
+                metadata: { title: event.title }
+            });
+        }
+
+        await event.destroy();
+        res.json({ success: true, message: 'Event deleted successfully' });
+    } catch (error) {
+        console.error('Delete event error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // Get Event Attendees
 router.get('/events/:id/attendees', requireOrganizerAuth, async (req, res) => {
     try {
@@ -717,6 +874,20 @@ router.post('/notifications/:id/read', requireOrganizerAuth, async (req, res) =>
         
         if (notif) {
             await notif.update({ is_read: true });
+            try {
+                if (req.body.eventIds) {
+                    for (let id of req.body.eventIds) {
+                        await EventSystemActivityLog.create({
+                            organizer_id: req.session.organizerAuth.organizerId,
+                            activity_type: 'DELETE_EVENT',
+                            target_type: 'Event',
+                            target_id: id.toString(),
+                            metadata: { action: 'bulk_delete' }
+                        });
+                    }
+                }
+            } catch(e) { console.error('Log error', e); }
+
             res.json({ success: true });
         } else {
             res.status(404).json({ error: 'Notification not found' });
@@ -822,6 +993,35 @@ router.post('/account/update', requireOrganizerAuth, async (req, res) => {
     } catch (error) {
         console.error('Error updating profile:', error);
         res.status(500).render('error', { title: 'Error', message: 'Failed to update profile.' });
+    }
+});
+
+// Update Organizer Avatar (AJAX)
+router.post('/avatar/update', requireOrganizerAuth, multer({ storage: memoryStorage }).single('avatar'), async (req, res) => {
+    try {
+        const organizerId = req.session.organizerAuth.organizerId;
+        
+        if (!req.file || !req.file.buffer) {
+            return res.status(400).json({ success: false, message: 'No image file provided' });
+        }
+
+        const imageUrl = await uploadBufferToCloudinary(req.file.buffer, 'campus-navigator/organizer-avatars');
+        
+        const organizer = await Organizer.findByPk(organizerId);
+        if (!organizer) {
+            return res.status(404).json({ success: false, message: 'Organizer not found' });
+        }
+
+        organizer.avatar_url = imageUrl;
+        await organizer.save();
+
+        // Update session as well
+        req.session.organizerAuth.avatarUrl = imageUrl;
+
+        res.json({ success: true, avatar_url: imageUrl });
+    } catch (error) {
+        console.error('Error updating avatar:', error);
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 

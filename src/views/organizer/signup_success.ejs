@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registration Successful | OhSee</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { light: '#E9E4FF', DEFAULT: '#7C43FE', dark: '#5A26ED' },
+            textMain: '#111827',
+            textMuted: '#6B7280'
+          },
+          fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes checkmark {
+      0% { transform: scale(0); opacity: 0; }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-checkmark { animation: checkmark 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+  </style>
+</head>
+<body class="min-h-screen bg-[#F8F9FE] text-textMain font-sans flex items-center justify-center p-6">
+  <div class="w-full max-w-md text-center">
+    <div class="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 p-8 sm:p-10">
+      
+      <!-- Success Icon -->
+      <div class="mx-auto mb-8 w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center relative">
+        <div class="absolute inset-0 bg-emerald-100 rounded-full animate-pulse opacity-50"></div>
+        <svg class="w-12 h-12 text-emerald-500 animate-checkmark relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+        </svg>
+      </div>
+
+      <h1 class="text-2xl font-extrabold tracking-tight mb-4">Registration Received!</h1>
+      
+      <p class="text-textMuted text-sm leading-relaxed mb-8">
+        Hello <span class="font-bold text-textMain"><%= name %></span>, your account has been successfully created and is now <span class="text-amber-500 font-bold">under review</span>.
+      </p>
+
+      <div class="space-y-4 bg-gray-50 rounded-2xl p-5 mb-8 text-left">
+        <div class="flex gap-3">
+          <div class="w-5 h-5 rounded-full bg-brand-light text-brand flex items-center justify-center shrink-0 mt-0.5">
+            <span class="text-[10px] font-bold">1</span>
+          </div>
+          <p class="text-xs text-textMuted"><span class="font-bold text-textMain">Check your email:</span> We've sent a confirmation to <span class="font-medium text-brand"><%= email %></span>.</p>
+        </div>
+        <div class="flex gap-3">
+          <div class="w-5 h-5 rounded-full bg-brand-light text-brand flex items-center justify-center shrink-0 mt-0.5">
+            <span class="text-[10px] font-bold">2</span>
+          </div>
+          <p class="text-xs text-textMuted"><span class="font-bold text-textMain">Admin Review:</span> Our team will verify your details within 24-48 hours.</p>
+        </div>
+        <div class="flex gap-3">
+          <div class="w-5 h-5 rounded-full bg-brand-light text-brand flex items-center justify-center shrink-0 mt-0.5">
+            <span class="text-[10px] font-bold">3</span>
+          </div>
+          <p class="text-xs text-textMuted"><span class="font-bold text-textMain">Approval:</span> You'll receive another email once you're ready to log in.</p>
+        </div>
+      </div>
+
+      <a href="/" class="block w-full rounded-xl bg-brand text-white px-4 py-3.5 text-sm font-bold shadow-[0_8px_16px_-4px_rgba(124,67,254,0.35)] hover:bg-brand-dark active:scale-[0.98] transition-all">
+        Return to Landing Page
+      </a>
+      
+      <p class="mt-6 text-[11px] text-textMuted italic">
+        Thank you for choosing OhSee to host your events!
+      </p>
+    </div>
+  </div>
+</body>
+</html>

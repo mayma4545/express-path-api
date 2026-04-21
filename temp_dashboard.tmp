@@ -281,7 +281,7 @@
 
     <!-- Desktop Sidebar -->
     <aside
-      class="relative hidden md:flex flex-col w-20 bg-white fixed top-0 bottom-0 left-0 border-r border-gray-100 z-40 items-center py-8 justify-between shadow-soft"
+      class="hidden md:flex flex-col w-20 bg-white fixed top-0 bottom-0 left-0 border-r border-gray-100 z-40 items-center py-8 justify-between shadow-soft"
     >
       <div class="flex flex-col gap-8 items-center">
         <nav class="flex flex-col gap-6">
@@ -294,11 +294,7 @@
                 d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"
               ></path>
             </svg>
-          
-  <% if(locals.unreadActivityCount > 0) { %>
-    <span class="absolute top-2 right-2 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full activity-badge" id="desktop-activity-badge"><%= locals.unreadActivityCount %></span>
-  <% } %>
-</a>
+          </a>
           <a
             href="/admin/organizers"
             class="p-3 rounded-xl text-textMuted hover:bg-gray-50"
@@ -319,7 +315,7 @@
           </a>
           <a
             href="/admin/activity"
-            class="relative p-3 rounded-xl text-textMuted hover:bg-gray-50"
+            class="p-3 rounded-xl text-textMuted hover:bg-gray-50"
           >
             <svg
               class="w-6 h-6"
@@ -334,11 +330,7 @@
                 d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
               />
             </svg>
-          
-  <% if(locals.unreadActivityCount > 0) { %>
-    <span class="absolute top-2 right-2 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full activity-badge" id="desktop-activity-badge"><%= locals.unreadActivityCount %></span>
-  <% } %>
-</a>
+          </a>
           <a
             href="/admin/events"
             class="p-3 rounded-xl text-textMuted hover:bg-gray-50"
@@ -414,7 +406,7 @@
       </a>
       <a
         href="/admin/activity"
-        class="relative flex flex-col items-center gap-1 text-textMuted hover:text-textMain transition"
+        class="flex flex-col items-center gap-1 text-textMuted hover:text-textMain transition"
       >
         <svg
           class="w-6 h-6"
@@ -429,11 +421,7 @@
             d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
           />
         </svg>
-      
-  <% if(locals.unreadActivityCount > 0) { %>
-    <span class="absolute top-0 right-2 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full activity-badge" id="mobile-activity-badge"><%= locals.unreadActivityCount %></span>
-  <% } %>
-</a>
+      </a>
       <a
         href="/admin/events"
         class="flex flex-col items-center gap-1 text-textMuted hover:text-textMain transition"
@@ -634,7 +622,7 @@
           </div>
         </div>
         <div class="text-right">
-          <p class="text-xs font-semibold text-gray-900"><%= act.organizer_actor ? act.organizer_actor.name : 'System' %></p>
+          <p class="text-xs font-semibold text-gray-900"><%= act.user ? (act.user.username || act.user.email) : 'System' %></p>
         </div>
       </div>
       <% }); %>
