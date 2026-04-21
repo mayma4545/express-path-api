@@ -274,21 +274,36 @@ router.post('/events/:id/bookmark', async (req, res) => {
 router.post('/events/:id/visit', async (req, res) => {
     try {
         const eventId = req.params.id;
-        const userId = req.body.user_id || req.query.user_id || (req.session.user && req.session.user.id) || (req.session.organizerAuth && req.session.organizerAuth.appUserId) || null;
+        const userId = (req.session.user && req.session.user.id) || (req.session.organizerAuth && req.session.organizerAuth.appUserId) || null;
         const sessionID = req.sessionID;
 
         const event = await Event.findByPk(eventId);
         if (!event) return res.status(404).json({ error: 'Event not found' });
 
-        // Uniqueness check: Use userId if logged in, otherwise use sessionID
-        const whereClause = userId ? { event_id: eventId, user_id: userId } : { event_id: eventId, session_id: sessionID };
-        
-        // We need to ensure EventVisit table can handle session_id (adding it if not exists is handled by Sequelize sync usually, 
-        // but for now we'll assume we can use it or fallback to a total count for anon)
-        const [visit, created] = await EventVisit.findOrCreate({
-            where: whereClause,
-            defaults: { event_id: eventId, user_id: userId, session_id: userId ? null : sessionID }
-        });
+        let created = false;
+        try {
+            // Uniqueness check: If logged in, check user_id. If guest, check session_id.
+            const whereClause = userId ? { event_id: eventId, user_id: userId } : { event_id: eventId, session_id: sessionID };
+            
+            const [visit, isNew] = await EventVisit.findOrCreate({
+                where: whereClause,
+                defaults: { 
+                    event_id: eventId, 
+                    user_id: userId, 
+                    session_id: userId ? null : sessionID 
+                }
+            });
+            created = isNew;
+        } catch (dbErr) {
+            console.warn('DB Error in findOrCreate visit, falling back to create:', dbErr.message);
+            // Fallback: just record the visit anyway if findOrCreate fails for some reason
+            await EventVisit.create({ 
+                event_id: eventId, 
+                user_id: userId, 
+                session_id: userId ? null : sessionID 
+            });
+            created = true;
+        }
 
         if (created) {
             const [analytics] = await EventAnalytics.findOrCreate({ where: { event_id: eventId } });
@@ -465,6 +480,125 @@ router.post('/events/:id/comment', async (req, res) => {
         res.json({ success: true, comment });
     } catch (error) {
         console.error('Comment event error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get organizer aggregate details
+router.get('/organizers/:id/details', async (req, res) => {
+    try {
+        const organizerId = req.params.id;
+        const { Event, EventRating } = require('../models');
+
+        // Get all events by this organizer
+        const events = await Event.findAll({
+            where: { organizer_id: organizerId },
+            include: [{ model: EventRating, as: 'ratings' }]
+        });
+
+        let totalRating = 0;
+        let ratingCount = 0;
+        let pastEventsCount = 0;
+        const now = new Date();
+
+        events.forEach(event => {
+            // Calculate past events count (status completed or date in past)
+            const eventDate = new Date(`${event.event_date}T${event.end_time || '23:59:59'}`);
+            if (event.status === 'completed' || eventDate < now) {
+                pastEventsCount++;
+            }
+
+            // Sum up ratings
+            if (event.ratings && event.ratings.length > 0) {
+                event.ratings.forEach(r => {
+                    totalRating += r.rating;
+                    ratingCount++;
+                });
+            }
+        });
+
+        const avgRating = ratingCount > 0 ? (totalRating / ratingCount).toFixed(1) : "0.0";
+
+        res.json({
+            success: true,
+            avgRating,
+            ratingCount,
+            pastEventsCount,
+            totalEvents: events.length
+        });
+    } catch (error) {
+        console.error('Get organizer details error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get all events by an organizer with sorting and pagination
+router.get('/organizers/:id/events', async (req, res) => {
+    try {
+        const organizerId = req.params.id;
+        const { sort = 'date', order = 'desc', page = 1 } = req.query;
+        const limit = 5;
+        const offset = (parseInt(page) - 1) * limit;
+
+        const { Event, Category, EventAnalytics, EventRating } = require('../models');
+
+        let sequelizeOrder = [];
+        if (sort === 'ratings') {
+            // This is complex in Sequelize, we might need a literal or subquery
+            // For simplicity, let's sort by date and then we could manually sort or use a better query
+            // Actually, let's use a subquery if possible or just handle common cases
+            sequelizeOrder = [['event_date', order.toUpperCase()]]; 
+        } else if (sort === 'visit') {
+            sequelizeOrder = [[{ model: EventAnalytics, as: 'analytics' }, 'page_view_count', order.toUpperCase()]];
+        } else {
+            // Default: date
+            sequelizeOrder = [['event_date', order.toUpperCase()]];
+        }
+
+        const { count, rows: events } = await Event.findAndCountAll({
+            where: { organizer_id: organizerId, status: 'published' },
+            include: [
+                { model: Category, as: 'category' },
+                { model: EventAnalytics, as: 'analytics' },
+                { model: EventRating, as: 'ratings' }
+            ],
+            order: sequelizeOrder,
+            limit,
+            offset,
+            distinct: true
+        });
+
+        // Map to include calculated average rating per event
+        const mappedEvents = events.map(e => {
+            const ratings = e.ratings || [];
+            const avg = ratings.length > 0 ? (ratings.reduce((acc, r) => acc + r.rating, 0) / ratings.length).toFixed(1) : "0.0";
+            return {
+                ...e.toJSON(),
+                avgRating: avg
+            };
+        });
+
+        // If sort was ratings, we sort manually since we don't have a virtual field or complex join ready
+        if (sort === 'ratings') {
+            mappedEvents.sort((a, b) => {
+                const valA = parseFloat(a.avgRating);
+                const valB = parseFloat(b.avgRating);
+                return order === 'desc' ? valB - valA : valA - valB;
+            });
+        }
+
+        res.json({
+            success: true,
+            events: mappedEvents,
+            pagination: {
+                total: count,
+                currentPage: parseInt(page),
+                totalPages: Math.ceil(count / limit),
+                limit
+            }
+        });
+    } catch (error) {
+        console.error('Get organizer events error:', error);
         res.status(500).json({ error: error.message });
     }
 });

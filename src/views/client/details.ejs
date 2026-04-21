@@ -139,7 +139,7 @@
 
   <!-- ── Hero Image ──────────────────────────────────── -->
   <div class="relative" style="height:300px;">
-    <img id="detail-img" src="" alt="" class="w-full h-full object-cover" />
+    <img id="detail-img" src="" onerror="this.src='https://images.unsplash.com/photo-1542204165-65bf26472b9b?auto=format&fit=crop&q=80&w=800'; this.onerror=null;" alt="" class="w-full h-full object-cover" />
     <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
     <!-- Category + going overlay -->
     <div class="absolute bottom-0 left-0 right-0 px-5 pb-5 flex items-end justify-between">
@@ -252,17 +252,48 @@
         <div>
           <p class="text-xs text-gray-400 font-medium mb-0.5">Event Organizer</p>
           <p id="detail-organizer" class="text-base font-bold text-gray-900"></p>
-          <p class="text-xs text-brand font-medium mt-0.5">View all events →</p>
+          <p class="text-xs text-brand font-medium mt-0.5">Verified Organizer</p>
         </div>
       </div>
       <div class="mt-4 grid grid-cols-2 gap-3">
         <div class="bg-gray-50 rounded-xl p-3 text-center">
-          <p class="text-lg font-extrabold text-gray-900">12</p>
+          <p id="org-past-events" class="text-lg font-extrabold text-gray-900">0</p>
           <p class="text-xs text-gray-400">Past Events</p>
         </div>
         <div class="bg-gray-50 rounded-xl p-3 text-center">
-          <p class="text-lg font-extrabold text-brand">4.9 ★</p>
+          <p id="org-avg-rating" class="text-lg font-extrabold text-brand">0.0 ★</p>
           <p class="text-xs text-gray-400">Avg Rating</p>
+        </div>
+      </div>
+
+      <!-- Organizer Events List -->
+      <div class="mt-8">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-base font-bold text-gray-900">Organizer Events</h3>
+          
+          <div class="flex items-center gap-2">
+            <select id="org-events-sort" onchange="loadOrgEvents(1)" class="text-[10px] font-bold bg-white border border-gray-200 rounded-lg px-2 py-1 outline-none text-gray-600">
+              <option value="date-desc">Newest Date</option>
+              <option value="date-asc">Oldest Date</option>
+              <option value="ratings-desc">Top Rated</option>
+              <option value="ratings-asc">Lowest Rated</option>
+              <option value="visit-desc">Most Visited</option>
+              <option value="visit-asc">Least Visited</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="org-events-list" class="space-y-3">
+          <!-- Events pushed via JS -->
+          <div class="animate-pulse space-y-3">
+            <div class="h-20 bg-gray-100 rounded-2xl"></div>
+            <div class="h-20 bg-gray-100 rounded-2xl"></div>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div id="org-events-pagination" class="mt-6 flex justify-center gap-2">
+          <!-- Pagination pushed via JS -->
         </div>
       </div>
     </div>
@@ -472,21 +503,42 @@
       return n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K' : String(n);
     }
 
-    /* ── Heart ── */
+    /* ── Heart / Bookmark ── */
     function toggleHeart() {
       if (!ev) return;
+      
+      // Optimistic UI update
       ev.liked = !ev.liked;
-        // Commented out going changes for bookmarks
-        // ev.going += ev.liked ? 1 : -1;
+      document.getElementById('heart-btn').classList.toggle('liked', ev.liked);
+      
+      // Notify backend about bookmark toggle
+      fetch(`/api/events/${ev.id}/bookmark`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      .then(res => {
+        if (res.status === 401) {
+          // If unauthorized, revert UI and redirect
+          ev.liked = !ev.liked;
+          document.getElementById('heart-btn').classList.toggle('liked', ev.liked);
+          window.location.href = '/login?message=' + encodeURIComponent('Please log in to bookmark events.');
+          return;
+        }
+        return res.json();
+      })
+      .then(data => {
+        if (data && data.success) {
+          // Ensure UI is in sync with server response
+          ev.liked = data.bookmarked;
+          document.getElementById('heart-btn').classList.toggle('liked', ev.liked);
+        }
+      })
+      .catch(err => {
+        console.error('Error toggling bookmark:', err);
+        // Revert UI on error
+        ev.liked = !ev.liked;
         document.getElementById('heart-btn').classList.toggle('liked', ev.liked);
-        document.getElementById('detail-going').textContent = formatGoing(ev.going);
-        
-        // Notify backend about bookmark toggle
-        fetch(`/api/events/${ev.id}/bookmark`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: ev.liked ? 'bookmark' : 'unbookmark' })
-        }).catch(err => console.error('Error toggling bookmark:', err));
+      });
     }
 
     function switchTab(name) {
@@ -803,13 +855,22 @@
       }).catch(console.error);
 
     // Log the visit independently and update UI
-    fetch(`/api/events/${ev.id}/visit`, { method: 'POST' })
+    function logVisit() {
+      fetch(`/api/events/${ev.id}/visit`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
       .then(res => res.json())
       .then(data => {
         if (data.success && data.visits !== undefined) {
            document.getElementById('detail-going').textContent = formatGoing(data.visits);
         }
-      });
+      })
+      .catch(err => console.error('Error logging visit:', err));
+    }
+
+    // Call it immediately
+    logVisit();
 
     function setupRating(userRating, avgRating, total) {
       const parent = document.getElementById('rating-section');
@@ -857,6 +918,125 @@
         }
       });
     }
+
+    /* ── Organizer Details & Events ── */
+    function loadOrganizerDetails() {
+      if (!RAW_EVENT || !RAW_EVENT.organizer_id) return;
+      
+      fetch(`/api/organizers/${RAW_EVENT.organizer_id}/details`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            document.getElementById('org-past-events').textContent = data.pastEventsCount;
+            document.getElementById('org-avg-rating').textContent = `${data.avgRating} ★`;
+          }
+        })
+        .catch(console.error);
+    }
+
+    function loadOrgEvents(page = 1) {
+      if (!RAW_EVENT || !RAW_EVENT.organizer_id) return;
+
+      const sortVal = document.getElementById('org-events-sort').value;
+      const [sort, order] = sortVal.split('-');
+      
+      const listContainer = document.getElementById('org-events-list');
+      // Show loading state if not already showing skeleton
+      if (page === 1 && !listContainer.querySelector('.animate-pulse')) {
+         listContainer.innerHTML = '<div class="animate-pulse space-y-3"><div class="h-20 bg-gray-100 rounded-2xl"></div><div class="h-20 bg-gray-100 rounded-2xl"></div></div>';
+      }
+
+      fetch(`/api/organizers/${RAW_EVENT.organizer_id}/events?sort=${sort}&order=${order}&page=${page}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            renderOrgEvents(data.events);
+            renderOrgPagination(data.pagination);
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          listContainer.innerHTML = '<p class="text-xs text-red-500 text-center py-4">Error loading events.</p>';
+        });
+    }
+
+    function renderOrgEvents(events) {
+      const container = document.getElementById('org-events-list');
+      container.innerHTML = '';
+
+      if (events.length === 0) {
+        container.innerHTML = '<p class="text-xs text-gray-500 text-center py-8">No other events found.</p>';
+        return;
+      }
+
+      events.forEach(e => {
+        const div = document.createElement('div');
+        div.className = 'bg-white border border-gray-100 rounded-2xl p-3 flex gap-3 cursor-pointer active:scale-[0.98] transition-all shadow-sm';
+        div.onclick = () => window.location.href = `/details?id=${e.id}`;
+        
+        const dateStr = new Date(e.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const visits = (e.analytics ? e.analytics.page_view_count : 0);
+        
+        div.innerHTML = `
+          <img src="${e.image_url || 'https://images.unsplash.com/photo-1542204165-65bf26472b9b?auto=format&fit=crop&q=80&w=800'}" 
+               onerror="this.src='https://images.unsplash.com/photo-1542204165-65bf26472b9b?auto=format&fit=crop&q=80&w=800'; this.onerror=null;"
+               class="w-16 h-16 rounded-xl object-cover" />
+          <div class="flex-1 min-w-0">
+            <h4 class="text-sm font-bold text-gray-900 truncate">${e.title}</h4>
+            <p class="text-[10px] text-gray-500 mb-1">${dateStr} • ${e.venue}</p>
+            <div class="flex items-center gap-3">
+              <span class="text-[10px] font-bold text-brand bg-brand-light px-2 py-0.5 rounded-md">${e.avgRating} ★</span>
+              <span class="text-[10px] font-medium text-gray-400 flex items-center gap-1">
+                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                ${formatGoing(visits)}
+              </span>
+            </div>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function renderOrgPagination(p) {
+      const container = document.getElementById('org-events-pagination');
+      container.innerHTML = '';
+      
+      if (p.totalPages <= 1) return;
+
+      // Prev
+      const prevBtn = document.createElement('button');
+      prevBtn.className = `w-8 h-8 rounded-lg flex items-center justify-center border ${p.currentPage > 1 ? 'border-gray-200 text-gray-700' : 'border-gray-100 text-gray-300 cursor-not-allowed'}`;
+      prevBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>';
+      if (p.currentPage > 1) prevBtn.onclick = () => loadOrgEvents(p.currentPage - 1);
+      container.appendChild(prevBtn);
+
+      // Page numbers (simplified)
+      for (let i = 1; i <= p.totalPages; i++) {
+        if (i === 1 || i === p.totalPages || (i >= p.currentPage - 1 && i <= p.currentPage + 1)) {
+          const btn = document.createElement('button');
+          btn.className = `w-8 h-8 rounded-lg text-xs font-bold ${i === p.currentPage ? 'bg-brand text-white' : 'text-gray-500 hover:bg-gray-50'}`;
+          btn.textContent = i;
+          btn.onclick = () => loadOrgEvents(i);
+          container.appendChild(btn);
+        } else if (i === p.currentPage - 2 || i === p.currentPage + 2) {
+          const dot = document.createElement('span');
+          dot.className = 'text-gray-300';
+          dot.textContent = '...';
+          container.appendChild(dot);
+        }
+      }
+
+      // Next
+      const nextBtn = document.createElement('button');
+      nextBtn.className = `w-8 h-8 rounded-lg flex items-center justify-center border ${p.currentPage < p.totalPages ? 'border-gray-200 text-gray-700' : 'border-gray-100 text-gray-300 cursor-not-allowed'}`;
+      nextBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>';
+      if (p.currentPage < p.totalPages) nextBtn.onclick = () => loadOrgEvents(p.currentPage + 1);
+      container.appendChild(nextBtn);
+    }
+
+    // Call organizer loaders on init
+    loadOrganizerDetails();
+    loadOrgEvents(1);
 
     /* ── Location Logic ── */
     function checkLocationBeforeMap() {

@@ -159,10 +159,12 @@ const createUploadMiddleware = (fieldName = 'image') => {
 // Create upload middlewares
 const upload360Hybrid = createUploadMiddleware('image_360');
 const uploadMapHybrid = createUploadMiddleware('blueprint_image');
+const uploadAvatarHybrid = createUploadMiddleware('avatar');
 
 module.exports = {
     upload360Hybrid,
     uploadMapHybrid,
+    uploadAvatarHybrid,
     saveFileHybrid,
     saveBase64Hybrid,
     deleteFileHybrid,

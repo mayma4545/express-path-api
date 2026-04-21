@@ -139,7 +139,9 @@
           <% dbEvents.forEach((ev, i) => { %>
             <div class="ev-card" style="animation-delay: <%= i * 50 %>ms">
               <div style="position:relative;">
-                <img src="<%= ev.image_url || 'https://images.unsplash.com/photo-1542204165-65bf26472b9b?auto=format&fit=crop&q=80&w=800' %>" alt="<%= ev.title %>" />
+                <img src="<%= ev.image_url || 'https://images.unsplash.com/photo-1542204165-65bf26472b9b?auto=format&fit=crop&q=80&w=800' %>" 
+                     onerror="this.src='https://images.unsplash.com/photo-1542204165-65bf26472b9b?auto=format&fit=crop&q=80&w=800'; this.onerror=null;"
+                     alt="<%= ev.title %>" />
                 <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.5),transparent);"></div>
                 <span style="position:absolute;top:10px;left:10px;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;background:rgba(255,255,255,.2);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.3);color:#fff;padding:3px 9px;border-radius:99px;">
                   <%= ev.category ? ev.category.name : 'Event' %>

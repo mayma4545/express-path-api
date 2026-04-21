@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { AppUser, Organizer, UserNotification } = require('../models');
 const { sendEmail } = require('../services/mailer');
+const { uploadAvatarHybrid, saveFileHybrid } = require('../services/upload.hybrid');
 
 // Helper to detect JSON requests (handles fetch, AJAX, etc)
 const isJson = (req) => {
@@ -96,6 +97,21 @@ router.get('/home', async (req, res) => {
             order
         });
 
+        // Fetch top 5 most visited events for Hot Events carousel
+        const hotEvents = await Event.findAll({
+            where: { status: 'published' },
+            include: [
+                { model: Category, as: 'category' },
+                { 
+                    model: EventAnalytics, 
+                    as: 'analytics',
+                    required: true
+                }
+            ],
+            order: [[{ model: EventAnalytics, as: 'analytics' }, 'page_view_count', 'DESC']],
+            limit: 5
+        });
+
         // Get user's bookmarks if logged in
         let userBookmarks = [];
         if (req.session.userId) {
@@ -108,6 +124,7 @@ router.get('/home', async (req, res) => {
         
         res.render('client/home', { 
             dbEvents, 
+            hotEvents,
             search: search || '', 
             sort: sort || 'date_asc',
             user: req.session.user || null,
@@ -591,8 +608,12 @@ router.get('/auth/google', (req, res) => {
 // Profile page
 router.get('/profile', requireUserAuth, async (req, res) => {
     try {
-        const { UserActivity, EventLike, Event, AppUser } = require('../models');
+        const { Event, AppUser, EventVisit, EventLike, EventBookmark, Comment, Category } = require('../models');
         const userId = req.session.userId || req.session.user.id;
+        const page = parseInt(req.query.page) || 1;
+        const limit = 10;
+        const offset = (page - 1) * limit;
+
         const user = await AppUser.findByPk(userId);
         
         if (!user) {
@@ -600,34 +621,64 @@ router.get('/profile', requireUserAuth, async (req, res) => {
             return res.redirect('/login?message=' + encodeURIComponent('User session expired. Please log in again.'));
         }
         
-        // Optional data for profile (bookmarks, history)
-        let bookmarkedEvents = [];
-        try {
-            bookmarkedEvents = await Event.findAll({
-                include: [{ model: AppUser, as: 'liked_by_users', where: { id: user.id } }]
-            });
-        } catch (e) { console.error('Error fetching bookmarks for profile:', e); }
+        // 1. Get Bookmarks
+        const bookmarkedEvents = await Event.findAll({
+            include: [{ 
+                model: EventBookmark, 
+                as: 'bookmarks', 
+                where: { user_id: userId },
+                required: true 
+            }]
+        });
 
-        let uniqueVisitedEvents = [];
-        try {
-            let visitedEventLogs = await UserActivity.findAll({
-                where: { user_id: user.id, event_id: { [require('sequelize').Op.not]: null } }
-            });
-            let uniqueVisitedEventIds = new Set();
-            for (const visit of visitedEventLogs) {
-                if (visit.event_id) uniqueVisitedEventIds.add(visit.event_id);
-            }
-            if (uniqueVisitedEventIds.size > 0) {
-                uniqueVisitedEvents = await Event.findAll({
-                    where: { id: Array.from(uniqueVisitedEventIds) }
-                });
-            }
-        } catch (e) { console.error('Error fetching visit history for profile:', e); }
+        // 2. Get Visit History with Pagination
+        const { count, rows: visits } = await EventVisit.findAndCountAll({
+            where: { user_id: userId },
+            include: [{ 
+                model: Event, 
+                as: 'event',
+                include: [{ model: Category, as: 'category' }]
+            }],
+            order: [['created_at', 'DESC']],
+            limit,
+            offset
+        });
+
+        // 3. For each visit, check for other activities
+        const visitedEventsWithActivity = await Promise.all(visits.map(async (v) => {
+            if (!v.event) return null;
+            
+            const eventId = v.event.id;
+            const [hasLiked, hasBookmarked, comments] = await Promise.all([
+                EventLike.findOne({ where: { event_id: eventId, user_id: userId } }),
+                EventBookmark.findOne({ where: { event_id: eventId, user_id: userId } }),
+                Comment.findAll({ where: { event_id: eventId, user_id: userId } })
+            ]);
+
+            return {
+                ...v.event.toJSON(),
+                visited_at: v.created_at,
+                activity: {
+                    liked: !!hasLiked,
+                    bookmarked: !!hasBookmarked,
+                    commentCount: comments.length
+                }
+            };
+        }));
+
+        const totalPages = Math.ceil(count / limit);
         
         res.render('client/profile', { 
             user, 
             bookmarkedEvents, 
-            visitedEvents: uniqueVisitedEvents 
+            visitedEvents: visitedEventsWithActivity.filter(e => e !== null),
+            pagination: {
+                total: count,
+                currentPage: page,
+                totalPages,
+                hasNext: page < totalPages,
+                hasPrev: page > 1
+            }
         });
     } catch (error) {
         console.error('Error loading profile:', error);
@@ -636,24 +687,36 @@ router.get('/profile', requireUserAuth, async (req, res) => {
 });
 
 // Update profile endpoint
-router.post('/profile/update', requireUserAuth, async (req, res) => {
+router.post('/profile/update', requireUserAuth, uploadAvatarHybrid.single('avatar'), async (req, res) => {
     try {
         const { first_name, last_name } = req.body;
+        const userId = req.session.userId || req.session.user.id;
         
         if (!first_name || !last_name) {
             return res.status(400).json({ success: false, error: 'First name and last name are required' });
         }
 
+        const updateData = { first_name, last_name };
+
+        // Handle Avatar Upload
+        if (req.file) {
+            const uploadResult = await saveFileHybrid(req.file, 'avatars');
+            updateData.avatar_url = uploadResult.cloudinaryUrl;
+        }
+
         await AppUser.update(
-            { first_name, last_name },
-            { where: { id: req.session.userId } }
+            updateData,
+            { where: { id: userId } }
         );
         
         // Update session
         req.session.user.first_name = first_name;
         req.session.user.last_name = last_name;
+        if (updateData.avatar_url) {
+            req.session.user.avatar_url = updateData.avatar_url;
+        }
         
-        res.json({ success: true, message: 'Profile updated successfully' });
+        res.json({ success: true, message: 'Profile updated successfully', avatar_url: updateData.avatar_url });
     } catch (error) {
         console.error('Update profile error:', error);
         res.status(500).json({ success: false, error: 'Failed to update profile' });

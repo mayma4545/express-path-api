@@ -763,6 +763,10 @@ const EventVisit = sequelize.define('EventVisit', {
             model: 'app_users',
             key: 'id'
         }
+    },
+    session_id: {
+        type: DataTypes.STRING(255),
+        allowNull: true
     }
 }, {
     tableName: 'event_visits',

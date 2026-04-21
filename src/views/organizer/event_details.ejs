@@ -61,7 +61,7 @@
 
   <!-- Hero Image -->
   <div class="relative" style="height:300px;">
-    <img id="detail-img" src="" alt="" class="w-full h-full object-cover" />
+    <img id="detail-img" src="" onerror="this.src='https://images.unsplash.com/photo-1542204165-65bf26472b9b?auto=format&fit=crop&q=80&w=800'; this.onerror=null;" alt="" class="w-full h-full object-cover" />
     <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
     <div class="absolute bottom-0 left-0 right-0 px-5 pb-5 flex items-end justify-between">
       <div>
@@ -240,8 +240,7 @@
                   const pDiv = document.createElement('div');
                   pDiv.className = 'rounded-xl overflow-hidden bg-gray-100 relative';
                   pDiv.style.height = '100px';
-                  pDiv.innerHTML = '<img src="' + p.image_url + '" class="w-full h-full object-cover" />';
-                  container.appendChild(pDiv);
+                  pDiv.innerHTML = '<img src="' + p.image_url + '" onerror="this.src=\'https://images.unsplash.com/photo-1542204165-65bf26472b9b?auto=format&fit=crop&q=80&w=800\'; this.onerror=null;" class="w-full h-full object-cover" />';                  container.appendChild(pDiv);
                 });
             }
         }).catch(err => console.error(err));
