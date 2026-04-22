@@ -1196,17 +1196,23 @@
 
       <div class="hero-stats" role="list" aria-label="App stats">
         <div class="stat" role="listitem">
-          <div class="stat-val">50<em>+</em></div>
-          <div class="stat-lbl">Active Events</div>
+          <div class="stat-val"><%= eventCount %><em>+</em></div>
+          <div class="stat-lbl">Events</div>
         </div>
         <div class="stat-sep" aria-hidden="true"></div>
         <div class="stat" role="listitem">
-          <div class="stat-val">30<em>+</em></div>
+          <div class="stat-val"><%= venueCount %><em>+</em></div>
           <div class="stat-lbl">Mapped Venues</div>
         </div>
         <div class="stat-sep" aria-hidden="true"></div>
         <div class="stat" role="listitem">
-          <div class="stat-val">1<em>K+</em></div>
+          <div class="stat-val">
+            <% if (guidedCount >= 1000) { %>
+              <%= (guidedCount / 1000).toFixed(1).replace(/\.0$/, '') %><em>K+</em>
+            <% } else { %>
+              <%= guidedCount %><em>+</em>
+            <% } %>
+          </div>
           <div class="stat-lbl">Users Guided</div>
         </div>
       </div>

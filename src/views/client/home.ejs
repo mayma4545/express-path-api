@@ -701,8 +701,13 @@
         };
       };
 
-      // Populate HOT from server-provided top 5
-      HOT_EVENTS.forEach(e => HOT.push(mapEvent(e)));
+      // Populate HOT strictly with upcoming/ongoing events (up to 5)
+      HOT_EVENTS.forEach(e => {
+        const mapped = mapEvent(e);
+        if ((mapped.isFuture || mapped.isOngoingReal) && HOT.length < 5) {
+          HOT.push(mapped);
+        }
+      });
 
       RAW_EVENTS.forEach((e) => {
         const evCat = e.category ? e.category.name : (e.tags ? e.tags.split(',')[0] : "Other");

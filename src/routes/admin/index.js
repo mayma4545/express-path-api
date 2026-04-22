@@ -400,20 +400,29 @@ router.post('/organizers/:id/approve', async (req, res) => {
         if (organizer.account && organizer.account.email) {
             try {
                 const { sendEmail } = require('../../services/mailer');
+                const portalUrl = 'https://express-path-api.onrender.com/organizer/login';
                 const mailText = `Congratulations ${organizer.name}!\n\nYour organizer account has been approved by the OhSee administrators. You can now log in and start creating events.\n\nWelcome to the platform!`;
                 const mailHtml = `
-                    <div style="font-family: sans-serif; color: #333;">
-                        <h2 style="color: #1DA1F2;">Account Approved!</h2>
-                        <p>Hello <strong>${organizer.name}</strong>,</p>
-                        <p>We are happy to inform you that your organizer account on <strong>OhSee</strong> has been <strong>approved</strong>.</p>
-                        <p>You can now log in to the organizer portal using your credentials and start publishing events.</p>
-                        <div style="margin: 20px 0;">
-                            <a href="${process.env.BASE_URL || 'http://localhost:3000'}/organizer/login" style="background: #1DA1F2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Login to Portal</a>
+                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb;">
+                        <div style="background-color: #1DA1F2; padding: 40px 20px; text-align: center;">
+                            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">Account Approved!</h1>
                         </div>
-                        <p>Welcome aboard!</p>
+                        <div style="padding: 40px 30px; background-color: white;">
+                            <p style="font-size: 16px; color: #374151; line-height: 1.6; margin-bottom: 24px;">Hello <strong>${organizer.name}</strong>,</p>
+                            <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 32px;">We are thrilled to inform you that your organizer account on <strong>OhSee</strong> has been officially approved. You are now part of our growing community of event creators!</p>
+                            
+                            <div style="text-align: center; margin-bottom: 32px;">
+                                <a href="${portalUrl}" style="background-color: #1DA1F2; color: white; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 12px rgba(29, 161, 242, 0.2);">Login to Portal</a>
+                            </div>
+
+                            <p style="font-size: 14px; color: #6b7280; line-height: 1.6; text-align: center; margin-bottom: 0;">You can now start publishing events, managing attendees, and broadcasting announcements directly from your dashboard.</p>
+                        </div>
+                        <div style="padding: 20px; background-color: #f3f4f6; text-align: center; border-top: 1px solid #e5e7eb;">
+                            <p style="font-size: 12px; color: #9ca3af; margin: 0;">&copy; 2026 OhSee Campus Navigation System. All rights reserved.</p>
+                        </div>
                     </div>
                 `;
-                await sendEmail(organizer.account.email, 'Account Approved - OhSee Organizer', mailText, mailHtml);
+                await sendEmail(organizer.account.email, 'Welcome to OhSee - Your Account is Approved!', mailText, mailHtml);
             } catch (mailErr) {
                 console.error('Approval email error:', mailErr);
             }
@@ -477,22 +486,34 @@ router.post('/organizers/:id/delete', async (req, res) => {
 });
 
 // Moderation of Events
-router.get('/events', async (req, res) => {
+router.get('/events', requireAdminAuth, async (req, res) => {
     try {
-        let events;
-        try {
-            events = await Event.findAll({ include: ['category', 'organizer'] });
-        } catch (e) {
-             events = await Event.findAll({
-                include: [
-                    { model: Category, as: 'category', required: false },
-                    { model: Organizer, as: 'organizer', required: false }
-                ]
-             });
-        }
+        const { Event, Organizer, Category, EventAnalytics, EventRating, EventBookmark } = require('../../models');
+        
+        const events = await Event.findAll({
+            include: [
+                { model: Category, as: 'category', required: false },
+                { model: Organizer, as: 'organizer', required: false },
+                { model: EventAnalytics, as: 'analytics', required: false },
+                { model: EventRating, as: 'ratings', required: false },
+                { model: EventBookmark, as: 'bookmarks', required: false }
+            ],
+            order: [['created_at', 'DESC']]
+        });
+
+        // Format data for easier client-side sorting
+        const formattedEvents = events.map(e => {
+            const data = e.toJSON();
+            const ratings = e.ratings || [];
+            data.avgRating = ratings.length > 0 ? (ratings.reduce((acc, curr) => acc + curr.rating, 0) / ratings.length) : 0;
+            data.visitCount = e.analytics ? e.analytics.page_view_count : 0;
+            data.bookmarkCount = e.bookmarks ? e.bookmarks.length : 0;
+            return data;
+        });
+
         res.render('admin/events', {
             title: 'Event Moderation | Admin',
-            events,
+            events: formattedEvents,
             currentPath: '/admin/events'
         });
     } catch (error) {
@@ -502,13 +523,30 @@ router.get('/events', async (req, res) => {
 });
 
 // Admin Event Details
-router.get('/events/:id', async (req, res) => {
+router.get('/events/:id', requireAdminAuth, async (req, res) => {
     try {
+        const { Event, Organizer, Category, EventAnnouncement, EventPhoto, Comment, AppUser } = require('../../models');
         const eventId = req.params.id;
         const event = await Event.findByPk(eventId, {
             include: [
-                { model: Category, as: 'category' },
-                { model: Organizer, as: 'organizer' }
+                { model: Category, as: 'category', required: false },
+                { model: Organizer, as: 'organizer', required: false },
+                { model: EventAnnouncement, as: 'announcements', required: false },
+                { model: EventPhoto, as: 'photos', required: false },
+                { 
+                    model: Comment, 
+                    as: 'comments', 
+                    required: false,
+                    include: [
+                        { model: AppUser, as: 'user', attributes: ['first_name', 'last_name', 'email'] },
+                        { 
+                            model: Comment, 
+                            as: 'replies', 
+                            required: false,
+                            include: [{ model: AppUser, as: 'user', attributes: ['first_name', 'last_name', 'email'] }]
+                        }
+                    ]
+                }
             ]
         });
 
@@ -527,9 +565,50 @@ router.get('/events/:id', async (req, res) => {
     }
 });
 
+// Admin Reply to Comment
+router.post('/events/:id/comments/:commentId/reply', requireAdminAuth, async (req, res) => {
+    try {
+        const { Comment } = require('../../models');
+        const { content } = req.body;
+        
+        if (!content) return res.status(400).json({ success: false, message: 'Content is required' });
+
+        await Comment.create({
+            event_id: req.params.id,
+            user_id: 1, // System/Admin User ID
+            content,
+            parent_comment_id: req.params.commentId
+        });
+
+        res.json({ success: true, message: 'Reply posted successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Admin Delete Comment
+router.delete('/events/:id/comments/:commentId', requireAdminAuth, async (req, res) => {
+    try {
+        const { Comment } = require('../../models');
+        const comment = await Comment.findByPk(req.params.commentId);
+        if (!comment) return res.status(404).json({ success: false, message: 'Comment not found' });
+        
+        await comment.destroy();
+        res.json({ success: true, message: 'Comment deleted' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 router.get('/activity', async (req, res) => {
     try {
         const { EventSystemActivityLog, Organizer } = require('../../models');
+        
+        // Mark all as read when visiting this page
+        if (EventSystemActivityLog) {
+            await EventSystemActivityLog.update({ is_read: true }, { where: { is_read: false } });
+        }
+
         let activities = [];
         if (EventSystemActivityLog) {
             activities = await EventSystemActivityLog.findAll({

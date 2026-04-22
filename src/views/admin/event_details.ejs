@@ -132,9 +132,12 @@
 
   <!-- ── Tabs ─────────────────────────────────────────── -->
   <div class="slide-in mt-5 px-5">
-    <div class="flex border-b border-gray-200 mb-4">
-      <button id="tab-about" class="tab-btn active flex-1 py-2.5 text-sm font-semibold text-center" onclick="switchTab(`about`)">Details</button>
-      <button id="tab-organizer" class="tab-btn flex-1 py-2.5 text-sm font-semibold text-gray-400 text-center" onclick="switchTab(`organizer`)">Organizer Info</button>
+    <div class="flex border-b border-gray-200 mb-4 overflow-x-auto no-scrollbar">
+      <button id="tab-about" class="tab-btn active shrink-0 px-4 py-2.5 text-sm font-semibold text-center" onclick="switchTab(`about`)">Details</button>
+      <button id="tab-announcements" class="tab-btn shrink-0 px-4 py-2.5 text-sm font-semibold text-gray-400 text-center" onclick="switchTab(`announcements`)">Updates</button>
+      <button id="tab-comments" class="tab-btn shrink-0 px-4 py-2.5 text-sm font-semibold text-gray-400 text-center" onclick="switchTab(`comments`)">Feedback</button>
+      <button id="tab-gallery" class="tab-btn shrink-0 px-4 py-2.5 text-sm font-semibold text-gray-400 text-center" onclick="switchTab(`gallery`)">Gallery</button>
+      <button id="tab-organizer" class="tab-btn shrink-0 px-4 py-2.5 text-sm font-semibold text-gray-400 text-center" onclick="switchTab(`organizer`)">Organizer</button>
     </div>
 
     <!-- About -->
@@ -149,6 +152,118 @@
         <span class="text-[11px] font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-full"><%= event.category ? event.category.name : "Category Placeholder" %></span>
         <span class="text-[11px] font-bold bg-brand-light text-brand-dark px-3 py-1 rounded-full">Visible to Public</span>
         <span class="text-[11px] font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-full"><%= event.is_ongoing ? "Active Status" : "Pending Scheduled" %></span>
+      </div>
+    </div>
+
+    <!-- Announcements -->
+    <div id="tab-announcements-content" class="tab-content pb-6">
+      <div class="space-y-4">
+        <% if (event.announcements && event.announcements.length > 0) { %>
+          <% event.announcements.forEach(a => { %>
+            <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm relative group">
+              <h5 class="font-bold text-slate-900 text-sm mb-1"><%= a.title %></h5>
+              <p class="text-xs text-slate-600 leading-relaxed mb-2"><%= a.body %></p>
+              <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-50">
+                <span class="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded"><%= new Date(a.created_at).toLocaleDateString() %></span>
+              </div>
+            </div>
+          <% }) %>
+        <% } else { %>
+          <div class="py-12 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            <p class="text-xs font-bold text-slate-400">No announcements posted</p>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Feedback / Comments -->
+    <div id="tab-comments-content" class="tab-content pb-6">
+      <div class="space-y-6">
+        <% if (event.comments && event.comments.length > 0) { %>
+          <% event.comments.filter(c => !c.parent_comment_id).forEach(c => { %>
+            <div class="relative pl-2">
+              <div class="flex gap-3 mb-3">
+                <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200">
+                  <span class="text-xs font-black text-slate-500 uppercase"><%= c.user ? c.user.first_name[0] : 'U' %></span>
+                </div>
+                <div class="flex-1 bg-white border border-slate-100 rounded-2xl rounded-tl-none p-3 shadow-sm relative group">
+                  <div class="flex justify-between items-start mb-1">
+                    <p class="text-[11px] font-black text-slate-900"><%= c.user ? (c.user.first_name + ' ' + c.user.last_name) : 'Anonymous' %></p>
+                    <button onclick="deleteComment(<%= c.id %>)" class="opacity-0 group-hover:opacity-100 text-rose-500 hover:text-rose-700 transition-all">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  </div>
+                  <p class="text-xs text-slate-600 mb-2"><%= c.content %></p>
+                  <div class="flex items-center gap-3">
+                    <span class="text-[9px] font-bold text-slate-400"><%= new Date(c.created_at).toLocaleDateString() %></span>
+                    <button onclick="showReplyInput(<%= c.id %>)" class="text-[9px] font-black text-brand uppercase tracking-widest hover:underline">Reply</button>
+                  </div>
+
+                  <!-- Reply Input -->
+                  <div id="reply-box-<%= c.id %>" class="hidden mt-3 pt-3 border-t border-slate-50">
+                    <textarea id="reply-text-<%= c.id %>" class="w-full bg-slate-50 border-none rounded-xl p-2 text-xs focus:ring-1 focus:ring-brand mb-2" rows="2" placeholder="Write an official response..."></textarea>
+                    <div class="flex justify-end gap-2">
+                      <button onclick="hideReplyInput(<%= c.id %>)" class="text-[9px] font-bold text-slate-400 uppercase px-2 py-1">Cancel</button>
+                      <button onclick="submitReply(<%= c.id %>)" class="bg-brand text-white text-[9px] font-black uppercase px-3 py-1 rounded-lg">Send</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Replies -->
+              <% if (c.replies && c.replies.length > 0) { %>
+                <div class="ml-10 space-y-3 mt-3">
+                  <% c.replies.forEach(r => { %>
+                    <div class="flex gap-3">
+                      <div class="w-8 h-8 rounded-lg <%= r.user_id === 1 ? 'bg-brand' : 'bg-slate-50' %> flex items-center justify-center shrink-0">
+                        <% if(r.user_id === 1) { %>
+                          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                        <% } else { %>
+                          <span class="text-[10px] font-black text-slate-400 uppercase"><%= r.user ? r.user.first_name[0] : 'U' %></span>
+                        <% } %>
+                      </div>
+                      <div class="flex-1 bg-slate-50 rounded-xl p-2.5 relative group">
+                        <div class="flex justify-between items-start mb-0.5">
+                          <p class="text-[10px] font-black <%= r.user_id === 1 ? 'text-brand' : 'text-slate-700' %>"><%= r.user_id === 1 ? 'System Administrator' : (r.user ? (r.user.first_name + ' ' + r.user.last_name) : 'Anonymous') %></p>
+                          <button onclick="deleteComment(<%= r.id %>)" class="opacity-0 group-hover:opacity-100 text-rose-500 hover:text-rose-700 transition-all">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+                        </div>
+                        <p class="text-xs text-slate-600"><%= r.content %></p>
+                      </div>
+                    </div>
+                  <% }) %>
+                </div>
+              <% } %>
+            </div>
+          <% }) %>
+        <% } else { %>
+          <div class="py-12 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            <p class="text-xs font-bold text-slate-400">No community feedback yet</p>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Gallery -->
+    <div id="tab-gallery-content" class="tab-content pb-6">
+      <div class="grid grid-cols-2 gap-3">
+        <% if (event.photos && event.photos.length > 0) { %>
+          <% event.photos.forEach(p => { %>
+            <div onclick="openPhotoFullscreen('<%= p.image_url %>', '<%= new Date(p.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) %>')" class="aspect-square rounded-2xl overflow-hidden bg-slate-100 border border-slate-100 relative group cursor-pointer">
+              <img src="<%= p.image_url %>" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+          <% }) %>
+        <% } else { %>
+          <div class="col-span-2 py-12 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            <p class="text-xs font-bold text-slate-400">No additional photos</p>
+          </div>
+        <% } %>
       </div>
     </div>
 
@@ -229,7 +344,7 @@
   <script>
     /* ── Tabs ── */
     function switchTab(name) {
-      ["about", "organizer"].forEach(t => {
+      ["about", "announcements", "comments", "gallery", "organizer"].forEach(t => {
         const btn = document.getElementById(`tab-${t}`);
         const content = document.getElementById(`tab-${t}-content`);
         if (btn && content) {
@@ -245,10 +360,66 @@
       });
     }
 
+    /* ── Moderation Functions ── */
+    const eventId = '<%= event.id %>';
+
+    function openPhotoFullscreen(url, date) {
+        const modal = document.getElementById('photo-fullscreen-modal');
+        const img = document.getElementById('fullscreen-img');
+        const dateText = document.getElementById('photo-added-date');
+        
+        img.src = url;
+        dateText.textContent = date;
+        
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closePhotoFullscreen() {
+        const modal = document.getElementById('photo-fullscreen-modal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = '';
+    }
+
+    async function deleteComment(id) {
+        if (!confirm('Permanently delete this comment?')) return;
+        try {
+            const response = await fetch(`/admin/events/${eventId}/comments/${id}`, { method: 'DELETE' });
+            const result = await response.json();
+            if (result.success) window.location.reload();
+            else alert('Error: ' + result.message);
+        } catch (e) { alert('Failed to delete comment'); }
+    }
+
+    function showReplyInput(id) {
+        document.getElementById(`reply-box-${id}`).classList.remove('hidden');
+    }
+
+    function hideReplyInput(id) {
+        document.getElementById(`reply-box-${id}`).classList.add('hidden');
+    }
+
+    async function submitReply(commentId) {
+        const content = document.getElementById(`reply-text-${commentId}`).value.trim();
+        if (!content) return alert('Reply content cannot be empty');
+
+        try {
+            const response = await fetch(`/admin/events/${eventId}/comments/${commentId}/reply`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content })
+            });
+            const result = await response.json();
+            if (result.success) window.location.reload();
+            else alert('Error: ' + result.message);
+        } catch (e) { alert('Failed to post reply'); }
+    }
+
     /* ── Takedown Logic ── */
     const takedownModal = document.getElementById('takedown-modal');
     const loadingOverlay = document.getElementById('loading-overlay');
-    const eventId = '<%= event.id %>';
 
     function confirmTakedown() {
       takedownModal.classList.remove('hidden');
@@ -276,7 +447,6 @@
         const result = await response.json();
 
         if (result.success) {
-          // Stay in loading state for a moment for UX
           setTimeout(() => {
             window.location.href = '/admin/events?takedown=success';
           }, 800);
@@ -290,5 +460,24 @@
       }
     }
   </script>
+
+  <!-- Fullscreen Photo Modal -->
+  <div id="photo-fullscreen-modal" class="fixed inset-0 z-[120] hidden items-center justify-center bg-black/95 backdrop-blur-xl transition-all p-4" onclick="closePhotoFullscreen()">
+    <div class="relative max-w-4xl w-full h-full flex flex-col items-center justify-center" onclick="event.stopPropagation()">
+        <button onclick="closePhotoFullscreen()" class="absolute top-0 right-0 p-4 text-white/50 hover:text-white transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+        <div class="w-full h-full flex flex-col items-center justify-center">
+            <img id="fullscreen-img" src="" class="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl" />
+            <div class="mt-8 text-center">
+                <p class="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Upload Date</p>
+                <p id="photo-added-date" class="text-white font-bold text-sm"></p>
+            </div>
+            <button onclick="closePhotoFullscreen()" class="mt-10 bg-white/10 hover:bg-white/20 text-white px-8 py-3 rounded-full font-black text-xs uppercase tracking-widest transition-all">Close Viewer</button>
+        </div>
+    </div>
+  </div>
 </body>
 </html>

@@ -548,97 +548,145 @@
       </div>
 
       <!-- ===== ONGOING EVENTS ===== -->
-<div class="mb-8">
-  <div class="flex justify-between items-center mb-4">
-    <h3 class="text-lg font-bold">Ongoing Events</h3><a href="/admin/events" class="text-sm font-medium text-textMuted hover:text-brand">See all</a>
-  </div>
-  <div class="flex flex-col gap-3">
-    <% if(ongoingEvents && ongoingEvents.length > 0) { %>
-      <% ongoingEvents.forEach(function(evt) { %>
-      <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 card-hover cursor-pointer" onclick="window.location.href='/admin/events/<%= evt.id %>'">
-        <div class="flex items-center justify-between gap-2 mb-0.5">
-          <h4 class="font-bold text-textMain text-sm truncate"><%= evt.title %></h4>
-          <span class="text-[11px] font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">In Progress</span>
+      <div class="mb-10">
+        <div class="flex justify-between items-center mb-5">
+          <h3 class="text-xl font-extrabold text-gray-900 tracking-tight">Ongoing Events</h3>
+          <a href="/admin/events" class="text-sm font-bold text-brand hover:text-brand-dark transition-colors px-3 py-1 bg-brand-light rounded-lg">View All</a>
         </div>
-        <p class="text-xs text-textMuted"><%= evt.venue || 'TBA' %></p>
-      </div>
-      <% }); %>
-    <% } else { %>
-      <p class="text-sm text-textMuted">No ongoing events right now.</p>
-    <% } %>
-  </div></div>
-<!-- ===== UPCOMING EVENTS ===== -->
-<div class="mb-8 mt-5">
-  <div class="flex justify-between items-center mb-4">
-    <h3 class="text-lg font-bold">Upcoming Events</h3><a href="/admin/events" class="text-sm font-medium text-textMuted hover:text-brand">See all</a>
-  </div>
-  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-    <% if(upcomingEvents && upcomingEvents.length > 0) { %>
-      <% upcomingEvents.forEach(function(evt) { %>
-      <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 flex gap-4 card-hover overflow-hidden relative cursor-pointer" onclick="window.location.href='/admin/events/<%= evt.id %>'">
-        <div class="absolute top-0 left-0 w-1 h-full bg-[#ec4899]"></div>
-        <div class="flex-1 min-w-0">
-          <span class="text-[10px] font-bold tracking-wider text-pink-500 uppercase mb-1 block"><%= evt.category ? evt.category.name : 'Event' %></span>
-          <h4 class="font-bold text-textMain text-sm truncate mb-1"><%= evt.title %></h4>
-          <div class="flex items-center gap-3 text-xs text-textMuted font-medium">
-            <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span><%= new Date(evt.event_date).toLocaleDateString([], {month:'short', day:'numeric'}) %></span>
-            <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span><%= evt.venue || 'TBA' %></span>
-          </div>
+        <div class="grid grid-cols-1 gap-4">
+          <% if(ongoingEvents && ongoingEvents.length > 0) { %>
+            <% ongoingEvents.forEach(function(evt) { %>
+            <div class="bg-white rounded-[2rem] p-5 shadow-sm border border-gray-100 card-hover cursor-pointer group" onclick="window.location.href='/admin/events/<%= evt.id %>'">
+              <div class="flex items-center justify-between gap-4 mb-3">
+                <div class="flex items-center gap-2">
+                  <span class="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span class="text-[10px] font-black uppercase tracking-widest text-emerald-600">Active Now</span>
+                </div>
+                <div class="p-2 bg-emerald-50 rounded-xl text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                </div>
+              </div>
+              <h4 class="font-extrabold text-gray-900 text-base truncate mb-1 group-hover:text-brand transition-colors"><%= evt.title %></h4>
+              <p class="text-xs font-bold text-gray-400 flex items-center gap-1.5 truncate">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                <%= evt.venue || 'TBA' %>
+              </p>
+            </div>
+            <% }); %>
+          <% } else { %>
+            <div class="py-12 bg-gray-50 rounded-[2rem] border border-dashed border-gray-200 text-center">
+              <p class="text-sm font-bold text-gray-400">No ongoing events right now</p>
+            </div>
+          <% } %>
         </div>
       </div>
-      <% }); %>
-    <% } else { %>
-      <p class="text-sm text-textMuted col-span-2">No upcoming events scheduled.</p>
-    <% } %>
-  </div></div>
-<!-- ===== MOST VISITED EVENTS ===== -->
-<div class="mb-8 mt-5">
-  <div class="flex justify-between items-center mb-4">
-    <h3 class="text-lg font-bold">Most Visited Events</h3><a href="/admin/events" class="text-sm font-medium text-textMuted hover:text-brand">See all</a>
-  </div>
-  <div class="flex flex-col gap-3">
-    <% if(mostVisitedEvents && mostVisitedEvents.length > 0) { %>
-      <% mostVisitedEvents.forEach(function(evt) { %>
-      <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 flex justify-between gap-4 card-hover overflow-hidden relative cursor-pointer" onclick="window.location.href='/admin/events/<%= evt.id %>'">
-        <div class="flex-1 min-w-0">
-          <h4 class="font-bold text-textMain text-sm truncate mb-1"><%= evt.title %></h4>
-          <p class="text-xs text-textMuted"><%= evt.venue || 'TBA' %></p>
+
+      <!-- ===== UPCOMING EVENTS ===== -->
+      <div class="mb-10">
+        <div class="flex justify-between items-center mb-5">
+          <h3 class="text-xl font-extrabold text-gray-900 tracking-tight">Upcoming Events</h3>
+          <a href="/admin/events" class="text-sm font-bold text-brand hover:text-brand-dark transition-colors px-3 py-1 bg-brand-light rounded-lg">See All</a>
         </div>
-        <div class="text-right flex-shrink-0">
-          <p class="font-bold text-gray-900 text-lg leading-none"><%= evt.analytics ? evt.analytics.page_view_count : 0 %></p>
-          <p class="text-[10px] text-textMuted font-medium uppercase tracking-wide">Visits</p>
-        </div>
-      </div>
-      <% }); %>
-    <% } else { %>
-      <p class="text-sm text-textMuted">No data available.</p>
-    <% } %>
-  </div></div>
-<!-- Recent Activities -->
-<div class="mb-5">
-  <div class="flex justify-between items-center mb-4">
-    <h3 class="text-lg font-bold">Recent Activities</h3><a href="/admin/activity" class="text-sm font-medium text-textMuted hover:text-brand">See all</a>
-  </div>
-  <div class="bg-white rounded-3xl p-2 shadow-sm border border-gray-50">
-    <% if(recentActivities && recentActivities.length > 0) { %>
-      <% recentActivities.forEach(function(act) { %>
-      <div class="flex items-center justify-between p-3 rounded-2xl hover:bg-gray-50 transition cursor-pointer">
-        <div class="flex items-center gap-4">
-          <div>
-            <p class="font-bold text-textMain text-sm"><%= act.activity_type ? act.activity_type.replace(/_/g, ' ') : 'System Action' %></p>
-            <p class="text-xs text-textMuted mt-0.5"><%= new Date(act.occurred_at).toLocaleString() %></p>
-          </div>
-        </div>
-        <div class="text-right">
-          <p class="text-xs font-semibold text-gray-900"><%= act.organizer_actor ? act.organizer_actor.name : 'System' %></p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <% if(upcomingEvents && upcomingEvents.length > 0) { %>
+            <% upcomingEvents.forEach(function(evt) { %>
+            <div class="bg-white rounded-[2rem] p-5 shadow-sm border border-gray-100 card-hover relative overflow-hidden cursor-pointer group" onclick="window.location.href='/admin/events/<%= evt.id %>'">
+              <div class="absolute top-0 right-0 w-24 h-24 bg-pink-50 rounded-full -mr-12 -mt-12 group-hover:bg-pink-100 transition-colors"></div>
+              <div class="relative z-10">
+                <div class="inline-block px-2.5 py-1 rounded-lg bg-pink-50 text-pink-500 text-[10px] font-black uppercase tracking-widest mb-3 border border-pink-100">
+                  <%= evt.category ? evt.category.name : 'Event' %>
+                </div>
+                <h4 class="font-extrabold text-gray-900 text-sm truncate mb-3 group-hover:text-brand transition-colors"><%= evt.title %></h4>
+                <div class="flex flex-col gap-2">
+                  <div class="flex items-center gap-2 text-[11px] font-bold text-gray-400 truncate">
+                    <div class="w-7 h-7 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    </div>
+                    <%= new Date(evt.event_date).toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'}) %>
+                  </div>
+                  <div class="flex items-center gap-2 text-[11px] font-bold text-gray-400 truncate">
+                    <div class="w-7 h-7 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    </div>
+                    <%= evt.venue || 'TBA' %>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <% }); %>
+          <% } else { %>
+            <div class="col-span-full py-12 bg-gray-50 rounded-[2rem] border border-dashed border-gray-200 text-center">
+              <p class="text-sm font-bold text-gray-400">No upcoming events scheduled</p>
+            </div>
+          <% } %>
         </div>
       </div>
-      <% }); %>
-    <% } else { %>
-      <div class="p-4 text-center text-sm text-textMuted">No recent activity</div>
-    <% } %>
-  </div></div></main>
-</main>
+
+      <!-- ===== MOST VISITED EVENTS ===== -->
+      <div class="mb-10">
+        <div class="flex justify-between items-center mb-5">
+          <h3 class="text-xl font-extrabold text-gray-900 tracking-tight">Most Visited</h3>
+          <a href="/admin/reports" class="text-sm font-bold text-brand hover:text-brand-dark transition-colors px-3 py-1 bg-brand-light rounded-lg">Full Report</a>
+        </div>
+        <div class="flex flex-col gap-4">
+          <% if(mostVisitedEvents && mostVisitedEvents.length > 0) { %>
+            <% mostVisitedEvents.forEach(function(evt) { %>
+            <div class="bg-white rounded-[2rem] p-5 shadow-sm border border-gray-100 flex items-center justify-between gap-4 card-hover cursor-pointer group" onclick="window.location.href='/admin/events/<%= evt.id %>'">
+              <div class="flex-1 min-w-0">
+                <h4 class="font-extrabold text-gray-900 text-sm truncate mb-1 group-hover:text-brand transition-colors"><%= evt.title %></h4>
+                <p class="text-xs font-bold text-gray-400 truncate flex items-center gap-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                  <%= evt.venue || 'TBA' %>
+                </p>
+              </div>
+              <div class="flex items-center gap-4 bg-gray-50 py-2.5 px-4 rounded-2xl border border-gray-100 shrink-0">
+                <div class="text-center">
+                  <p class="font-black text-gray-900 text-xl leading-none"><%= evt.analytics ? evt.analytics.page_view_count : 0 %></p>
+                  <p class="text-[9px] font-black text-brand uppercase tracking-tighter mt-1">Visits</p>
+                </div>
+              </div>
+            </div>
+            <% }); %>
+          <% } else { %>
+            <div class="py-12 bg-gray-50 rounded-[2rem] border border-dashed border-gray-200 text-center">
+              <p class="text-sm font-bold text-gray-400">No popular events data available</p>
+            </div>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Recent Activities -->
+      <div class="mb-10">
+        <div class="flex justify-between items-center mb-5">
+          <h3 class="text-xl font-extrabold text-gray-900 tracking-tight">Recent Activities</h3>
+          <a href="/admin/activity" class="text-sm font-bold text-brand hover:text-brand-dark transition-colors px-3 py-1 bg-brand-light rounded-lg">Logs</a>
+        </div>
+        <div class="bg-white rounded-[2rem] p-3 shadow-sm border border-gray-100">
+          <% if(recentActivities && recentActivities.length > 0) { %>
+            <% recentActivities.forEach(function(act, idx) { %>
+            <div class="flex items-center justify-between p-4 rounded-2xl hover:bg-gray-50 transition-all cursor-pointer group <%= idx !== recentActivities.length -1 ? 'mb-1' : '' %>">
+              <div class="flex items-center gap-4 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-brand-light text-brand flex items-center justify-center shrink-0 font-black text-xs">
+                  <%= act.activity_type ? act.activity_type.charAt(0) : 'S' %>
+                </div>
+                <div class="min-w-0">
+                  <p class="font-extrabold text-gray-900 text-sm truncate group-hover:text-brand transition-colors"><%= act.activity_type ? act.activity_type.replace(/_/g, ' ') : 'System Action' %></p>
+                  <p class="text-[10px] font-bold text-gray-400 mt-0.5"><%= new Date(act.occurred_at).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) %></p>
+                </div>
+              </div>
+              <div class="text-right shrink-0 ml-4">
+                <span class="text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover:text-brand-dark transition-colors"><%= act.organizer_actor ? act.organizer_actor.name : 'System' %></span>
+              </div>
+            </div>
+            <% }); %>
+          <% } else { %>
+            <div class="p-8 text-center">
+              <p class="text-sm font-bold text-gray-400">No recent activity found</p>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </main>
 
     <script>
       function toggleNotif() {

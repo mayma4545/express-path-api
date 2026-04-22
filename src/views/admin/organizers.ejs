@@ -248,12 +248,9 @@
           </div>
           <div class="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-gray-50 justify-end items-center">
             <% if(org.status === 'pending') { %>
-              <form action="/admin/organizers/<%= org.id %>/approve" method="POST" class="m-0">
-                <button type="submit" class="text-xs font-bold text-white bg-emerald-500 px-4 py-1.5 rounded-xl sm:rounded-lg hover:bg-emerald-600 active:scale-95 transition shadow-sm">Confirm</button>
-              </form>
-              <form action="/admin/organizers/<%= org.id %>/reject" method="POST" class="m-0">
-                <button type="submit" class="text-xs font-bold text-red-500 bg-red-50 px-4 py-1.5 rounded-xl sm:rounded-lg hover:bg-red-100 active:scale-95 transition">Reject</button>
-              </form>
+              <a href="/admin/organizers/<%= org.id %>" class="flex-1 sm:flex-none text-xs font-bold text-amber-600 bg-amber-50 px-4 py-2 sm:py-1.5 rounded-xl sm:rounded-lg hover:bg-amber-100 active:scale-95 transition text-center border border-amber-100">
+                Review Account
+              </a>
             <% } else { %>
               <a href="/admin/organizers/<%= org.id %>" class="flex-1 sm:flex-none text-xs font-bold text-brand bg-brand-light px-4 py-2 sm:py-1.5 rounded-xl sm:rounded-lg hover:bg-[#D7C9FF] active:scale-95 transition text-center">
                 Profile

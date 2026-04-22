@@ -93,14 +93,24 @@ router.post('/signup', async (req, res) => {
         try {
             const mailText = `Hello ${name},\n\nThank you for registering as an organizer on OhSee. Your account is currently under review by our administrators. You will receive another email once your account has been approved.\n\nThank you for your patience!`;
             const mailHtml = `
-                <div style="font-family: sans-serif; color: #333;">
-                    <h2 style="color: #1DA1F2;">Registration Received!</h2>
-                    <p>Hello <strong>${name}</strong>,</p>
-                    <p>Thank you for registering as an organizer on <strong>OhSee</strong>.</p>
-                    <p>Your account is currently <strong>under review</strong> by our administrators. This usually takes 24-48 hours.</p>
-                    <p>You will receive another email notification once your account has been approved and you can start creating events.</p>
-                    <br>
-                    <p>Thank you for your patience!</p>
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb;">
+                    <div style="background-color: #1DA1F2; padding: 40px 20px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">Registration Received!</h1>
+                    </div>
+                    <div style="padding: 40px 30px; background-color: white;">
+                        <p style="font-size: 16px; color: #374151; line-height: 1.6; margin-bottom: 24px;">Hello <strong>${name}</strong>,</p>
+                        <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 24px;">Thank you for your interest in becoming an organizer on <strong>OhSee</strong>.</p>
+                        <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 32px;">Your application is currently <strong>under review</strong> by our administration team. This process typically takes 24-48 hours. We want to ensure all our partners meet our community standards.</p>
+                        
+                        <div style="background-color: #fffbeb; border: 1px solid #fef3c7; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 32px;">
+                            <p style="font-size: 14px; color: #92400e; margin: 0; font-weight: 600;">We will notify you via email as soon as your account is activated.</p>
+                        </div>
+
+                        <p style="font-size: 14px; color: #6b7280; line-height: 1.6; text-align: center; margin-bottom: 0;">Thank you for your patience and for choosing OhSee!</p>
+                    </div>
+                    <div style="padding: 20px; background-color: #f3f4f6; text-align: center; border-top: 1px solid #e5e7eb;">
+                        <p style="font-size: 12px; color: #9ca3af; margin: 0;">&copy; 2026 OhSee Campus Navigation System. All rights reserved.</p>
+                    </div>
                 </div>
             `;
             await sendEmail(emailValue, 'Account Under Review - OhSee Organizer', mailText, mailHtml);
@@ -705,6 +715,37 @@ router.get('/events/:id', requireOrganizerAuth, async (req, res) => {
     }
 });
 
+// Delete Photo from Gallery
+router.delete('/events/:id/photos/:photoId', requireOrganizerAuth, async (req, res) => {
+    try {
+        const organizerId = req.session.organizerAuth.organizerId;
+        const event = await Event.findOne({ 
+            where: { id: req.params.id, organizer_id: organizerId }
+        });
+        
+        if (!event) {
+            return res.status(404).json({ success: false, message: 'Event not found or unauthorized' });
+        }
+
+        const photo = await EventPhoto.findOne({
+            where: { id: req.params.photoId, event_id: event.id }
+        });
+
+        if (!photo) {
+            return res.status(404).json({ success: false, message: 'Photo not found' });
+        }
+
+        // We could also delete from Cloudinary here if needed, 
+        // but for now let's just remove from database
+        await photo.destroy();
+
+        res.json({ success: true, message: 'Photo deleted successfully' });
+    } catch (error) {
+        console.error('Delete photo error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // Post Announcement
 router.post('/events/:id/announcement', requireOrganizerAuth, async (req, res) => {
     try {
@@ -728,10 +769,69 @@ router.post('/events/:id/announcement', requireOrganizerAuth, async (req, res) =
             body
         });
 
-        res.redirect(`/organizer/events/${event.id}?tab=announcement`);
+        res.redirect(`/organizer/events/${event.id}?tab=announcements`);
     } catch (error) {
         console.error('Post announcement error:', error);
         res.status(500).render('error', { title: 'Error', message: error.message });
+    }
+});
+
+// Update Announcement
+router.post('/events/:id/announcements/:announcementId/update', requireOrganizerAuth, async (req, res) => {
+    try {
+        const organizerId = req.session.organizerAuth.organizerId;
+        const event = await Event.findOne({ 
+            where: { id: req.params.id, organizer_id: organizerId }
+        });
+        
+        if (!event) {
+            return res.status(404).json({ success: false, message: 'Event not found or unauthorized' });
+        }
+
+        const announcement = await EventAnnouncement.findOne({
+            where: { id: req.params.announcementId, event_id: event.id }
+        });
+
+        if (!announcement) {
+            return res.status(404).json({ success: false, message: 'Announcement not found' });
+        }
+
+        const { title, body } = req.body;
+        await announcement.update({ title, body });
+
+        res.json({ success: true, message: 'Announcement updated successfully' });
+    } catch (error) {
+        console.error('Update announcement error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Delete Announcement
+router.delete('/events/:id/announcements/:announcementId', requireOrganizerAuth, async (req, res) => {
+    try {
+        const organizerId = req.session.organizerAuth.organizerId;
+        const event = await Event.findOne({ 
+            where: { id: req.params.id, organizer_id: organizerId }
+        });
+        
+        if (!event) {
+            return res.status(404).json({ success: false, message: 'Event not found or unauthorized' });
+        }
+
+        const announcement = await EventAnnouncement.findOne({
+            where: { id: req.params.announcementId, event_id: event.id }
+        });
+
+        if (!announcement) {
+            return res.status(404).json({ success: false, message: 'Announcement not found' });
+        }
+
+        await announcement.destroy();
+
+        res.json({ success: true, message: 'Announcement deleted successfully' });
+    } catch (error) {
+        console.error('Delete announcement error:', error);
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 

@@ -60,8 +60,38 @@ const getGoogleSettings = (req) => {
 console.log('[DEBUG] Google Auth configured:', !!process.env.GOOGLE_CLIENT_ID);
 
 // Landing page (was index.html)
-router.get('/', (req, res) => {
-    res.render('client/index');
+router.get('/', async (req, res) => {
+    try {
+        const { Event, EventAnalytics, sequelize } = require('../models');
+        
+        const [eventCount, venueCount, guidedCount] = await Promise.all([
+            // Total published events
+            Event.count({ where: { status: 'published' } }),
+            
+            // Total unique venues mapped to events
+            Event.count({
+                distinct: true,
+                col: 'venue',
+                where: { status: 'published' }
+            }),
+            
+            // Total page views/visits across all events
+            EventAnalytics.sum('page_view_count')
+        ]);
+
+        res.render('client/index', {
+            eventCount: eventCount || 0,
+            venueCount: venueCount || 0,
+            guidedCount: guidedCount || 0
+        });
+    } catch (error) {
+        console.error('Error loading landing page stats:', error);
+        res.render('client/index', {
+            eventCount: 50,
+            venueCount: 30,
+            guidedCount: 1000
+        });
+    }
 });
 router.get('/index', (req, res) => {
     res.redirect('/');
@@ -97,9 +127,18 @@ router.get('/home', async (req, res) => {
             order
         });
 
-        // Fetch top 5 most visited events for Hot Events carousel
+        const { Op } = require('sequelize');
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        // Fetch top most visited active events for Hot Events carousel
         const hotEvents = await Event.findAll({
-            where: { status: 'published' },
+            where: { 
+                status: 'published',
+                [Op.or]: [
+                    { event_date: { [Op.gte]: todayStr } },
+                    { end_date: { [Op.gte]: todayStr } }
+                ]
+            },
             include: [
                 { model: Category, as: 'category' },
                 { 
@@ -109,7 +148,7 @@ router.get('/home', async (req, res) => {
                 }
             ],
             order: [[{ model: EventAnalytics, as: 'analytics' }, 'page_view_count', 'DESC']],
-            limit: 5
+            limit: 10
         });
 
         // Get user's bookmarks if logged in
