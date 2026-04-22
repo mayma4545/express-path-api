@@ -85,16 +85,31 @@
         <div class="w-7 h-7 rounded-full bg-brand-light flex items-center justify-center text-brand">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
         </div>
-        <h3 class="text-sm font-bold text-textMain tracking-tight">AI Data Insights</h3>
+        <h3 class="text-sm font-bold text-textMain tracking-tight">Data Insights</h3>
       </div>
       <p class="text-[13px] text-slate-600 leading-relaxed font-medium relative z-10">
         <% if(metrics.totalViews > 0) { %>
-          Across <%= totalEvents %> events, you've accumulated <span class="font-bold text-brand"><%= metrics.totalViews %> views</span> and <span class="font-bold text-slate-800"><%= metrics.totalAttendees %> check-ins</span>, resulting in a conversion rate of <span class="font-bold text-emerald-500"><%= metrics.conversionRate %>%</span>. 
-          <% if(metrics.conversionRate > 20) { %>
-            This indicates highly engaging event titles and robust community interest.
-          <% } else { %>
-            Consider improving your event descriptions or categories to increase conversions from page visitors to attendees.
-          <% } %>
+          <%
+            let perfLevel = '';
+            let actionItem = '';
+            
+            if (metrics.conversionRate >= 25 && metrics.avgRating >= 4.0) {
+              perfLevel = "exceptional";
+              actionItem = "Your events are highly engaging and well-received. Keep leveraging your current promotional strategies.";
+            } else if (metrics.conversionRate >= 20) {
+              perfLevel = "strong";
+              actionItem = "Event discovery is performing well, but consider gathering attendee feedback to boost your reputation score.";
+            } else if (metrics.conversionRate < 10) {
+              perfLevel = "developing";
+              actionItem = "Conversion is on the lower side. Enhance event descriptions and highlight key attractions to turn more views into check-ins.";
+            } else {
+              perfLevel = "steady";
+              actionItem = "You have consistent engagement. Try experimenting with different event categories or promotional channels to increase overall reach.";
+            }
+          %>
+          Across <%= totalEvents %> events, you have accumulated <span class="font-bold text-brand"><%= metrics.totalViews %> views</span> and <span class="font-bold text-slate-800"><%= metrics.totalAttendees %> check-ins</span>. 
+          With a conversion rate of <span class="font-bold text-emerald-500"><%= metrics.conversionRate %>%</span>, your overall performance is <strong><%= perfLevel %></strong>. 
+          <%= actionItem %>
         <% } else { %>
           There isn't enough interaction data to generate conversion insights yet. Create more events to gather analytics.
         <% } %>

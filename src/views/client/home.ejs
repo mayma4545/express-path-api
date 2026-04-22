@@ -118,6 +118,49 @@
         opacity: 1;
       }
 
+      .c-status-badge {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        background: rgba(255, 255, 255, 0.18);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 99px;
+        padding: 5px 10px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        z-index: 5;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.4s;
+      }
+      .c-status-badge.visible {
+        opacity: 1;
+      }
+      .badge-ongoing {
+        color: #fca5a5;
+        border-color: rgba(239, 68, 68, 0.4);
+        background: rgba(239, 68, 68, 0.25);
+      }
+      .badge-upcoming {
+        color: #93c5fd;
+        border-color: rgba(29, 161, 242, 0.4);
+        background: rgba(29, 161, 242, 0.25);
+      }
+      @keyframes status-pulse-dot {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.4; transform: scale(1.4); }
+      }
+      .pulse-anim {
+        animation: status-pulse-dot 1.5s ease-in-out infinite;
+      }
+
       .c-overlay {
         position: absolute;
         inset: 0;
@@ -750,8 +793,17 @@
           const el = document.createElement("div");
           el.className = "c-item";
           el.dataset.i = i;
+          
+          let statusBadgeHTML = '';
+          if (ev.isOngoingReal) {
+            statusBadgeHTML = '<div class="c-status-badge badge-ongoing"><svg width="8" height="8" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" class="pulse-anim"/></svg>Ongoing</div>';
+          } else if (ev.isFuture) {
+            statusBadgeHTML = '<div class="c-status-badge badge-upcoming"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>Upcoming</div>';
+          }
+
           el.innerHTML = `
             <img src="${ev.img}" onerror="this.src='https://images.unsplash.com/photo-1542204165-65bf26472b9b?auto=format&fit=crop&q=80&w=800'; this.onerror=null;" alt="${ev.name}" loading="lazy"/>
+            ${statusBadgeHTML}
             <div class="c-views-badge" id="vbadge-${i}">
               <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
               ${fmt(ev.views)}
@@ -799,6 +851,7 @@
         items.forEach((el, i) => {
           const ov = el.querySelector(".c-overlay");
           const badge = el.querySelector(".c-views-badge");
+          const sbadge = el.querySelector(".c-status-badge");
           let tx = 0,
             sc = 1,
             op = 1,
@@ -809,28 +862,32 @@
             op = 1;
             zi = 20;
             ov.classList.remove("hidden-overlay");
-            badge.classList.add("visible");
+            if (badge) badge.classList.add("visible");
+            if (sbadge) sbadge.classList.add("visible");
           } else if (i === (activeIdx - 1 + n) % n) {
             tx = -58;
             sc = 0.78;
             op = 0.55;
             zi = 10;
             ov.classList.add("hidden-overlay");
-            badge.classList.remove("visible");
+            if (badge) badge.classList.remove("visible");
+            if (sbadge) sbadge.classList.remove("visible");
           } else if (i === (activeIdx + 1) % n) {
             tx = 58;
             sc = 0.78;
             op = 0.55;
             zi = 10;
             ov.classList.add("hidden-overlay");
-            badge.classList.remove("visible");
+            if (badge) badge.classList.remove("visible");
+            if (sbadge) sbadge.classList.remove("visible");
           } else {
             tx = 0;
             sc = 0.55;
             op = 0;
             zi = 0;
             ov.classList.add("hidden-overlay");
-            badge.classList.remove("visible");
+            if (badge) badge.classList.remove("visible");
+            if (sbadge) sbadge.classList.remove("visible");
           }
           el.style.cssText = `transform:translateX(${tx}%) scale(${sc});opacity:${op};z-index:${zi};`;
         });

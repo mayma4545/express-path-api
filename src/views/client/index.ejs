@@ -1356,16 +1356,22 @@
       installBanner.style.display = 'flex';
     });
 
-    installBtn.addEventListener('click', async () => {
+    installBtn.addEventListener('click', () => {
       if (deferredPrompt) {
-        // Trigger the automatic native system installation popup!
-        deferredPrompt.prompt();
-        // Wait for the user to respond to the native prompt
-        const { outcome } = await deferredPrompt.userChoice;
-        console.log(`User response: ${outcome}`);
-        // Clear the prompt variable
-        deferredPrompt = null;
+        // Hide our custom banner immediately
         installBanner.style.display = 'none';
+        
+        // Save locally and clear the global to prevent double-clicks
+        const promptEvent = deferredPrompt;
+        deferredPrompt = null;
+        
+        // Trigger the automatic native system installation popup!
+        promptEvent.prompt();
+        
+        // Handle the user's choice properly without blocking the main event thread
+        promptEvent.userChoice.then((choiceResult) => {
+          console.log(`User response: ${choiceResult.outcome}`);
+        }).catch(err => console.error("Prompt failed", err));
       }
     });
 
