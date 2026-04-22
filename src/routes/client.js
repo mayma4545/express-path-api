@@ -353,8 +353,8 @@ router.get('/logout', (req, res) => {
         // Clear session cookie
         res.clearCookie('connect.sid'); // Default express-session cookie name
         
-        // Instruct browser to clear all security cache/storage
-        res.set('Clear-Site-Data', '"cache", "cookies", "storage", "executionContexts"');
+        // Instruct browser to clear cookies, avoiding slow cache clears to preserve performance
+        res.set('Clear-Site-Data', '"cookies"');
         
         // Redirect back to landing page (root)
         res.redirect('/');
