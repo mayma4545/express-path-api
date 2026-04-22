@@ -1309,7 +1309,7 @@
   <div id="install-banner"
     style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999; align-items: center; gap: 16px; width: 90%; max-width: 400px; border: 1px solid var(--primary-light);">
     <div style="flex: 1;">
-      <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: var(--text);">Install EventNav App</h4>
+      <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: var(--text);">Install PEMWA App</h4>
       <p style="margin: 4px 0 0; font-size: 13px; color: var(--text-muted); line-height: 1.4;" id="install-hint">Add to
         your home screen for quick access and offline routing.</p>
     </div>
@@ -1336,43 +1336,37 @@
     const installClose = document.getElementById('install-close');
     const installHint = document.getElementById('install-hint');
 
-    // Detect iOS
-    const isIos = () => {
-      const userAgent = window.navigator.userAgent.toLowerCase();
-      return /iphone|ipad|ipod/.test(userAgent);
-    };
+    // Only iOS needs a manual instruction because Apple strictly bans automatic install prompts
+    const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
-    const isIosInstallable = () => {
-      return isIos() && !window.navigator.standalone;
-    };
+    if (isIos && !isStandalone) {
+      installBanner.style.display = 'flex';
+      installBtn.style.display = 'none';
+      installHint.innerHTML = "To install this app on iOS, tap the <strong>Share</strong> icon in Safari and select <strong>Add to Home Screen</strong>.";
+    }
 
+    // For Android/Chrome: The browser fires this event ONLY if the PWA is valid and on HTTPS
     window.addEventListener('beforeinstallprompt', (e) => {
-      // Prevent the mini-infobar from appearing on mobile
+      // Prevent Chrome 67 and earlier from automatically showing the prompt
       e.preventDefault();
-      // Stash the event so it can be triggered later.
+      // Stash the event so it can be triggered when the user clicks our button
       deferredPrompt = e;
-      // Update UI notify the user they can install the PWA
+      // Now that we know the browser allows automatic installation, show our custom banner!
       installBanner.style.display = 'flex';
     });
 
-    if (isIosInstallable()) {
-      installBanner.style.display = 'flex';
-      installBtn.style.display = 'none';
-      installHint.innerHTML = "To install this app on your iOS device, tap the <strong>Share</strong> icon and then select <strong>Add to Home Screen</strong>.";
-    }
-
     installBtn.addEventListener('click', async () => {
       if (deferredPrompt) {
-        // Show the install prompt
+        // Trigger the automatic native system installation popup!
         deferredPrompt.prompt();
-        // Wait for the user to respond to the prompt
+        // Wait for the user to respond to the native prompt
         const { outcome } = await deferredPrompt.userChoice;
-        console.log(`User response to the install prompt: ${outcome}`);
-        // We've used the prompt, and can't use it again, throw it away
+        console.log(`User response: ${outcome}`);
+        // Clear the prompt variable
         deferredPrompt = null;
+        installBanner.style.display = 'none';
       }
-      // Hide the banner
-      installBanner.style.display = 'none';
     });
 
     installClose.addEventListener('click', () => {
