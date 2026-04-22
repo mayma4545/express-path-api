@@ -98,6 +98,7 @@ app.set('views', path.join(__dirname, 'views'));
 
 // Static files
 app.use('/static', express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'))); // Serve root-level files like manifest.json & sw.js
 app.use('/media', express.static(path.join(__dirname, '../media')));
 
 // Favicon handler - suppress 404 errors

@@ -11,6 +11,9 @@
   <meta property="og:description"
     content="Discover what's happening around Masbate and get guided straight to the exact venue location." />
 
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+
   <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -1305,6 +1308,77 @@
       });
     }, { threshold: 0.1 });
     document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+  </script>
+
+  <!-- PWA Install App Banner -->
+  <div id="install-banner" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999; align-items: center; gap: 16px; width: 90%; max-width: 400px; border: 1px solid var(--primary-light);">
+    <div style="flex: 1;">
+      <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: var(--text);">Install EventNav App</h4>
+      <p style="margin: 4px 0 0; font-size: 13px; color: var(--text-muted); line-height: 1.4;" id="install-hint">Add to your home screen for quick access and offline routing.</p>
+    </div>
+    <button id="install-btn" style="background: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: 24px; font-weight: 600; font-size: 13px; cursor: pointer;">Install</button>
+    <button id="install-close" style="background: none; border: none; font-size: 20px; color: #999; cursor: pointer; padding: 0 4px; line-height: 1;">&times;</button>
+  </div>
+
+  <script>
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('Service Worker registered successfully.', reg))
+          .catch(err => console.error('Service Worker registration failed: ', err));
+      });
+    }
+
+    // Install App Logic
+    let deferredPrompt;
+    const installBanner = document.getElementById('install-banner');
+    const installBtn = document.getElementById('install-btn');
+    const installClose = document.getElementById('install-close');
+    const installHint = document.getElementById('install-hint');
+
+    // Detect iOS
+    const isIos = () => {
+      const userAgent = window.navigator.userAgent.toLowerCase();
+      return /iphone|ipad|ipod/.test(userAgent);
+    };
+    
+    const isIosInstallable = () => {
+      return isIos() && !window.navigator.standalone;
+    };
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      deferredPrompt = e;
+      // Update UI notify the user they can install the PWA
+      installBanner.style.display = 'flex';
+    });
+
+    if (isIosInstallable()) {
+      installBanner.style.display = 'flex';
+      installBtn.style.display = 'none';
+      installHint.innerHTML = "To install this app on your iOS device, tap the <strong>Share</strong> icon and then select <strong>Add to Home Screen</strong>.";
+    }
+
+    installBtn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        // Show the install prompt
+        deferredPrompt.prompt();
+        // Wait for the user to respond to the prompt
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`User response to the install prompt: ${outcome}`);
+        // We've used the prompt, and can't use it again, throw it away
+        deferredPrompt = null;
+      }
+      // Hide the banner
+      installBanner.style.display = 'none';
+    });
+
+    installClose.addEventListener('click', () => {
+      installBanner.style.display = 'none';
+    });
   </script>
 </body>
 
