@@ -704,17 +704,19 @@
         
         // Calculate real-time ongoing status
         const now = new Date();
-        const baseStart = new Date(`${e.event_date}T${e.start_time}`);
-        const endDateStr = e.end_date || e.event_date;
-        const baseEnd = new Date(`${endDateStr}T${e.end_time}`);
+        const evtDateStr = typeof e.event_date === 'string' && e.event_date.length > 10 ? e.event_date.substring(0, 10) : e.event_date;
+        const endDtStr = e.end_date ? (typeof e.end_date === 'string' && e.end_date.length > 10 ? e.end_date.substring(0, 10) : e.end_date) : evtDateStr;
+        const recEndDtStr = e.recurrence_end_date ? (typeof e.recurrence_end_date === 'string' && e.recurrence_end_date.length > 10 ? e.recurrence_end_date.substring(0, 10) : e.recurrence_end_date) : endDtStr;
+
+        const baseStart = new Date(`${evtDateStr}T${e.start_time}`);
+        const baseEnd = new Date(`${endDtStr}T${e.end_time}`);
         
         let isOngoingRealLife = now >= baseStart && now <= baseEnd;
         let isFuture = now < baseStart;
         let activeEnd = baseEnd;
 
         if (e.recurrence_type && e.recurrence_type !== 'none' && e.recurrence_type !== 'once') {
-            const recEndStr = e.recurrence_end_date || endDateStr;
-            const recEnd = new Date(`${recEndStr}T23:59:59`);
+            const recEnd = new Date(`${recEndDtStr}T23:59:59`);
             
             if (now >= baseStart && now <= recEnd) {
                 const todayStr = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, '0') + "-" + String(now.getDate()).padStart(2, '0');
@@ -768,7 +770,7 @@
           desc: e.description || "No description",
           venue: e.venue || "TBA",
           img: e.image_url || "https://images.unsplash.com/photo-1542204165-65bf26472b9b?auto=format&fit=crop&q=80&w=800",
-          date: e.event_date ? new Date(e.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "TBA",
+          date: e.event_date ? new Date(evtDateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "TBA",
           start: e.start_time ? e.start_time.substring(0, 5) : "",
           end: e.end_time ? e.end_time.substring(0, 5) : "",
           going: Math.max(0, e.analytics ? e.analytics.page_view_count : 0),
