@@ -704,16 +704,53 @@
         
         // Calculate real-time ongoing status
         const now = new Date();
-        const start = new Date(`${e.event_date}T${e.start_time}`);
+        const baseStart = new Date(`${e.event_date}T${e.start_time}`);
         const endDateStr = e.end_date || e.event_date;
-        const end = new Date(`${endDateStr}T${e.end_time}`);
+        const baseEnd = new Date(`${endDateStr}T${e.end_time}`);
         
-        const isOngoingRealLife = now >= start && now <= end;
-        const isFuture = now < start;
+        let isOngoingRealLife = now >= baseStart && now <= baseEnd;
+        let isFuture = now < baseStart;
+        let activeEnd = baseEnd;
+
+        if (e.recurrence_type && e.recurrence_type !== 'none' && e.recurrence_type !== 'once') {
+            const recEndStr = e.recurrence_end_date || endDateStr;
+            const recEnd = new Date(`${recEndStr}T23:59:59`);
+            
+            if (now >= baseStart && now <= recEnd) {
+                const todayStr = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, '0') + "-" + String(now.getDate()).padStart(2, '0');
+                const todayStart = new Date(`${todayStr}T${e.start_time}`);
+                let todayEnd = new Date(`${todayStr}T${e.end_time}`);
+                if (todayEnd < todayStart) {
+                    todayEnd.setDate(todayEnd.getDate() + 1);
+                }
+
+                let matchesPattern = false;
+                if (e.recurrence_type === 'daily') matchesPattern = true;
+                else if (e.recurrence_type === 'weekly') matchesPattern = now.getDay() === baseStart.getDay();
+                else if (e.recurrence_type === 'monthly') matchesPattern = now.getDate() === baseStart.getDate();
+                else if (e.recurrence_type === 'yearly') matchesPattern = now.getDate() === baseStart.getDate() && now.getMonth() === baseStart.getMonth();
+
+                if (matchesPattern) {
+                    if (now >= todayStart && now <= todayEnd) {
+                        isOngoingRealLife = true;
+                        isFuture = false;
+                        activeEnd = todayEnd;
+                    } else if (now < todayStart) {
+                        isFuture = true;
+                    } else {
+                        isFuture = true;
+                    }
+                } else if (now <= recEnd) {
+                    isFuture = true;
+                }
+            } else if (now < baseStart) {
+                isFuture = true;
+            }
+        }
         
         let timeLeftStr = "TBA";
         if (isOngoingRealLife) {
-           const diffMs = end - now;
+           const diffMs = activeEnd - now;
            const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
            const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
            

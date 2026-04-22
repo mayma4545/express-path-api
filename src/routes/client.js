@@ -136,7 +136,8 @@ router.get('/home', async (req, res) => {
                 status: 'published',
                 [Op.or]: [
                     { event_date: { [Op.gte]: todayStr } },
-                    { end_date: { [Op.gte]: todayStr } }
+                    { end_date: { [Op.gte]: todayStr } },
+                    { recurrence_end_date: { [Op.gte]: todayStr } }
                 ]
             },
             include: [
