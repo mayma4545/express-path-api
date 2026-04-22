@@ -44,7 +44,7 @@ self.addEventListener('fetch', (event) => {
                 });
             })
         );
-    } 
+    }
     // Network First strategy for EJS routes (HTML pages and API requests)
     else if (event.request.mode === 'navigate' || event.request.method === 'GET') {
         event.respondWith(
