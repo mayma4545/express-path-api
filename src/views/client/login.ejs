@@ -82,8 +82,8 @@
     }
 
     /* Password toggle (no default browser icon) */
-    input[type="password"]::-ms-reveal,
-    input[type="password"]::-ms-clear {
+    input[type=\"password\"]::-ms-reveal,
+    input[type=\"password\"]::-ms-clear {
       display: none;
     }
 
@@ -99,7 +99,7 @@
   </style>
 </head>
 
-<body class="font-sans bg-white min-h-screen flex items-center justify-center">
+<body class=\"font-sans bg-white min-h-screen flex items-center justify-center\">
 
   <!-- ══════════════════════════════════════════════════
        Mobile shell — max-w-sm centres content on wide
@@ -438,7 +438,7 @@
           return;
         }
 
-        showToast('✓ Logged in successfully!');
+        // Redirect to home page
         window.location.href = '/home';
       } catch (err) {
         showToast('An error occurred. Please try again.', true);

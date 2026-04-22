@@ -589,6 +589,20 @@
       window.location.href = '/auth/google?flow=signup';
     });
 
+    /* ─── Query Params Check ────────────────────────── */
+    window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const error = urlParams.get('error');
+      const message = urlParams.get('message');
+      
+      if (error) {
+        showToast('⚠ ' + error, 4000);
+      }
+      if (message) {
+        showToast('i ' + message, 4000);
+      }
+    });
+
   </script>
 </body>
 

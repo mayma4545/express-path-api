@@ -484,6 +484,49 @@ router.post('/events/:id/comment', async (req, res) => {
     }
 });
 
+// Delete a comment
+router.delete('/comments/:id', async (req, res) => {
+    try {
+        const commentId = req.params.id;
+        const userId = (req.session.user && req.session.user.id) || (req.session.organizerAuth && req.session.organizerAuth.appUserId) || null;
+        const isOrganizerSession = !!req.session.organizerAuth;
+
+        if (!userId) {
+            return res.status(401).json({ error: 'You must be logged in to delete a comment' });
+        }
+
+        const comment = await Comment.findByPk(commentId, {
+            include: [{ model: Event, as: 'event' }]
+        });
+
+        if (!comment) {
+            return res.status(404).json({ error: 'Comment not found' });
+        }
+
+        // Authorization check: 
+        // 1. Comment owner can delete
+        // 2. Event organizer can delete any comment on their event
+        const isOwner = comment.user_id === userId;
+        const isEventOrganizer = isOrganizerSession && comment.event && comment.event.organizer_id === req.session.organizerAuth.id;
+
+        if (!isOwner && !isEventOrganizer) {
+            return res.status(403).json({ error: 'You are not authorized to delete this comment' });
+        }
+
+        // If it's a top-level comment, we might want to delete replies too, 
+        // but in this schema they might just stay orphaned or we can bulk delete.
+        // Let's bulk delete replies if any.
+        await Comment.destroy({ where: { parent_comment_id: commentId } });
+        await CommentReaction.destroy({ where: { comment_id: commentId } });
+        await comment.destroy();
+
+        res.json({ success: true, message: 'Comment deleted successfully' });
+    } catch (error) {
+        console.error('Delete comment error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Get organizer aggregate details
 router.get('/organizers/:id/details', async (req, res) => {
     try {

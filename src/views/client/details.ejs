@@ -108,6 +108,19 @@
     .tab-content.active {
       display: block;
     }
+
+    /* Lightbox Styles */
+    #lightbox-modal {
+      transition: all 0.3s ease;
+    }
+    #lightbox-modal.hidden {
+      display: none;
+      opacity: 0;
+    }
+    #lightbox-modal:not(.hidden) {
+      display: flex;
+      opacity: 1;
+    }
   </style>
 </head>
 
@@ -222,7 +235,7 @@
       </div>
 
       <div class="mt-4 border-t border-gray-100 pt-6 pb-2">
-        <h3 class="text-lg font-bold text-gray-900 mb-4">Comments (<span id="comment-count">2</span>)</h3>
+        <h3 class="text-lg font-bold text-gray-900 mb-4">Comments (<span id="comment-count">0</span>)</h3>
         
         <!-- Add Comment -->
         <div class="flex gap-3 mb-6 relative">
@@ -406,6 +419,58 @@
         class="w-full text-sm text-gray-400 font-medium py-2 active:text-gray-600">Cancel</button>
     </div>
   </div>
+
+  <!-- ── Delete Confirmation Modal ─────────────────── -->
+  <div id="delete-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-6">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeDeleteModal()"></div>
+    <div class="relative bg-white w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl animate-fade-up">
+      <div class="p-6 text-center">
+        <div class="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </div>
+        <h3 class="text-xl font-extrabold text-gray-900 mb-2">Delete Comment?</h3>
+        <p class="text-sm text-gray-500 leading-relaxed mb-6">
+          Are you sure you want to delete this comment? This action cannot be undone.
+        </p>
+        <div class="flex flex-col gap-2">
+          <button id="confirm-delete-btn" class="w-full bg-red-500 text-white font-bold py-3.5 rounded-2xl active:scale-95 transition-all shadow-md">
+            Delete
+          </button>
+          <button onclick="closeDeleteModal()" class="w-full text-sm text-gray-400 font-semibold py-3 hover:text-gray-600 transition-colors">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Fullscreen Lightbox Modal ─────────────────── -->
+  <div id="lightbox-modal" class="hidden fixed inset-0 z-[110] flex-col items-center justify-center bg-black/95 backdrop-blur-lg">
+    <!-- Close -->
+    <button onclick="closeLightbox()" class="absolute top-6 right-6 text-white/70 hover:text-white transition-colors p-2 bg-white/10 rounded-full">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+    <!-- Content -->
+    <div class="w-full max-w-lg px-4 flex flex-col items-center gap-6">
+      <div class="relative w-full aspect-square rounded-3xl overflow-hidden shadow-2xl">
+        <img id="lightbox-img" src="" class="w-full h-full object-contain bg-black/20" />
+      </div>
+      <div class="text-center space-y-1">
+        <p class="text-white font-bold text-lg">Photo Details</p>
+        <div class="flex items-center justify-center gap-2 text-white/50 text-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span id="lightbox-date">-- -- ----</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <a id="ics-link" style="display:none;"></a>
 
   <script src="/static/js/events-data.js"></script>
@@ -603,7 +668,6 @@
       fetch(`/api/comments/${commentId}/react`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // Using session-based auth now
         body: JSON.stringify({})
       })
       .then(res => res.json())
@@ -639,6 +703,29 @@
       }
     }
 
+    let commentToDelete = null;
+    function openDeleteModal(id) {
+      commentToDelete = id;
+      document.getElementById('delete-modal').classList.remove('hidden');
+    }
+    function closeDeleteModal() {
+      commentToDelete = null;
+      document.getElementById('delete-modal').classList.add('hidden');
+    }
+    document.getElementById('confirm-delete-btn').onclick = () => {
+      if (!commentToDelete) return;
+      fetch(`/api/comments/${commentToDelete}`, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            closeDeleteModal();
+            loadComments();
+          } else {
+            alert(data.error);
+          }
+        }).catch(alert);
+    };
+
     function loadComments() {
       fetch(`/api/events/${ev.id}/comments`)
         .then(res => res.json())
@@ -655,18 +742,18 @@
           
           commentsCount.textContent = data.comments.length;
           
-          // Separate top-level comments and replies
           const organizerId = data.organizer_id;
           const topLevel = data.comments.filter(c => !c.parent_comment_id);
           const replies = data.comments.filter(c => c.parent_comment_id);
-          
+          const currentUserId = <%= user ? user.id : 'null' %>;
+
           topLevel.forEach(c => {
              const userInitials = (c.user && c.user.first_name) ? c.user.first_name.substring(0, 2).toUpperCase() : 'AN';
-               const userName = (c.user && c.user.first_name) ? c.user.first_name + ' ' + (c.user.last_name || '') : 'Anonymous';
-               const isOrganizer = c.user && (c.user.id === organizerId);
-               const reactionCount = c.reacted_by_users ? c.reacted_by_users.length : 0;
-               const currentUserId = <%= user ? user.id : 'null' %>;
-               const isReacted = c.reacted_by_users && c.reacted_by_users.some(r => r.id === currentUserId);
+             const userName = (c.user && c.user.first_name) ? c.user.first_name + ' ' + (c.user.last_name || '') : 'Anonymous';
+             const isOrganizer = c.user && (c.user.id === organizerId);
+             const isOwner = c.user && (c.user.id === currentUserId);
+             const reactionCount = c.reacted_by_users ? c.reacted_by_users.length : 0;
+             const isReacted = c.reacted_by_users && c.reacted_by_users.some(r => r.id === currentUserId);
              const cReplies = replies.filter(r => r.parent_comment_id === c.id);
              
              const div = document.createElement('div');
@@ -695,6 +782,14 @@
                     </svg>
                     Reply
                   </button>
+                  ${isOwner ? `
+                  <button class="text-xs font-semibold text-gray-400 hover:text-red-500 transition flex items-center gap-1" onclick="openDeleteModal(${c.id})">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete
+                  </button>
+                  ` : ''}
                 </div>
                 
                 <!-- Replies -->
@@ -717,11 +812,11 @@
              const repliesContainer = div.querySelector(`#replies-${c.id}`);
              cReplies.forEach(r => {
                const rUserInitials = (r.user && r.user.first_name) ? r.user.first_name.substring(0, 2).toUpperCase() : 'AN';
-                 const rUserName = (r.user && r.user.first_name) ? r.user.first_name + ' ' + (r.user.last_name || '') : 'Anonymous';
-                 const rIsOrganizer = r.user && (r.user.id === organizerId);
-                 const rReactCount = r.reacted_by_users ? r.reacted_by_users.length : 0;
-                 const currentUserId = <%= user ? user.id : 'null' %>;
-                 const rIsReacted = r.reacted_by_users && r.reacted_by_users.some(x => x.id === currentUserId);
+               const rUserName = (r.user && r.user.first_name) ? r.user.first_name + ' ' + (r.user.last_name || '') : 'Anonymous';
+               const rIsOrganizer = r.user && (r.user.id === organizerId);
+               const rIsOwner = r.user && (r.user.id === currentUserId);
+               const rReactCount = r.reacted_by_users ? r.reacted_by_users.length : 0;
+               const rIsReacted = r.reacted_by_users && r.reacted_by_users.some(x => x.id === currentUserId);
                
                const rDiv = document.createElement('div');
                rDiv.className = `flex gap-2.5 ${rIsOrganizer ? 'bg-brand-light/20 p-1.5 rounded-xl' : ''}`;
@@ -743,6 +838,14 @@
                         </svg>
                         <span class="react-count">${rReactCount}</span>
                       </button>
+                      ${rIsOwner ? `
+                      <button class="text-[10px] font-semibold text-gray-400 hover:text-red-500 transition flex items-center gap-1" onclick="openDeleteModal(${r.id})">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete
+                      </button>
+                      ` : ''}
                     </div>
                   </div>
                `;
@@ -776,65 +879,87 @@
         if (data.success) {
           inputEl.value = '';
           if (parentId) {
-            const btn = inputEl.closest('.reply-box').previousElementSibling; // Button section
-            showReplyInput(inputEl.parentElement.querySelector('button')); // close reply box
+            showReplyInput(inputEl.parentElement.querySelector('button'));
           }
-          loadComments(); // Reload comments
+          loadComments();
         }
       })
       .catch(alert);
     }
 
-    function loadPhotos() {
+    function closeLightbox() {
+      document.getElementById('lightbox-modal').classList.add('hidden');
+    }
+    function openLightbox(url, date) {
+      document.getElementById('lightbox-img').src = url;
+      document.getElementById('lightbox-date').textContent = new Date(date).toLocaleString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      document.getElementById('lightbox-modal').classList.remove('hidden');
+    }
+
+    let allEventPhotos = [];
+    function loadPhotos(expand = false) {
       fetch(`/api/events/${ev.id}/photos`)
         .then(res => res.json())
         .then(data => {
+            allEventPhotos = data.photos || [];
             const container = document.getElementById('gallery-container');
             container.innerHTML = '';
             
             // Add poster as main
             const mainDiv = document.createElement('div');
             mainDiv.id = 'gallery-main';
-            mainDiv.className = 'col-span-2 rounded-2xl overflow-hidden';
+            mainDiv.className = 'col-span-2 rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-all shadow-sm';
             mainDiv.style.height = '160px';
             mainDiv.innerHTML = `<img src="${ev.img}" class="w-full h-full object-cover" />`;
+            mainDiv.onclick = () => openLightbox(ev.img, RAW_EVENT.created_at || new Date());
             container.appendChild(mainDiv);
 
-            if (data.photos && data.photos.length > 0) {
-                const limit = Math.min(data.photos.length, 2);
+            if (allEventPhotos.length > 0) {
+                const limit = expand ? allEventPhotos.length : Math.min(allEventPhotos.length, 2);
                 for (let i = 0; i < limit; i++) {
+                  const photo = allEventPhotos[i];
                   const pDiv = document.createElement('div');
-                  pDiv.className = 'rounded-xl overflow-hidden bg-gray-100 relative';
+                  pDiv.className = 'rounded-xl overflow-hidden bg-gray-100 relative cursor-pointer active:scale-[0.98] transition-all';
                   pDiv.style.height = '100px';
                   
-                  let contents = `<img src="${data.photos[i].image_url}" class="w-full h-full object-cover" />`;
+                  let contents = `<img src="${photo.image_url}" class="w-full h-full object-cover" />`;
                   
-                  if (i === 1 && data.photos.length > 2) {
+                  if (!expand && i === 1 && allEventPhotos.length > 2) {
                     contents += `
-                      <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
-                        <p class="text-white font-bold text-sm">+${data.photos.length - 2} more</p>
+                      <div class="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-[2px]">
+                        <p class="text-white font-bold text-sm">+${allEventPhotos.length - 2} more</p>
                       </div>`;
+                    pDiv.onclick = (e) => {
+                      e.stopPropagation();
+                      loadPhotos(true);
+                    };
+                  } else {
+                    pDiv.onclick = () => openLightbox(photo.image_url, photo.created_at);
                   }
+                  
                   pDiv.innerHTML = contents;
                   container.appendChild(pDiv);
                 }
             } else {
-               // Show default empty state if no extra photos
                const p1 = document.createElement('div');
                p1.className = 'rounded-xl border border-dashed border-gray-300 flex items-center justify-center';
                p1.style.height = '100px';
-               p1.innerHTML = '<span class="text-xs text-gray-400">No photos</span>';
+               p1.innerHTML = '<span class="text-xs text-gray-400">No extra photos</span>';
                container.appendChild(p1);
             }
         })
         .catch(console.error);
     }
     
-    // Call loaders on init!
     loadComments();
     loadPhotos();
 
-    // Auto-log visit and grab status
     fetch(`/api/events/${ev.id}/status`)
       .then(res => res.json())
       .then(data => {
@@ -850,11 +975,9 @@
            document.getElementById('detail-going').textContent = formatGoing(data.visits);
         }
 
-        // Setup Rating UI
         setupRating(data.rating, data.avgRating, data.totalRatings);
       }).catch(console.error);
 
-    // Log the visit independently and update UI
     function logVisit() {
       fetch(`/api/events/${ev.id}/visit`, { 
         method: 'POST',
@@ -869,7 +992,6 @@
       .catch(err => console.error('Error logging visit:', err));
     }
 
-    // Call it immediately
     logVisit();
 
     function setupRating(userRating, avgRating, total) {
@@ -888,7 +1010,7 @@
       
       stars.forEach(star => {
         star.onclick = () => {
-          if (userRating) return; // already rated
+          if (userRating) return;
           const val = parseInt(star.getAttribute('data-val'));
           fetch(`/api/events/${ev.id}/rate`, {
             method: 'POST',
@@ -919,7 +1041,6 @@
       });
     }
 
-    /* ── Organizer Details & Events ── */
     function loadOrganizerDetails() {
       if (!RAW_EVENT || !RAW_EVENT.organizer_id) return;
       
@@ -941,7 +1062,6 @@
       const [sort, order] = sortVal.split('-');
       
       const listContainer = document.getElementById('org-events-list');
-      // Show loading state if not already showing skeleton
       if (page === 1 && !listContainer.querySelector('.animate-pulse')) {
          listContainer.innerHTML = '<div class="animate-pulse space-y-3"><div class="h-20 bg-gray-100 rounded-2xl"></div><div class="h-20 bg-gray-100 rounded-2xl"></div></div>';
       }
@@ -1003,14 +1123,12 @@
       
       if (p.totalPages <= 1) return;
 
-      // Prev
       const prevBtn = document.createElement('button');
       prevBtn.className = `w-8 h-8 rounded-lg flex items-center justify-center border ${p.currentPage > 1 ? 'border-gray-200 text-gray-700' : 'border-gray-100 text-gray-300 cursor-not-allowed'}`;
       prevBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>';
       if (p.currentPage > 1) prevBtn.onclick = () => loadOrgEvents(p.currentPage - 1);
       container.appendChild(prevBtn);
 
-      // Page numbers (simplified)
       for (let i = 1; i <= p.totalPages; i++) {
         if (i === 1 || i === p.totalPages || (i >= p.currentPage - 1 && i <= p.currentPage + 1)) {
           const btn = document.createElement('button');
@@ -1026,7 +1144,6 @@
         }
       }
 
-      // Next
       const nextBtn = document.createElement('button');
       nextBtn.className = `w-8 h-8 rounded-lg flex items-center justify-center border ${p.currentPage < p.totalPages ? 'border-gray-200 text-gray-700' : 'border-gray-100 text-gray-300 cursor-not-allowed'}`;
       nextBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>';
@@ -1034,31 +1151,24 @@
       container.appendChild(nextBtn);
     }
 
-    // Call organizer loaders on init
     loadOrganizerDetails();
     loadOrgEvents(1);
 
-    /* ── Location Logic ── */
     function checkLocationBeforeMap() {
       if (!navigator.geolocation) {
-        // Fallback for browsers that don't support geolocation
         window.location.href = '/map';
         return;
       }
 
-      // Check permission status if API is available
       if (navigator.permissions && navigator.permissions.query) {
         navigator.permissions.query({ name: 'geolocation' }).then(result => {
           if (result.state === 'granted') {
-            // Already granted, proceed to map
             window.location.href = '/map';
           } else {
-            // Not granted or prompt needed, show our custom modal
             document.getElementById('location-modal').classList.remove('hidden');
           }
         });
       } else {
-        // Fallback: just show the modal to be safe
         document.getElementById('location-modal').classList.remove('hidden');
       }
     }
@@ -1068,24 +1178,15 @@
     }
 
     function requestLocationAccess() {
-      // Trigger the browser's native location prompt
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          // Success! Permission granted and location retrieved.
-          // We don't necessarily need the coordinates here as the map page will fetch them.
           closeLocationModal();
           window.location.href = '/map';
         },
         (error) => {
-          // User denied or error occurred
           console.error('Location error:', error);
-          // Even if they deny, we might want to let them view the map without their current location,
-          // OR we show a message. Usually, navigation apps need location.
-          // For now, let's just proceed to the map - the map page should handle the empty state.
-          // But based on user request: "prompt first... if not turn on"
           alert("Please enable location services in your device settings to use the navigation features.");
           closeLocationModal();
-          // We still let them go to the map, but they've been warned.
           window.location.href = '/map';
         },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }

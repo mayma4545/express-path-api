@@ -219,6 +219,11 @@ router.get('/login', async (req, res) => {
                     return res.redirect('/login?error=' + encodeURIComponent('Invalid user account'));
                 }
 
+                if (flow === 'signup') {
+                    // Email already exists - show error on signup page
+                    return res.redirect('/signup?error=' + encodeURIComponent('Email already in use. Please log in.'));
+                }
+
                 // Auto-login existing non-organizer user
                 req.session.user = {
                     id: user.id,
@@ -687,7 +692,10 @@ router.get('/profile', requireUserAuth, async (req, res) => {
 });
 
 // Update profile endpoint
-router.post('/profile/update', requireUserAuth, uploadAvatarHybrid.single('avatar'), async (req, res) => {
+router.post('/profile/update', requireUserAuth, (req, res, next) => {
+    const { uploadAvatarHybrid } = require('../services/upload.hybrid');
+    uploadAvatarHybrid.single('avatar')(req, res, next);
+}, async (req, res) => {
     try {
         const { first_name, last_name } = req.body;
         const userId = req.session.userId || req.session.user.id;

@@ -90,7 +90,10 @@ router.get('/nodes/create', async (req, res) => {
     }
 });
 
-router.post('/nodes/create', upload360Hybrid.single('image_360'), async (req, res) => {
+router.post('/nodes/create', (req, res, next) => {
+    const { upload360Hybrid } = require('../services/upload.hybrid');
+    upload360Hybrid.single('image_360')(req, res, next);
+}, async (req, res) => {
     try {
         const { node_code, name, building, floor_level, type_of_node, description, map_x, map_y, annotation } = req.body;
 
@@ -147,7 +150,10 @@ router.get('/nodes/:node_id/edit', async (req, res) => {
     }
 });
 
-router.post('/nodes/:node_id/edit', upload360Hybrid.single('image_360'), async (req, res) => {
+router.post('/nodes/:node_id/edit', (req, res, next) => {
+    const { upload360Hybrid } = require('../services/upload.hybrid');
+    upload360Hybrid.single('image_360')(req, res, next);
+}, async (req, res) => {
     try {
         const node = await Nodes.findByPk(req.params.node_id);
         if (!node) {
