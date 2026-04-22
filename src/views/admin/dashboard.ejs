@@ -485,29 +485,25 @@
           </h2>
         </div>
         <div class="flex gap-3">
-          <button
-            id="notif-btn"
-            onclick="toggleNotif()"
-            class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-textMain shadow-sm border border-gray-100 hover:bg-gray-50 relative"
+          <a
+            href="/admin/logout"
+            class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-rose-500 shadow-sm border border-gray-100 hover:bg-rose-50 hover:border-rose-100 transition-all active:scale-95"
+            title="Logout"
           >
             <svg
               class="w-5 h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              stroke-width="2.5"
             >
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
-                stroke-width="2"
-                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
               ></path>
             </svg>
-            <span
-              id="notif-badge"
-              class="absolute top-2 right-2.5 w-2 h-2 rounded-full bg-red-500 border border-white"
-            ></span>
-          </button>
+          </a>
         </div>
       </header>
 
@@ -582,10 +578,10 @@
       <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 flex gap-4 card-hover overflow-hidden relative cursor-pointer" onclick="window.location.href='/admin/events/<%= evt.id %>'">
         <div class="absolute top-0 left-0 w-1 h-full bg-[#ec4899]"></div>
         <div class="flex-1 min-w-0">
-          <span class="text-[10px] font-bold tracking-wider text-pink-500 uppercase mb-1 block"><%= evt.category || 'Event' %></span>
+          <span class="text-[10px] font-bold tracking-wider text-pink-500 uppercase mb-1 block"><%= evt.category ? evt.category.name : 'Event' %></span>
           <h4 class="font-bold text-textMain text-sm truncate mb-1"><%= evt.title %></h4>
           <div class="flex items-center gap-3 text-xs text-textMuted font-medium">
-            <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span><%= new Date(evt.start_date || evt.created_at).toLocaleDateString([], {month:'short', day:'numeric'}) %></span>
+            <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span><%= new Date(evt.event_date).toLocaleDateString([], {month:'short', day:'numeric'}) %></span>
             <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span><%= evt.venue || 'TBA' %></span>
           </div>
         </div>
@@ -609,7 +605,7 @@
           <p class="text-xs text-textMuted"><%= evt.venue || 'TBA' %></p>
         </div>
         <div class="text-right flex-shrink-0">
-          <p class="font-bold text-gray-900 text-lg leading-none"><%= evt.page_view_count || Math.floor(Math.random()*1000) %></p>
+          <p class="font-bold text-gray-900 text-lg leading-none"><%= evt.analytics ? evt.analytics.page_view_count : 0 %></p>
           <p class="text-[10px] text-textMuted font-medium uppercase tracking-wide">Visits</p>
         </div>
       </div>

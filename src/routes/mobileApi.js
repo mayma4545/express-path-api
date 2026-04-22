@@ -1931,22 +1931,24 @@ router.post('/events/:event_id/rsvp', requireAuth, async (req, res) => {
 router.post('/events/:event_id/analytics', async (req, res) => {
     try {
         const { event_id } = req.params;
-        const { type } = req.body; // 'scan' or '360_view'
+        const { type } = req.body; // 'scan', '360_view', or 'navigation'
 
         const event = await Event.findByPk(event_id);
         if (!event) return res.status(404).json({ success: false, error: 'Event not found' });
 
         const [analytics] = await EventAnalytics.findOrCreate({
             where: { event_id },
-            defaults: { scan_count: 0, view_count_360: 0 }
+            defaults: { scan_count: 0, view_count_360: 0, navigation_count: 0 }
         });
 
         if (type === 'scan') {
             await analytics.increment('scan_count', { by: 1 });
         } else if (type === '360_view') {
             await analytics.increment('view_count_360', { by: 1 });
+        } else if (type === 'navigation') {
+            await analytics.increment('navigation_count', { by: 1 });
         } else {
-            return res.status(400).json({ success: false, error: 'Invalid analytics type. Use "scan" or "360_view".' });
+            return res.status(400).json({ success: false, error: 'Invalid analytics type. Use "scan", "360_view", or "navigation".' });
         }
 
         res.json({ success: true, message: `Analytics updated for ${type}` });

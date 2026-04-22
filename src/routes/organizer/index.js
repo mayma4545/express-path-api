@@ -2,7 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const router = express.Router();
-const { sequelize, Event, Category, Nodes, Organizer, AppUser, EventAttendee, EventAnalytics, EventAnnouncement, EventPhoto, EventSystemActivityLog, OrganizerNotification, Sequelize } = require('../../models');
+const { sequelize, Event, Category, Nodes, Organizer, AppUser, EventAttendee, EventAnalytics, EventRating, EventBookmark, EventVisit, Comment, EventAnnouncement, EventPhoto, EventSystemActivityLog, OrganizerNotification, EventLike, CommentReaction, UserNotification, User, Sequelize } = require('../../models');
 const { sendEmail } = require('../../services/mailer');
 const { upload, uploadBufferToCloudinary } = require('../../services/cloudinary'); // Import uploadBufferToCloudinary function
 
@@ -24,6 +24,9 @@ router.use((req, res, next) => {
 
 // Redirect /organizer to /organizer/dashboard
 router.get('/', (req, res) => {
+    if (req.session.adminAuth) {
+        return res.redirect('/admin/dashboard');
+    }
     if (req.session.organizerAuth && req.session.organizerAuth.organizerId) {
         return res.redirect('/organizer/dashboard');
     }
@@ -32,6 +35,7 @@ router.get('/', (req, res) => {
 
 // Organizer signup view
 router.get('/signup', (req, res) => {
+    if (req.session.adminAuth) return res.redirect('/admin/dashboard');
     if (req.session.organizerAuth && req.session.organizerAuth.organizerId) {
         return res.redirect('/organizer/dashboard');
     }
@@ -117,12 +121,19 @@ router.post('/signup', async (req, res) => {
 
 // Organizer login view
 router.get('/login', (req, res) => {
+    if (req.session.adminAuth) return res.redirect('/admin/dashboard');
     if (req.session.organizerAuth && req.session.organizerAuth.organizerId) {
         return res.redirect('/organizer/dashboard');
     }
 
+    let error = req.query.error || null;
+    if (error === 'admin_required') {
+        error = 'Authentication required. Please login with your admin credentials.';
+    }
+
     return res.render('organizer/login', {
-        title: 'Organizer Login'
+        title: 'Organizer Login',
+        error: error
     });
 });
 
@@ -134,12 +145,32 @@ router.post('/login', async (req, res) => {
         if (!email || !password) {
             return res.status(400).render('error', {
                 title: 'Login Error',
-                message: 'Email and password are required.'
+                message: 'Email/Username and password are required.'
             });
         }
 
+        const identifier = email.trim().toLowerCase();
+
+        // 1. Check for Admin Login (admin4545)
+        if (identifier === 'admin4545') {
+            const admin = await User.findOne({ where: { username: 'admin4545' } });
+            if (admin) {
+                const isValid = await bcrypt.compare(password, admin.password);
+                if (isValid) {
+                    req.session.adminAuth = {
+                        userId: admin.id,
+                        username: admin.username,
+                        is_staff: admin.is_staff,
+                        is_superuser: admin.is_superuser
+                    };
+                    return res.redirect('/admin/dashboard');
+                }
+            }
+        }
+
+        // 2. Regular Organizer Login
         const account = await AppUser.findOne({
-            where: { email: email.trim().toLowerCase() }
+            where: { email: identifier }
         });
 
         if (!account) {
@@ -272,43 +303,37 @@ router.get('/dashboard', requireOrganizerAuth, async (req, res) => {
         ]);
 
         // Compute metrics
-        let totalRSVP = 0;
-        let totalActual = 0;
-        let activeEventIds = activeEventsList.map(e => e.id);
-        let livePathHits = 0; // node_id was removed from events, so this remains 0 for now
-        let entryVelocity = 0;
+        const allOrganizerEvents = await Event.findAll({ 
+            where: { organizer_id: organizer.id },
+            attributes: ['id']
+        });
+        const allEventIds = allOrganizerEvents.map(e => e.id);
 
-        for (const ev of activeEventsList) {
-            if (ev.capacity && ev.capacity > 0) totalRSVP += ev.capacity;
-            
-            // Get actual attendees
-            const attendeeCount = await EventAttendee.count({ where: { event_id: ev.id, status: 'attending' } });
-            totalActual += attendeeCount;
+        let totalVisits = 0;
+        let totalNavigationHits = 0;
+        let totalRatingSum = 0;
+        let totalRatingCount = 0;
 
-            // Get live A* path hits from node visit analytics? There is no node_id in event. 
-            // Query event_analytics for scan_count and views?
-            const analytics = await EventAnalytics.findOne({ where: { event_id: ev.id } });
-            if (analytics) {
-                livePathHits += analytics.scan_count || 0;
-                livePathHits += analytics.view_count_360 || 0;
-            }
+        if (allEventIds.length > 0) {
+            const [analyticsList, ratingsList] = await Promise.all([
+                EventAnalytics.findAll({ where: { event_id: { [Op.in]: allEventIds } } }),
+                EventRating.findAll({ where: { event_id: { [Op.in]: allEventIds } } })
+            ]);
 
-            // check entry velocity: attendees checked in the last hour
-            const recentAttendees = await EventAttendee.count({
-                where: {
-                    event_id: ev.id,
-                    status: 'attending',
-                    check_in_time: {
-                        [Op.gte]: new Date(Date.now() - 60 * 60 * 1000)
-                    }
-                }
+            analyticsList.forEach(a => {
+                totalVisits += (a.page_view_count || 0);
+                totalNavigationHits += (a.navigation_count || 0);
             });
-            entryVelocity += recentAttendees;
-        }
-        
-        // Ensure some defaults if 0 RSVP
-        if (totalRSVP === 0 && activeEventsList.length > 0) totalRSVP = 200;
 
+            ratingsList.forEach(r => {
+                totalRatingSum += r.rating;
+                totalRatingCount++;
+            });
+        }
+
+        const averageRating = totalRatingCount > 0 ? (totalRatingSum / totalRatingCount).toFixed(1) : "0.0";
+
+        // Restore missing logic
         const eventsByStatus = { upcoming: 0, ongoing: 0, completed: 0, cancelled: 0 };
         const eventsPerMonth = Array(12).fill(0);
         
@@ -365,6 +390,21 @@ router.get('/dashboard', requireOrganizerAuth, async (req, res) => {
             }
         }
 
+        // Entry velocity (still useful to keep for "Recent Visit" context if needed, but user wants total)
+        let entryVelocity = 0;
+        for (const ev of activeEventsList) {
+            const recentAttendees = await EventAttendee.count({
+                where: {
+                    event_id: ev.id,
+                    status: 'attending',
+                    check_in_time: {
+                        [Op.gte]: new Date(Date.now() - 60 * 60 * 1000)
+                    }
+                }
+            });
+            entryVelocity += recentAttendees;
+        }
+
         res.render('organizer/dashboard', {
             title: 'Organizer Dashboard | Masbate City',
             organizer,
@@ -376,11 +416,12 @@ router.get('/dashboard', requireOrganizerAuth, async (req, res) => {
             eventsByStatus: JSON.stringify(eventsByStatus),
             eventsPerMonth: JSON.stringify(eventsPerMonth),
             dashboardMetrics: {
-                entryVelocity,
-                livePathHits,
-                totalRSVP,
-                totalActual,
-                alerts: totalUnreadCount
+                totalVisits,
+                navigationHits: totalNavigationHits,
+                averageRating,
+                totalRatingCount,
+                alerts: totalUnreadCount,
+                entryVelocity // keeping for fallback or additional context
             }
         });
     } catch (error) {
@@ -394,40 +435,113 @@ router.get('/analytics', requireOrganizerAuth, async (req, res) => {
     try {
         const organizerId = req.session.organizerAuth.organizerId;
         const { Op } = require('sequelize');
+        const { Event, EventAnalytics, EventRating, EventAttendee, EventLike, EventBookmark, Category } = require('../../models');
         
-        const totalEvents = await Event.count({ where: { organizer_id: organizerId } });
-        const activeEvents = await Event.count({ where: { organizer_id: organizerId, is_ongoing: true } });
-        const finishedEvents = await Event.count({
-            where: { organizer_id: organizerId, [Op.or]: [{status: 'completed'}, {is_ongoing: false}] }
+        // Basic stats
+        const [totalEvents, activeEvents, finishedEvents] = await Promise.all([
+            Event.count({ where: { organizer_id: organizerId } }),
+            Event.count({ where: { organizer_id: organizerId, is_ongoing: true } }),
+            Event.count({ where: { organizer_id: organizerId, [Op.or]: [{status: 'completed'}, {is_ongoing: false}] } })
+        ]);
+
+        // Aggregate Analytics
+        const allEvents = await Event.findAll({
+            where: { organizer_id: organizerId },
+            include: [
+                { model: EventAnalytics, as: 'analytics' },
+                { model: EventRating, as: 'ratings' },
+                { model: Category, as: 'category' },
+                { model: AppUser, as: 'liked_by_users' },
+                { model: EventBookmark, as: 'bookmarks' },
+                { model: EventAttendee, as: 'attendees' },
+                { model: Comment, as: 'comments' },
+                { model: EventVisit, as: 'visits' }
+            ]
         });
 
-        const eventsWithTags = await Event.findAll({
-            where: { organizer_id: organizerId },
-            attributes: ['tags']
-        });
+        let totalViews = 0;
+        let totalScans = 0;
+        let totalNavigations = 0;
+        let totalRatingSum = 0;
+        let totalRatingCount = 0;
+        let totalLikes = 0;
+        let totalBookmarks = 0;
+        let totalAttendees = 0;
+        let totalComments = 0;
         
-        let tagCounts = {};
-        eventsWithTags.forEach(e => {
-            if (e.tags) {
-                let eventTags = e.tags.split(',').map(tag => tag.trim()).filter(t => t);
-                eventTags.forEach(tag => {
-                    tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+        const ratingDistribution = [0, 0, 0, 0, 0];
+        const categoryCounts = {};
+        const eventPerformance = []; 
+
+        allEvents.forEach(e => {
+            if (e.category) {
+                categoryCounts[e.category.name] = (categoryCounts[e.category.name] || 0) + 1;
+            }
+
+            if (e.analytics) {
+                totalViews += (e.analytics.page_view_count || 0);
+                totalScans += (e.analytics.scan_count || 0);
+                totalNavigations += (e.analytics.navigation_count || 0);
+            } else if (e.visits) {
+                totalViews += e.visits.length;
+            }
+
+            totalLikes += (e.liked_by_users ? e.liked_by_users.length : 0);
+            totalBookmarks += (e.bookmarks ? e.bookmarks.length : 0);
+            totalComments += (e.comments ? e.comments.length : 0);
+            
+            const checkins = e.attendees ? e.attendees.filter(a => a.status === 'attending').length : 0;
+            totalAttendees += checkins;
+
+            eventPerformance.push({
+                title: e.title,
+                score: ((e.analytics?.page_view_count || 0) * 0.4) + (checkins * 0.6),
+                views: e.analytics?.page_view_count || 0,
+                checkins: checkins
+            });
+
+            if (e.ratings && e.ratings.length > 0) {
+                e.ratings.forEach(r => {
+                    totalRatingSum += r.rating;
+                    totalRatingCount++;
+                    if (r.rating >= 1 && r.rating <= 5) ratingDistribution[r.rating - 1]++;
                 });
             }
         });
 
-        // Top 5 or 10 tags
-        const sortedTags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
-        const tagLabels = sortedTags.map(t => t[0]);
-        const tagData = sortedTags.map(t => t[1]);
-        
+        // Top 5 Events by combined performance score
+        const topEvents = eventPerformance
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 5);
+
+        const avgRating = totalRatingCount > 0 ? (totalRatingSum / totalRatingCount).toFixed(1) : "0.0";
+        const conversionRate = totalViews > 0 ? ((totalAttendees / totalViews) * 100).toFixed(1) : 0;
+
         res.render('organizer/analytics', {
-            title: 'Analytics | Organizer',
+            title: 'Intelligence Hub | Organizer',
             totalEvents,
             activeEvents,
             finishedEvents,
-            tagLabels: JSON.stringify(tagLabels),
-            tagData: JSON.stringify(tagData)
+            metrics: {
+                totalViews,
+                totalScans,
+                totalNavigations,
+                avgRating,
+                totalRatingCount,
+                totalLikes,
+                totalBookmarks,
+                totalAttendees,
+                totalComments,
+                conversionRate
+            },
+            charts: {
+                categoryLabels: JSON.stringify(Object.keys(categoryCounts)),
+                categoryValues: JSON.stringify(Object.values(categoryCounts)),
+                topEventsLabels: JSON.stringify(topEvents.map(te => te.title)),
+                topEventsViews: JSON.stringify(topEvents.map(te => te.views)),
+                topEventsCheckins: JSON.stringify(topEvents.map(te => te.checkins)),
+                ratingDistribution: JSON.stringify(ratingDistribution)
+            }
         });
     } catch (error) {
         console.error('Error loading analytics page:', error);
@@ -562,7 +676,12 @@ router.get('/events/:id', requireOrganizerAuth, async (req, res) => {
         const organizerId = req.session.organizerAuth.organizerId;
         const event = await Event.findOne({ 
             where: { id: req.params.id, organizer_id: organizerId },
-            include: ['category', { model: EventAnnouncement, as: 'announcements', required: false, order: [['created_at', 'DESC']] }]
+            include: [
+                'category', 
+                { model: EventAnnouncement, as: 'announcements', required: false },
+                { model: EventAnalytics, as: 'analytics', required: false },
+                { model: EventBookmark, as: 'bookmarks', required: false }
+            ]
         });
         
         if (!event) {
@@ -769,13 +888,16 @@ router.post('/events/:id/update', requireOrganizerAuth, multer({ storage: memory
 
 // Delete Event
 router.delete('/events/:id/delete', requireOrganizerAuth, async (req, res) => {
+    const t = await sequelize.transaction();
     try {
         const organizerId = req.session.organizerAuth.organizerId;
         const event = await Event.findOne({ 
-            where: { id: req.params.id, organizer_id: organizerId }
+            where: { id: req.params.id, organizer_id: organizerId },
+            transaction: t
         });
         
         if (!event) {
+            await t.rollback();
             return res.status(404).json({ success: false, message: 'Event not found or unauthorized' });
         }
         
@@ -787,12 +909,50 @@ router.delete('/events/:id/delete', requireOrganizerAuth, async (req, res) => {
                 target_type: 'event',
                 target_id: event.id.toString(),
                 metadata: { title: event.title }
+            }, { transaction: t });
+        }
+
+        const eventId = event.id;
+
+        // 1. Delete dependent data that directly references event_id
+        await EventBookmark.destroy({ where: { event_id: eventId }, transaction: t });
+        await EventLike.destroy({ where: { event_id: eventId }, transaction: t });
+        await EventAttendee.destroy({ where: { event_id: eventId }, transaction: t });
+        await EventAnalytics.destroy({ where: { event_id: eventId }, transaction: t });
+        await EventRating.destroy({ where: { event_id: eventId }, transaction: t });
+        await EventVisit.destroy({ where: { event_id: eventId }, transaction: t });
+        await EventPhoto.destroy({ where: { event_id: eventId }, transaction: t });
+        await EventAnnouncement.destroy({ where: { event_id: eventId }, transaction: t });
+        await OrganizerNotification.destroy({ where: { event_id: eventId }, transaction: t });
+        await UserNotification.destroy({ where: { event_id: eventId }, transaction: t });
+
+        // 2. Handle comments (and their reactions)
+        const comments = await Comment.findAll({ 
+            where: { event_id: eventId }, 
+            attributes: ['id'],
+            transaction: t 
+        });
+        const commentIds = comments.map(c => c.id);
+        if (commentIds.length > 0) {
+            // Delete reactions to these comments
+            await CommentReaction.destroy({ 
+                where: { comment_id: commentIds }, 
+                transaction: t 
+            });
+            // Delete the comments themselves (including replies since they also have event_id)
+            await Comment.destroy({ 
+                where: { event_id: eventId }, 
+                transaction: t 
             });
         }
 
-        await event.destroy();
+        // 3. Finally delete the event
+        await event.destroy({ transaction: t });
+        
+        await t.commit();
         res.json({ success: true, message: 'Event deleted successfully' });
     } catch (error) {
+        if (t) await t.rollback();
         console.error('Delete event error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
@@ -841,7 +1001,34 @@ router.post('/events/bulk-action', requireOrganizerAuth, async (req, res) => {
         const validEventIds = events.map(e => e.id);
 
         if (action === 'delete') {
-            await Event.destroy({ where: { id: validEventIds } });
+            await sequelize.transaction(async (t) => {
+                // Delete all dependent data for all selected events
+                await EventBookmark.destroy({ where: { event_id: validEventIds }, transaction: t });
+                await EventLike.destroy({ where: { event_id: validEventIds }, transaction: t });
+                await EventAttendee.destroy({ where: { event_id: validEventIds }, transaction: t });
+                await EventAnalytics.destroy({ where: { event_id: validEventIds }, transaction: t });
+                await EventRating.destroy({ where: { event_id: validEventIds }, transaction: t });
+                await EventVisit.destroy({ where: { event_id: validEventIds }, transaction: t });
+                await EventPhoto.destroy({ where: { event_id: validEventIds }, transaction: t });
+                await EventAnnouncement.destroy({ where: { event_id: validEventIds }, transaction: t });
+                await OrganizerNotification.destroy({ where: { event_id: validEventIds }, transaction: t });
+                await UserNotification.destroy({ where: { event_id: validEventIds }, transaction: t });
+
+                // Comments and their reactions
+                const comments = await Comment.findAll({ 
+                    where: { event_id: validEventIds }, 
+                    attributes: ['id'], 
+                    transaction: t 
+                });
+                const commentIds = comments.map(c => c.id);
+                if (commentIds.length > 0) {
+                    await CommentReaction.destroy({ where: { comment_id: commentIds }, transaction: t });
+                    await Comment.destroy({ where: { event_id: validEventIds }, transaction: t });
+                }
+
+                // Finally delete the events
+                await Event.destroy({ where: { id: validEventIds }, transaction: t });
+            });
         } else if (action === 'publish') {
             await Event.update({ status: 'published' }, { where: { id: validEventIds } });
         } else if (action === 'duplicate') {

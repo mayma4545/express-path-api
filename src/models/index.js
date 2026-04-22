@@ -991,6 +991,10 @@ const EventAnalytics = sequelize.define('EventAnalytics', {
     page_view_count: {
         type: DataTypes.INTEGER,
         defaultValue: 0
+    },
+    navigation_count: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
     }
 }, {
     tableName: 'event_analytics',

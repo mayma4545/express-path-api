@@ -69,12 +69,42 @@
         <h1 id="detail-name" class="text-2xl font-extrabold text-white leading-tight mt-1 drop-shadow-lg"></h1>
       </div>
       <div class="flex flex-col items-center bg-white/20 backdrop-blur-sm rounded-2xl px-3 py-2 border border-white/30">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-red-400 mb-0.5" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
         </svg>
-        <p id="detail-going" class="text-sm font-bold text-white leading-none"></p>
-        <p class="text-[10px] text-white/70 font-medium">going</p>
+        <p id="detail-visits" class="text-sm font-bold text-white leading-none"></p>
+        <p class="text-[10px] text-white/70 font-medium">visits</p>
       </div>
+    </div>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="fade-up px-5 pt-6 grid grid-cols-2 gap-4">
+    <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+      <div class="flex items-center gap-2 mb-1">
+        <div class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+          </svg>
+        </div>
+        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Navigation</span>
+      </div>
+      <p id="detail-navs" class="text-2xl font-black text-gray-900">0</p>
+      <p class="text-[10px] text-gray-500 font-medium mt-0.5">Used Map View</p>
+    </div>
+    
+    <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+      <div class="flex items-center gap-2 mb-1">
+        <div class="w-8 h-8 rounded-full bg-pink-50 flex items-center justify-center text-pink-500">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+          </svg>
+        </div>
+        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Bookmarks</span>
+      </div>
+      <p id="detail-bookmarks" class="text-2xl font-black text-gray-900">0</p>
+      <p class="text-[10px] text-gray-500 font-medium mt-0.5">Saved by Users</p>
     </div>
   </div>
 
@@ -172,7 +202,9 @@
         date: RAW_EVENT.event_date ? new Date(RAW_EVENT.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "TBA",
         start: RAW_EVENT.start_time ? (RAW_EVENT.start_time.length > 5 ? RAW_EVENT.start_time.substring(0, 5) : RAW_EVENT.start_time) : "",
         end: RAW_EVENT.end_time ? (RAW_EVENT.end_time.length > 5 ? RAW_EVENT.end_time.substring(0, 5) : RAW_EVENT.end_time) : "",
-        going: RAW_EVENT.capacity || 0,
+        visits: RAW_EVENT.analytics ? (RAW_EVENT.analytics.page_view_count || 0) : 0,
+        navs: RAW_EVENT.analytics ? (RAW_EVENT.analytics.navigation_count || 0) : 0,
+        bookmarks: RAW_EVENT.bookmarks ? RAW_EVENT.bookmarks.length : 0,
         organizer: RAW_EVENT.organizer ? RAW_EVENT.organizer.name : "Organizer"
       };
     }
@@ -186,7 +218,9 @@
       document.getElementById('detail-time').textContent = ev.start + " - " + ev.end;
       document.getElementById('detail-venue').textContent = ev.venue;
       document.getElementById('detail-desc').textContent = ev.description;
-      document.getElementById('detail-going').textContent = ev.going;
+      document.getElementById('detail-visits').textContent = ev.visits;
+      document.getElementById('detail-navs').textContent = ev.navs;
+      document.getElementById('detail-bookmarks').textContent = ev.bookmarks;
 
       // tags
       const parsedTags = [ev.category];

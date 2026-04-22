@@ -540,10 +540,11 @@
             Reports
           </h2>
           <p class="text-xs text-textMuted font-600 mt-0.5">
-            April 2026 · All Organizers
+            <%= new Date().toLocaleString('default', { month: 'long', year: 'numeric' }) %> · System Overview
           </p>
         </div>
         <button
+          onclick="window.location.href='/admin/reports/export'"
           class="flex items-center gap-1.5 bg-white border border-gray-200 rounded-2xl px-4 py-2.5 text-xs font-700 text-textMuted shadow-soft hover:border-brand hover:text-brand transition-all"
         >
           <svg
@@ -584,7 +585,7 @@
           </div>
           <div class="stat-label">Total Users</div>
           <div class="stat-value" id="stat-users">0</div>
-          <div class="stat-delta delta-up">↑ 12% this month</div>
+          <div class="stat-delta delta-up">Platform Registered</div>
         </div>
         <!-- Total Events -->
         <div
@@ -608,28 +609,14 @@
           </div>
           <div class="stat-label">Total Events</div>
           <div class="stat-value" id="stat-events">0</div>
-          <div class="stat-delta delta-up">↑ 8% this month</div>
+          <div class="stat-delta delta-up">System Published</div>
         </div>
       </div>
 
       <!-- ── User Growth Chart ── -->
       <div class="section-wrap">
         <div class="section-title-row">
-          <span class="section-title">User Growth</span>
-          <div class="period-toggle">
-            <button
-              class="period-btn active"
-              onclick="switchPeriod(this, 'week')"
-            >
-              Week
-            </button>
-            <button class="period-btn" onclick="switchPeriod(this, 'month')">
-              Month
-            </button>
-            <button class="period-btn" onclick="switchPeriod(this, 'year')">
-              Year
-            </button>
-          </div>
+          <span class="section-title">User Growth (Last 6 Months)</span>
         </div>
         <div class="chart-card">
           <canvas id="growthChart"></canvas>
@@ -659,7 +646,7 @@
       <div class="section-wrap">
         <div class="section-title-row">
           <span class="section-title">Top Rated Organizers</span>
-          <button class="see-all">See all</button>
+          <a href="/admin/organizers" class="see-all">See all</a>
         </div>
         <div class="org-list" id="org-list"></div>
       </div>
@@ -668,7 +655,7 @@
       <div class="section-wrap" style="padding-bottom: 0">
         <div class="section-title-row">
           <span class="section-title">Most Popular Events</span>
-          <button class="see-all">See all</button>
+          <a href="/admin/events" class="see-all">See all</a>
         </div>
         <div class="event-list" id="event-list"></div>
       </div>
@@ -677,145 +664,36 @@
     </main>
 
     <script>
-      // ── Data ──────────────────────────────────────────────────────────────────
-      const STATS = { users: 4821, events: 138, orgs: 23 };
-
-      const ORGANIZERS = [
-        {
-          name: "Maria Santos",
-          initial: "MS",
-          color: "#1da1f2",
-          events: 28,
-          rating: 4.9,
-          badge: "pill-blue",
-          category: "Tech",
-        },
-        {
-          name: "Carlos Tan",
-          initial: "CT",
-          color: "#7c43fe",
-          events: 21,
-          rating: 4.8,
-          badge: "pill-purple",
-          category: "Arts",
-        },
-        {
-          name: "Liza Ong",
-          initial: "LO",
-          color: "#22c55e",
-          events: 19,
-          rating: 4.7,
-          badge: "pill-green",
-          category: "Sports",
-        },
-        {
-          name: "Juan dela Cruz",
-          initial: "JC",
-          color: "#f59e0b",
-          events: 15,
-          rating: 4.6,
-          badge: "pill-amber",
-          category: "Music",
-        },
-        {
-          name: "Ana Reyes",
-          initial: "AR",
-          color: "#ef4444",
-          events: 12,
-          rating: 4.4,
-          badge: "pill-blue",
-          category: "Food",
-        },
-      ];
-
-      const EVENTS = [
-        {
-          name: "Tech Conf '26",
-          icon: "laptop",
-          color: "#e8f5fe",
-          stroke: "#1da1f2",
-          pill: "pill-blue",
-          pillLabel: "Tech",
-          attendees: 842,
-          capacity: 1000,
-        },
-        {
-          name: "Spring Fair",
-          icon: "sun",
-          color: "#fef7e8",
-          stroke: "#f59e0b",
-          pill: "pill-amber",
-          pillLabel: "Fair",
-          attendees: 620,
-          capacity: 750,
-        },
-        {
-          name: "Hackathon 2026",
-          icon: "code",
-          color: "#f0ebff",
-          stroke: "#7c43fe",
-          pill: "pill-purple",
-          pillLabel: "Hack",
-          attendees: 500,
-          capacity: 500,
-        },
-        {
-          name: "VIP Meetup",
-          icon: "star",
-          color: "#e8fef0",
-          stroke: "#22c55e",
-          pill: "pill-green",
-          pillLabel: "Social",
-          attendees: 384,
-          capacity: 400,
-        },
-        {
-          name: "Open Mic Night",
-          icon: "mic",
-          color: "#fee8e8",
-          stroke: "#ef4444",
-          pill: "pill-blue",
-          pillLabel: "Music",
-          attendees: 210,
-          capacity: 350,
-        },
-      ];
-
-      const CHART_DATA = {
-        week: {
-          labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-          data: [120, 145, 132, 158, 174, 161, 190],
-        },
-        month: { labels: ["W1", "W2", "W3", "W4"], data: [610, 740, 820, 965] },
-        year: {
-          labels: [
-            "Jan",
-            "Feb",
-            "Mar",
-            "Apr",
-            "May",
-            "Jun",
-            "Jul",
-            "Aug",
-            "Sep",
-            "Oct",
-            "Nov",
-            "Dec",
-          ],
-          data: [
-            820, 940, 1010, 1180, 1320, 1100, 1240, 1450, 1380, 1560, 1700,
-            1870,
-          ],
-        },
+      // ── Data from Server ──────────────────────────────────────────────────────
+      const STATS = { 
+        users: <%= stats.totalUsers %>, 
+        events: <%= stats.totalEvents %> 
       };
 
-      const CATEGORIES = [
-        { label: "Technology", value: 38, color: "#1da1f2" },
-        { label: "Arts", value: 22, color: "#7c43fe" },
-        { label: "Sports", value: 18, color: "#22c55e" },
-        { label: "Music", value: 14, color: "#f59e0b" },
-        { label: "Others", value: 8, color: "#9ca3af" },
-      ];
+      const ORGANIZERS = <%- JSON.stringify(topOrganizers.map(o => ({
+        name: o.name,
+        initial: o.name.charAt(0).toUpperCase(),
+        color: '#1da1f2',
+        events: o.getDataValue('eventCount'),
+        rating: o.average_rating || '0.0',
+        badge: 'pill-blue',
+        category: o.description ? o.description.substring(0, 15) + '...' : 'Partner'
+      }))) %>;
+
+      const EVENTS = <%- JSON.stringify(popularEvents.map(e => ({
+        name: e.title,
+        id: e.id,
+        icon: 'star',
+        color: '#e8f5fe',
+        stroke: '#1da1f2',
+        pill: 'pill-blue',
+        pillLabel: e.category ? e.category.name : 'Event',
+        visits: e.getDataValue('visitCount') || 0
+      }))) %>;
+
+      const GROWTH_DATA = <%- JSON.stringify(growthData) %>;
+
+      const CATEGORIES = <%- JSON.stringify(categoryData) %>;
 
       const ICON_SVG = {
         laptop: `<svg fill="none" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>`,
@@ -827,6 +705,7 @@
 
       // ── Animate Counters ──────────────────────────────────────────────────────
       function animateCount(el, target, prefix = "", suffix = "") {
+        if (!el) return;
         const start = 0,
           dur = 900,
           step = 16;
@@ -847,7 +726,7 @@
 
         renderOrgList();
         renderEventList();
-        renderGrowthChart("week");
+        renderGrowthChart();
         renderCategoryChart();
       });
 
@@ -856,6 +735,7 @@
         const RANK_COLORS = ["#f59e0b", "#9ca3af", "#cd7f32"];
         const RANK_EMOJI = ["🥇", "🥈", "🥉"];
         const list = document.getElementById("org-list");
+        if (!list) return;
         list.innerHTML = ORGANIZERS.map(
           (o, i) => `
           <div class="org-item" style="animation-delay:${i * 50}ms">
@@ -867,7 +747,7 @@
               <div class="org-name">${o.name}</div>
               <div class="org-meta">${o.events} events · <span class="${o.badge}" style="font-size:10px;padding:1px 7px;">${o.category}</span></div>
               <div class="bar-track" style="width:100%">
-                <div class="bar-fill" style="width:${(o.rating / 5) * 100}%;background:${o.color};"></div>
+                <div class="bar-fill" style="width:${(parseFloat(o.rating) / 5) * 100}%;background:${o.color};"></div>
               </div>
             </div>
             <div class="org-right">
@@ -882,10 +762,15 @@
       // ── Event List ─────────────────────────────────────────────────────────────
       function renderEventList() {
         const list = document.getElementById("event-list");
+        if (!list) return;
+        
+        // Find max visits for normalization
+        const maxVisits = Math.max(...EVENTS.map(e => e.visits), 1);
+
         list.innerHTML = EVENTS.map((e, i) => {
-          const pct = Math.round((e.attendees / e.capacity) * 100);
+          const pct = Math.round((e.visits / maxVisits) * 100);
           return `
-          <div class="event-item" style="animation-delay:${i * 50}ms">
+          <div class="event-item" style="animation-delay:${i * 50}ms" onclick="window.location.href='/admin/events/${e.id}'">
             <div class="event-icon" style="background:${e.color};">
               <svg style="stroke:${e.stroke}" fill="none" viewBox="0 0 24 24" stroke-width="1.8">${ICON_SVG[e.icon].replace(/<svg[^>]*>/, "").replace("</svg>", "")}</svg>
             </div>
@@ -897,8 +782,8 @@
               </div>
             </div>
             <div class="event-right">
-              <div class="event-count">${e.attendees.toLocaleString()}</div>
-              <div class="event-label">${pct}% full</div>
+              <div class="event-count">${e.visits.toLocaleString()}</div>
+              <div class="event-label">Total Visits</div>
             </div>
           </div>`;
         }).join("");
@@ -906,8 +791,10 @@
 
       // ── Growth Chart ───────────────────────────────────────────────────────────
       let growthChart = null;
-      function renderGrowthChart(period) {
-        const { labels, data } = CHART_DATA[period];
+      function renderGrowthChart() {
+        const labels = GROWTH_DATA.map(d => d.label);
+        const data = GROWTH_DATA.map(d => d.value);
+        
         const ctx = document.getElementById("growthChart").getContext("2d");
         const grad = ctx.createLinearGradient(0, 0, 0, 180);
         grad.addColorStop(0, "rgba(29,161,242,0.18)");
@@ -920,15 +807,18 @@
             labels,
             datasets: [
               {
+                label: 'New Users',
                 data,
                 borderColor: "#1da1f2",
                 borderWidth: 2.5,
                 backgroundColor: grad,
                 fill: true,
                 tension: 0.4,
-                pointRadius: 0,
-                pointHoverRadius: 5,
-                pointHoverBackgroundColor: "#1da1f2",
+                pointRadius: 4,
+                pointBackgroundColor: "#fff",
+                pointBorderColor: "#1da1f2",
+                pointBorderWidth: 2,
+                pointHoverRadius: 6,
               },
             ],
           },
@@ -951,10 +841,6 @@
                 },
                 padding: 10,
                 cornerRadius: 12,
-                callbacks: {
-                  label: (ctx) =>
-                    " " + ctx.parsed.y.toLocaleString() + " users",
-                },
               },
             },
             scales: {
@@ -971,10 +857,12 @@
                 border: { display: false },
               },
               y: {
+                beginAtZero: true,
                 grid: { color: "#f3f4f6" },
                 ticks: {
                   font: { family: "Plus Jakarta Sans", size: 10 },
                   color: "#9ca3af",
+                  stepSize: 1
                 },
                 border: { display: false },
               },
@@ -983,25 +871,25 @@
         });
       }
 
-      function switchPeriod(btn, period) {
-        document
-          .querySelectorAll(".period-btn")
-          .forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        renderGrowthChart(period);
-      }
-
       // ── Category Donut Chart ───────────────────────────────────────────────────
       function renderCategoryChart() {
         const ctx = document.getElementById("categoryChart").getContext("2d");
+        
+        // Calculate percentages
+        const total = CATEGORIES.reduce((acc, c) => acc + c.value, 0) || 1;
+        const processedCategories = CATEGORIES.map(c => ({
+          ...c,
+          pct: Math.round((c.value / total) * 100)
+        }));
+
         new Chart(ctx, {
           type: "doughnut",
           data: {
-            labels: CATEGORIES.map((c) => c.label),
+            labels: processedCategories.map((c) => c.label),
             datasets: [
               {
-                data: CATEGORIES.map((c) => c.value),
-                backgroundColor: CATEGORIES.map((c) => c.color),
+                data: processedCategories.map((c) => c.value),
+                backgroundColor: processedCategories.map((c) => c.color),
                 borderWidth: 0,
                 hoverOffset: 4,
               },
@@ -1027,19 +915,19 @@
                 },
                 padding: 10,
                 cornerRadius: 12,
-                callbacks: { label: (ctx) => " " + ctx.parsed + "% of events" },
+                callbacks: { label: (ctx) => ` ${ctx.parsed} events` },
               },
             },
           },
         });
 
         const legend = document.getElementById("category-legend");
-        legend.innerHTML = CATEGORIES.map(
+        legend.innerHTML = processedCategories.map(
           (c) => `
           <div style="display:flex;align-items:center;gap:8px;">
             <div style="width:10px;height:10px;border-radius:3px;background:${c.color};flex-shrink:0;"></div>
             <span style="font-size:12px;font-weight:600;color:#111827;flex:1;">${c.label}</span>
-            <span style="font-size:12px;font-weight:800;color:#111827;">${c.value}%</span>
+            <span style="font-size:12px;font-weight:800;color:#111827;">${c.pct}%</span>
           </div>
         `,
         ).join("");
