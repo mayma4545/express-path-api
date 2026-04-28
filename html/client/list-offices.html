@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              poppins: ["Poppins", "sans-serif"],
+              inter: ["Inter", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="stylesheet" href="../../assets/css/list-offices-departments.css" />
+  </head>
+  <body>
+    <div class="carousel-wrapper">
+      <div class="carousel-brand flex justify-between items-center w-full">
+        <div class="flex items-center gap-2">
+          <div class="logo">OC</div>
+          <div class="carousel-brand-text">
+            OC Campus Navigator<span id="campus-name-header">Osmena Colleges</span>
+          </div>
+        </div>
+        <div class="flex gap-2.5">
+          <button onclick="window.history.back()" class="w-10 h-10 bg-[#1da1f2] rounded-xl shadow-lg border border-[#1da1f2] flex items-center justify-center text-white active:scale-90 transition-transform" title="Go Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+          <a href="/" class="w-10 h-10 bg-[#1da1f2] rounded-xl shadow-lg border border-[#1da1f2] flex items-center justify-center text-white active:scale-90 transition-transform" title="Home">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          </a>
+        </div>
+      </div>
+      <div class="carousel-track" id="carouselTrack">
+        <div class="carousel-slide">
+           <div class="flex items-center justify-center h-full text-white">Loading...</div>
+        </div>
+      </div>
+      <div class="carousel-dots" id="carouselDots"></div>
+    </div>
+
+    <div class="offices-section">
+      <div class="section-header">
+        <div class="section-label">Offices</div>
+        <div class="section-sub">Find the right office on campus</div>
+      </div>
+
+      <div class="office-list" id="office-list">
+        <!-- Offices will be loaded here -->
+        <div class="text-center p-10 text-gray-500">Loading offices...</div>
+      </div>
+    </div>
+
+    <script>
+      const campusId = localStorage.getItem('selectedCampusId');
+      if (!campusId) {
+        window.location.href = '../index.html';
+      }
+
+      // ── DATA LOADING ──
+      async function loadData() {
+        try {
+          // Load Campus Details for Carousel
+          const campusRes = await fetch(`/api/campuses/${campusId}`);
+          const campusResult = await campusRes.json();
+          
+          if (campusResult.success) {
+            const campus = campusResult.data;
+            document.getElementById('campus-name-header').textContent = campus.name;
+            
+            const track = document.getElementById('carouselTrack');
+            const dotsContainer = document.getElementById('carouselDots');
+            track.innerHTML = '';
+            dotsContainer.innerHTML = '';
+            
+            if (campus.CampusPhotos && campus.CampusPhotos.length > 0) {
+              campus.CampusPhotos.forEach((photo, i) => {
+                const slide = document.createElement('div');
+                slide.className = 'carousel-slide';
+                slide.innerHTML = `
+                  <img src="${photo.image_url}" alt="Campus Photo ${i+1}" onerror="this.src='https://images.unsplash.com/photo-1562774053-701939374585?w=800&auto=format&fit=crop'">
+                  <div class="carousel-caption">${campus.name}</div>
+                `;
+                track.appendChild(slide);
+                
+                const dot = document.createElement('div');
+                dot.className = "dot" + (i === 0 ? " active" : "");
+                dot.onclick = () => goTo(i);
+                dotsContainer.appendChild(dot);
+              });
+              startCarousel();
+            } else {
+               track.innerHTML = `
+                <div class="carousel-slide">
+                  <img src="https://images.unsplash.com/photo-1562774053-701939374585?w=800&auto=format&fit=crop" alt="Default">
+                  <div class="carousel-caption">${campus.name}</div>
+                </div>
+              `;
+            }
+          }
+
+          // Load Offices
+          const officeRes = await fetch(`/api/offices/by-campus/${campusId}`);
+          const officeResult = await officeRes.json();
+          
+          if (officeResult.success) {
+            const list = document.getElementById('office-list');
+            list.innerHTML = '';
+            
+            if (officeResult.data.length === 0) {
+              list.innerHTML = '<div class="text-center p-10 text-gray-500">No offices found for this campus.</div>';
+              return;
+            }
+
+            officeResult.data.forEach(office => {
+              const imgUrl = office.OfficePhotos && office.OfficePhotos.length > 0 
+                ? office.OfficePhotos[0].image_url 
+                : 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=200&auto=format&fit=crop';
+              
+              const card = document.createElement('a');
+              card.href = `./office.html?id=${office.id}`;
+              card.innerHTML = `
+                <div class="office-card">
+                  <div class="office-img">
+                    <img src="${imgUrl}" alt="${office.name}" onerror="this.src='https://images.unsplash.com/photo-1497366216548-37526070297c?w=200&auto=format&fit=crop'">
+                  </div>
+                  <div class="office-info">
+                    <div class="office-name">${office.name}</div>
+                    <div class="office-desc">${office.about ? office.about.substring(0, 60) + '...' : 'Academic affairs & approvals'}</div>
+                    <div class="office-badge">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                        <polyline points="9 22 9 12 15 12 15 22" />
+                      </svg>
+                      Main Building
+                    </div>
+                  </div>
+                  <div class="office-arrow">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </div>
+                </div>
+              `;
+              list.appendChild(card);
+            });
+          }
+        } catch (error) {
+          console.error('Error loading data:', error);
+          document.getElementById('office-list').innerHTML = '<div class="text-center p-10 text-red-500">Failed to load offices.</div>';
+        }
+      }
+
+      // ── CAROUSEL LOGIC ──
+      let current = 0;
+      let autoSlide;
+
+      function goTo(idx) {
+        const slides = document.querySelectorAll(".carousel-slide");
+        if (slides.length === 0) return;
+        current = idx;
+        const track = document.getElementById('carouselTrack');
+        track.style.transform = `translateX(-${idx * 100}%)`;
+        document
+          .querySelectorAll(".dot")
+          .forEach((d, i) => d.classList.toggle("active", i === idx));
+      }
+
+      function nextSlide() {
+        const slides = document.querySelectorAll(".carousel-slide");
+        if (slides.length === 0) return;
+        goTo((current + 1) % slides.length);
+      }
+
+      function startCarousel() {
+        if (autoSlide) clearInterval(autoSlide);
+        autoSlide = setInterval(nextSlide, 3500);
+      }
+
+      window.onload = loadData;
+    </script>
+  </body>
+</html>

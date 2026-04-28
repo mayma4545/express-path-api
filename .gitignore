@@ -1,38 +1,3 @@
-# Dependencies
 node_modules/
-
-# Database
-*.sqlite3
-db.sqlite3
-
-# Environment
 .env
-.env.local
-
-# Media files (keep structure)
-media/360_images/*
-media/campus_maps/*
-media/qrcodes/*
-!media/360_images/.gitkeep
-!media/campus_maps/.gitkeep
-!media/qrcodes/.gitkeep
-
-# Logs
-logs/
-*.log
-*.pem
-npm-debug.log*
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-
-# Build
-dist/
-build/
-
-client_secret_2_502340336274-s2q3a73k0p58djlia5mco0homdr8fljl.apps.googleusercontent.com.json
+ca-certificate.crt

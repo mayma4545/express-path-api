@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Manage Staff - OC Mobile Campus Navigator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/js/all.min.js" defer></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/assets/js/admin-auth.js" defer></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#1DA1F2',
+            'primary-dark': '#0d8fd8',
+            'primary-light': '#e8f5fe',
+          },
+          fontFamily: {
+            poppins: ['Poppins', 'sans-serif'],
+            nunito: ['Nunito', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Nunito', sans-serif; background: #f0f8ff; }
+
+    /* Sidebar */
+    #sidebar {
+      transform: translateX(-100%);
+      transition: transform 0.35s cubic-bezier(.4,0,.2,1);
+      z-index: 50;
+    }
+    #sidebar.open { transform: translateX(0); }
+    #overlay {
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.35s;
+      z-index: 40;
+    }
+    #overlay.open { opacity: 1; pointer-events: all; }
+
+    /* Nav item */
+    .nav-item { transition: background 0.2s, color 0.2s; }
+    .nav-item.active { background: #e8f5fe; color: #1DA1F2; font-weight: 700; }
+    .nav-item:not(.active):hover { background: #f0f8ff; }
+
+    /* Modal */
+    .modal {
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s;
+      z-index: 100;
+    }
+    .modal.open { opacity: 1; pointer-events: all; }
+    .modal-content {
+      transform: translateY(20px);
+      transition: transform 0.3s;
+    }
+    .modal.open .modal-content { transform: translateY(0); }
+
+    /* Mobile-only constraint */
+    @media (min-width: 640px) {
+      body { display: flex; align-items: center; justify-content: center; background: #ccc; min-height: 100vh; }
+      #app { max-width: 390px; width: 100%; min-height: 100vh; background: #f0f8ff; position: relative; overflow: hidden; box-shadow: 0 0 40px rgba(0,0,0,0.2); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- App Shell -->
+<div id="app" class="relative min-h-screen overflow-x-hidden">
+
+  <!-- Overlay -->
+  <div id="overlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm" onclick="closeSidebar()"></div>
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="fixed top-0 left-0 h-full w-72 bg-white shadow-2xl flex flex-col">
+    <!-- Sidebar Header -->
+    <div class="bg-primary px-5 py-6 flex items-center gap-3">
+      <div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center shadow-inner overflow-hidden">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="white" fill-opacity="0.15"/>
+          <path d="M16 4L4 10V22L16 28L28 22V10L16 4Z" fill="white" fill-opacity="0.9"/>
+          <path d="M16 4L28 10L16 16L4 10L16 4Z" fill="white"/>
+          <rect x="14.5" y="16" width="3" height="12" fill="white" fill-opacity="0.7"/>
+        </svg>
+      </div>
+      <div>
+        <p class="text-white font-poppins font-700 text-sm leading-tight font-bold">OC Mobile</p>
+        <p class="text-white/80 text-xs font-nunito">Campus Navigator</p>
+      </div>
+    </div>
+
+    <!-- User Info -->
+    <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+        <i class="fa-solid fa-user-tie text-primary text-sm"></i>
+      </div>
+      <div>
+        <p class="text-gray-800 font-semibold text-sm font-poppins">Admin User</p>
+        <p class="text-gray-400 text-xs">Administrator</p>
+      </div>
+    </div>
+
+    <!-- Nav Items -->
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <p class="text-xs text-gray-400 font-semibold uppercase px-3 pb-2 tracking-widest">General</p>
+      
+      <a href="/admin/dashboard" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600 hover:text-primary transition" id="nav-dashboard">
+        <i class="fa-solid fa-chart-line w-5 text-center"></i>
+        <span>Dashboard</span>
+      </a>
+
+      <p class="text-xs text-gray-400 font-semibold uppercase px-3 pt-3 pb-2 tracking-widest">Management</p>
+
+      <a href="/admin/departments" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600 hover:text-primary transition" id="nav-departments">
+        <i class="fa-solid fa-building-columns w-5 text-center"></i>
+        <span>Manage Departments</span>
+      </a>
+      <a href="/admin/offices" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600 hover:text-primary transition" id="nav-offices">
+        <i class="fa-solid fa-door-open w-5 text-center"></i>
+        <span>Manage Offices</span>
+      </a>
+      <a href="/admin/facilities" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600 hover:text-primary transition" id="nav-facilities">
+        <i class="fa-solid fa-building w-5 text-center"></i>
+        <span>Manage Facilities</span>
+      </a>
+      <a href="/admin/navigation" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600 hover:text-primary transition" id="nav-navigation">
+        <i class="fa-solid fa-route w-5 text-center"></i>
+        <span>Manage Navigation</span>
+      </a>
+
+      <!-- Manage Personnel (with sub-menu) -->
+      <div id="nav-personnel-wrapper">
+        <button onclick="togglePersonnelMenu()" id="nav-personnel-btn" class="nav-item active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm bg-transparent border-none text-left cursor-pointer hover:text-primary transition">
+          <i class="fa-solid fa-users w-5 text-center"></i>
+          <span class="flex-1">Manage Personnel</span>
+          <i id="personnel-chevron" class="fa-solid fa-chevron-right text-gray-400 text-xs transition-transform duration-300"></i>
+        </button>
+        <div id="personnel-submenu" class="overflow-hidden transition-all duration-300 max-h-0 pl-10 pr-2 pb-1 space-y-1">
+          <a href="/admin/personnel/head-officer" class="sub-item flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition" id="nav-head-officer">
+            <span class="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0"></span>
+            <span>Head / Officer</span>
+          </a>
+          <a href="/admin/personnel/staff" class="sub-item active flex items-center gap-3 px-3 py-2 rounded-lg text-sm bg-primary/10 text-primary font-bold" id="nav-staff">
+            <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></span>
+            <span>Staff</span>
+          </a>
+        </div>
+      </div>
+
+      <a href="/admin/programs" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600 hover:text-primary transition" id="nav-programs">
+        <i class="fa-solid fa-graduation-cap w-5 text-center"></i>
+        <span>Manage Programs</span>
+      </a>
+      <a href="/admin/events" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600 hover:text-primary transition" id="nav-events">
+        <i class="fa-solid fa-calendar-days w-5 text-center"></i>
+        <span>Manage Events</span>
+      </a>
+    </nav>
+
+    <!-- Logout -->
+    <div class="px-3 py-4 border-t border-gray-100">
+      <a href="/" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-red-500 hover:bg-red-50 transition">
+        <i class="fa-solid fa-right-from-bracket w-5 text-center"></i>
+        <span class="font-semibold">Logout</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <div id="main-content" class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="px-4 py-4 flex items-center justify-between bg-white border-b border-gray-100">
+      <div class="flex items-center gap-3">
+        <button onclick="toggleSidebar()" class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-600">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <h1 class="font-poppins font-bold text-gray-800 text-lg">Staff Members</h1>
+      </div>
+      <button onclick="openModal()" class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/20">
+        <i class="fa-solid fa-plus text-sm"></i>
+      </button>
+    </header>
+
+    <!-- Content -->
+    <main class="flex-1 px-4 py-6 space-y-4">
+      
+      <!-- Search -->
+      <div class="relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+        <input type="text" id="search-input" placeholder="Search staff members..." class="w-full pl-11 pr-4 py-3 rounded-2xl bg-white border border-gray-100 focus:outline-none focus:border-primary/30 transition text-sm shadow-sm" />
+      </div>
+
+      <!-- List -->
+      <div id="staff-list" class="space-y-3">
+        <div class="flex flex-col items-center justify-center py-12 text-gray-400">
+          <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
+          <p class="text-sm">Loading staff members...</p>
+        </div>
+      </div>
+
+      <div id="pagination-container" class="flex items-center justify-center gap-2 mt-6 pb-6"></div>
+
+    </main>
+
+  </div><!-- /main-content -->
+
+  <!-- Modal -->
+  <div id="modal" class="modal fixed inset-0 flex items-end sm:items-center justify-center p-4">
+     <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeModal()"></div>
+     <div class="modal-content relative w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl">
+        <div class="px-6 py-5 border-b border-gray-50 flex items-center justify-between">
+          <h3 id="modal-title" class="font-poppins font-bold text-gray-800 text-lg">Add New Staff Member</h3>
+          <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <form id="staff-form" class="p-6 space-y-4">
+          <input type="hidden" id="staff-id" name="id" />
+          <div class="space-y-1">
+            <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Full Name</label>
+            <input type="text" id="staff-fullname" name="fullname" required placeholder="e.g. Juan Dela Cruz" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-primary/30 transition text-sm outline-none" />
+          </div>
+          <div class="space-y-1">
+            <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Position</label>
+            <input type="text" id="staff-position" name="position" placeholder="e.g. Clerk" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-primary/30 transition text-sm outline-none" />
+          </div>
+          <div class="space-y-1">
+            <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Personnel Category</label>
+            <div class="flex gap-4 p-1 bg-gray-100 rounded-xl">
+              <label class="flex-1">
+                <input type="radio" name="category" value="office" checked class="hidden peer" onchange="toggleCategory('office')" />
+                <div class="py-2.5 text-center text-xs font-bold rounded-lg cursor-pointer transition peer-checked:bg-white peer-checked:text-primary peer-checked:shadow-sm text-gray-500">
+                  Office
+                </div>
+              </label>
+              <label class="flex-1">
+                <input type="radio" name="category" value="department" class="hidden peer" onchange="toggleCategory('department')" />
+                <div class="py-2.5 text-center text-xs font-bold rounded-lg cursor-pointer transition peer-checked:bg-white peer-checked:text-primary peer-checked:shadow-sm text-gray-500">
+                  Department
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div id="assignment-select-group" class="space-y-1">
+            <label id="assignment-label" class="text-xs font-bold text-gray-400 uppercase tracking-wider">Office</label>
+            <select id="staff-assignment" name="offices_id" required class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-primary/30 transition text-sm outline-none appearance-none">
+              <option value="">Select Office</option>
+              <!-- Options will be loaded here -->
+            </select>
+          </div>
+          <div class="space-y-1">
+            <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Photo</label>
+            <div class="flex items-center gap-4">
+              <div id="image-preview" class="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400 text-xl border-2 border-dashed border-gray-200 overflow-hidden relative">
+                <i class="fa-solid fa-user"></i>
+              </div>
+              <div class="flex flex-col gap-2">
+                <label for="staff-image" class="px-4 py-2 rounded-lg bg-primary/10 text-primary text-xs font-bold cursor-pointer hover:bg-primary/20 transition inline-block text-center">
+                  Upload Photo
+                </label>
+                <input type="file" id="staff-image" name="image" accept="image/*" class="hidden" onchange="previewImage(event)" />
+                <button type="button" onclick="removeImage()" id="remove-img-btn" class="hidden text-[10px] font-bold text-red-400 hover:text-red-500 transition">Remove Photo</button>
+              </div>
+            </div>
+          </div>
+        </form>
+        <div class="p-6 bg-gray-50 flex gap-3">
+          <button onclick="closeModal()" class="flex-1 py-3.5 rounded-2xl font-bold text-gray-500 text-sm hover:bg-gray-100 transition">Cancel</button>
+          <button type="submit" form="staff-form" id="save-btn" class="flex-[2] py-3.5 rounded-2xl bg-primary text-white font-bold text-sm shadow-lg shadow-primary/20 hover:bg-primary-dark transition">Save</button>
+        </div>
+     </div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+  let staffMembers = [];
+  let filteredStaff = [];
+  let offices = [];
+  let departments_list = []; // Renamed from departments to avoid collision
+  let currentMode = 'add';
+  const ITEMS_PER_PAGE = 6;
+  let currentPage = 1;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadOffices();
+    loadDepartments();
+    loadStaff();
+    document.getElementById('staff-form').addEventListener('submit', handleFormSubmit);
+    document.getElementById('search-input').addEventListener('input', handleSearch);
+    
+    // Auto-open personnel menu
+    const submenu = document.getElementById('personnel-submenu');
+    submenu.style.maxHeight = '200px';
+    document.getElementById('personnel-chevron').style.transform = 'rotate(90deg)';
+  });
+
+  async function loadOffices() {
+    try {
+      const res = await fetch('/api/offices');
+      const data = await res.json();
+      if (data.success) {
+        offices = data.data;
+        // If current category is office, refresh the select
+        const currentCategory = document.querySelector('input[name="category"]:checked').value;
+        if (currentCategory === 'office') toggleCategory('office');
+      }
+    } catch (err) {
+      console.error('Failed to load offices', err);
+    }
+  }
+
+  async function loadDepartments() {
+    try {
+      const res = await fetch('/api/departments');
+      const data = await res.json();
+      if (data.success) {
+        departments_list = data.data;
+        // If current category is department, refresh the select
+        const currentCategory = document.querySelector('input[name="category"]:checked').value;
+        if (currentCategory === 'department') toggleCategory('department');
+      }
+    } catch (err) {
+      console.error('Failed to load departments', err);
+    }
+  }
+
+  function toggleCategory(category) {
+    const label = document.getElementById('assignment-label');
+    const select = document.getElementById('staff-assignment');
+    
+    if (category === 'office') {
+      label.textContent = 'Office';
+      select.name = 'offices_id';
+      select.innerHTML = '<option value="">Select Office</option>' + 
+        offices.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+    } else {
+      label.textContent = 'Department';
+      select.name = 'department_id';
+      select.innerHTML = '<option value="">Select Department</option>' + 
+        departments_list.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+    }
+  }
+
+  async function loadStaff() {
+    try {
+      const res = await fetch('/api/staff');
+      const data = await res.json();
+      if (data.success) {
+        staffMembers = data.data;
+        filteredStaff = [...staffMembers];
+        renderStaff();
+      }
+    } catch (err) {
+      console.error('Failed to load staff', err);
+      document.getElementById('staff-list').innerHTML = '<p class="text-center text-red-500 py-4">Error loading data</p>';
+    }
+  }
+
+  function renderStaff() {
+    const list = document.getElementById('staff-list');
+    if (filteredStaff.length === 0) {
+      list.innerHTML = '<p class="text-center text-gray-400 py-12">No staff members found</p>';
+      renderPagination();
+      return;
+    }
+
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const itemsToShow = filteredStaff.slice(startIndex, endIndex);
+
+    list.innerHTML = itemsToShow.map(member => {
+      let assignment = 'No Assignment';
+      if (member.Office) assignment = member.Office.name;
+      else if (member.Department) assignment = member.Department.name;
+
+      return `
+        <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 animate-fade-in">
+          <div class="w-14 h-14 rounded-xl bg-gray-50 flex-shrink-0 flex items-center justify-center overflow-hidden border border-gray-100">
+             ${member.image_url ? 
+               `<img src="${member.image_url}" class="w-full h-full object-cover" alt="${member.fullname}">` : 
+               `<i class="fa-solid fa-id-badge text-primary text-xl"></i>`
+             }
+          </div>
+          <div class="flex-1 min-w-0">
+            <h4 class="font-bold text-gray-800 text-sm truncate">${member.fullname}</h4>
+            <p class="text-[10px] font-bold text-primary uppercase mb-0.5">${member.position || 'No Position'}</p>
+            <p class="text-xs text-gray-500 truncate">${assignment}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="w-8 h-8 rounded-lg bg-gray-50 text-gray-400 flex items-center justify-center hover:text-primary transition" onclick="openEditModal(${member.id})">
+              <i class="fa-solid fa-pen text-xs"></i>
+            </button>
+            <button class="w-8 h-8 rounded-lg bg-gray-50 text-gray-400 flex items-center justify-center hover:text-red-500 transition" onclick="confirmDelete(${member.id})">
+              <i class="fa-solid fa-trash text-xs"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    renderPagination();
+  }
+
+  function renderPagination() {
+    const container = document.getElementById('pagination-container');
+    if (!container) return;
+
+    const totalPages = Math.ceil(filteredStaff.length / ITEMS_PER_PAGE);
+    
+    if (totalPages <= 1) {
+      container.innerHTML = '';
+      return;
+    }
+
+    let html = '';
+    
+    // Prev Button
+    html += `
+      <button onclick="changePage(${currentPage - 1})" 
+              class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-gray-100 text-gray-500 hover:text-primary transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              ${currentPage === 1 ? 'disabled' : ''}>
+        <i class="fa-solid fa-chevron-left text-xs"></i>
+      </button>
+    `;
+
+    // Calculate pagination range (show max 3 pages centered around current)
+    let startPage = Math.max(1, currentPage - 1);
+    let endPage = Math.min(totalPages, currentPage + 1);
+
+    if (currentPage === 1) {
+      endPage = Math.min(totalPages, 3);
+    }
+    if (currentPage === totalPages) {
+      startPage = Math.max(1, totalPages - 2);
+    }
+
+    // Page Numbers
+    for (let i = startPage; i <= endPage; i++) {
+      html += `
+        <button onclick="changePage(${i})" 
+                class="w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition shadow-sm ${
+                  currentPage === i 
+                    ? 'bg-primary text-white border-transparent' 
+                    : 'bg-white border border-gray-100 text-gray-600 hover:text-primary'
+                }">
+          ${i}
+        </button>
+      `;
+    }
+
+    // Next Button
+    html += `
+      <button onclick="changePage(${currentPage + 1})" 
+              class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-gray-100 text-gray-500 hover:text-primary transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              ${currentPage === totalPages ? 'disabled' : ''}>
+        <i class="fa-solid fa-chevron-right text-xs"></i>
+      </button>
+    `;
+
+    container.innerHTML = html;
+  }
+
+  function changePage(page) {
+    const totalPages = Math.ceil(filteredStaff.length / ITEMS_PER_PAGE);
+    if (page < 1 || page > totalPages) return;
+    currentPage = page;
+    renderStaff();
+    const mainContent = document.getElementById('main-content');
+    if(mainContent) {
+      mainContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  async function handleFormSubmit(e) {
+    e.preventDefault();
+    const btn = document.getElementById('save-btn');
+    const formData = new FormData(e.target);
+    const id = document.getElementById('staff-id').value;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving...';
+
+    const url = currentMode === 'add' ? '/api/staff' : `/api/staff/${id}`;
+    const method = currentMode === 'add' ? 'POST' : 'PUT';
+
+    try {
+      const res = await fetch(url, {
+        method: method,
+        body: formData
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        closeModal();
+        loadStaff();
+      } else {
+        alert(data.message || 'Action failed');
+      }
+    } catch (err) {
+      console.error('Error saving staff', err);
+      alert('Network error occurred');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save';
+    }
+  }
+
+  async function confirmDelete(id) {
+    if (!confirm('Are you sure you want to delete this staff member?')) return;
+    try {
+      const res = await fetch(`/api/staff/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) loadStaff();
+      else alert(data.message || 'Delete failed');
+    } catch (err) {
+      console.error('Error deleting staff member', err);
+    }
+  }
+
+  function handleSearch(e) {
+    const term = e.target.value.toLowerCase();
+    
+    if (term.trim() === '') {
+      filteredStaff = [...staffMembers];
+    } else {
+      filteredStaff = staffMembers.filter(s => {
+        const matchName = s.fullname.toLowerCase().includes(term);
+        const matchPosition = s.position ? s.position.toLowerCase().includes(term) : false;
+        
+        let matchAssignment = false;
+        if (s.Office && s.Office.name) {
+          matchAssignment = s.Office.name.toLowerCase().includes(term);
+        } else if (s.Department && s.Department.name) {
+          matchAssignment = s.Department.name.toLowerCase().includes(term);
+        }
+
+        return matchName || matchPosition || matchAssignment;
+      });
+    }
+    
+    currentPage = 1;
+    renderStaff();
+  }
+
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('overlay').classList.toggle('open');
+  }
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('open');
+  }
+
+  function togglePersonnelMenu() {
+    const submenu = document.getElementById('personnel-submenu');
+    const chevron = document.getElementById('personnel-chevron');
+    if (submenu.style.maxHeight === '0px' || !submenu.style.maxHeight) {
+      submenu.style.maxHeight = '200px';
+      chevron.style.transform = 'rotate(90deg)';
+    } else {
+      submenu.style.maxHeight = '0px';
+      chevron.style.transform = 'rotate(0deg)';
+    }
+  }
+
+  function openModal(mode = 'add') {
+    currentMode = mode;
+    const modal = document.getElementById('modal');
+    const title = document.getElementById('modal-title');
+    const form = document.getElementById('staff-form');
+    
+    form.reset();
+    document.querySelector('input[name="category"][value="office"]').checked = true;
+    toggleCategory('office');
+    
+    document.getElementById('staff-id').value = '';
+    document.getElementById('image-preview').innerHTML = '<i class="fa-solid fa-user"></i>';
+    document.getElementById('remove-img-btn').classList.add('hidden');
+    
+    title.textContent = mode === 'edit' ? 'Edit Staff member' : 'Add New Staff member';
+    modal.classList.add('open');
+  }
+
+  function openEditModal(id) {
+    const member = staffMembers.find(m => m.id === id);
+    if (!member) return;
+    openModal('edit');
+    document.getElementById('staff-id').value = member.id;
+    document.getElementById('staff-fullname').value = member.fullname;
+    document.getElementById('staff-position').value = member.position || '';
+    
+    if (member.department_id) {
+      document.querySelector('input[name="category"][value="department"]').checked = true;
+      toggleCategory('department');
+      document.getElementById('staff-assignment').value = member.department_id;
+    } else {
+      document.querySelector('input[name="category"][value="office"]').checked = true;
+      toggleCategory('office');
+      document.getElementById('staff-assignment').value = member.offices_id || '';
+    }
+    
+    if (member.image_url) {
+      document.getElementById('image-preview').innerHTML = `<img src="${member.image_url}" class="w-full h-full object-cover">`;
+      document.getElementById('remove-img-btn').classList.remove('hidden');
+    }
+  }
+
+  function closeModal() {
+    document.getElementById('modal').classList.remove('open');
+  }
+
+  function previewImage(event) {
+    const reader = new FileReader();
+    reader.onload = function() {
+      const preview = document.getElementById('image-preview');
+      preview.innerHTML = `<img src="${reader.result}" class="w-full h-full object-cover">`;
+      document.getElementById('remove-img-btn').classList.remove('hidden');
+    };
+    if (event.target.files[0]) {
+      reader.readAsDataURL(event.target.files[0]);
+    }
+  }
+
+  function removeImage() {
+    document.getElementById('staff-image').value = '';
+    document.getElementById('image-preview').innerHTML = '<i class="fa-solid fa-user"></i>';
+    document.getElementById('remove-img-btn').classList.add('hidden');
+  }
+</script>
+
+<style>
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out forwards;
+  }
+  .sub-item.active {
+    background-color: #e8f5fe;
+    color: #1DA1F2;
+    font-weight: 700;
+  }
+</style>
+
+</body>
+</html>
+

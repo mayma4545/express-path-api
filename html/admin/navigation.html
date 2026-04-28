@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Manage Navigation - OC Mobile Campus Navigator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/js/all.min.js" defer></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/assets/js/admin-auth.js" defer></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#1DA1F2',
+            'primary-dark': '#0d8fd8',
+            'primary-light': '#e8f5fe',
+          },
+          fontFamily: {
+            poppins: ['Poppins', 'sans-serif'],
+            nunito: ['Nunito', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Nunito', sans-serif; background: #f0f8ff; }
+
+    /* Sidebar */
+    #sidebar {
+      transform: translateX(-100%);
+      transition: transform 0.35s cubic-bezier(.4,0,.2,1);
+      z-index: 50;
+    }
+    #sidebar.open { transform: translateX(0); }
+    #overlay {
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.35s;
+      z-index: 40;
+    }
+    #overlay.open { opacity: 1; pointer-events: all; }
+
+    /* Nav item */
+    .nav-item { transition: background 0.2s, color 0.2s; }
+    .nav-item.active { background: #e8f5fe; color: #1DA1F2; font-weight: 700; }
+    .nav-item:not(.active):hover { background: #f0f8ff; }
+
+    /* Modal */
+    .modal {
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s;
+      z-index: 100;
+    }
+    .modal.open { opacity: 1; pointer-events: all; }
+    .modal-content {
+      transform: translateY(20px);
+      transition: transform 0.3s;
+    }
+    .modal.open .modal-content { transform: translateY(0); }
+
+    /* Mobile-only constraint */
+    @media (min-width: 640px) {
+      body { display: flex; align-items: center; justify-content: center; background: #ccc; min-height: 100vh; }
+      #app { max-width: 390px; width: 100%; min-height: 100vh; background: #f0f8ff; position: relative; overflow: hidden; box-shadow: 0 0 40px rgba(0,0,0,0.2); }
+    }
+  </style>
+</head>
+<body>
+
+<div id="app" class="relative min-h-screen overflow-x-hidden">
+
+  <div id="overlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm" onclick="closeSidebar()"></div>
+
+  <aside id="sidebar" class="fixed top-0 left-0 h-full w-72 bg-white shadow-2xl flex flex-col">
+    <div class="bg-primary px-5 py-6 flex items-center gap-3">
+      <div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center shadow-inner overflow-hidden">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="white" fill-opacity="0.15"/>
+          <path d="M16 4L4 10V22L16 28L28 22V10L16 4Z" fill="white" fill-opacity="0.9"/>
+          <path d="M16 4L28 10L16 16L4 10L16 4Z" fill="white"/>
+          <rect x="14.5" y="16" width="3" height="12" fill="white" fill-opacity="0.7"/>
+        </svg>
+      </div>
+      <div>
+        <p class="text-white font-poppins font-700 text-sm leading-tight font-bold">OC Mobile</p>
+        <p class="text-white/80 text-xs font-nunito">Campus Navigator</p>
+      </div>
+    </div>
+
+    <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+        <i class="fa-solid fa-user-tie text-primary text-sm"></i>
+      </div>
+      <div>
+        <p class="text-gray-800 font-semibold text-sm font-poppins">Admin User</p>
+        <p class="text-gray-400 text-xs">Administrator</p>
+      </div>
+    </div>
+
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <p class="text-xs text-gray-400 font-semibold uppercase px-3 pb-2 tracking-widest">General</p>
+      <a href="/admin/dashboard" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600">
+        <i class="fa-solid fa-chart-line w-5 text-center"></i>
+        <span>Dashboard</span>
+      </a>
+
+      <p class="text-xs text-gray-400 font-semibold uppercase px-3 pt-3 pb-2 tracking-widest">Management</p>
+      <a href="/admin/departments" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600">
+        <i class="fa-solid fa-building-columns w-5 text-center"></i>
+        <span>Manage Departments</span>
+      </a>
+      <a href="/admin/offices" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600">
+        <i class="fa-solid fa-door-open w-5 text-center"></i>
+        <span>Manage Offices</span>
+      </a>
+      <a href="/admin/facilities" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600">
+        <i class="fa-solid fa-building w-5 text-center"></i>
+        <span>Manage Facilities</span>
+      </a>
+      <a href="/admin/navigation" class="nav-item active flex items-center gap-3 px-4 py-3 rounded-xl text-sm">
+        <i class="fa-solid fa-route w-5 text-center"></i>
+        <span>Manage Navigation</span>
+      </a>
+      <a href="/admin/programs" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600">
+        <i class="fa-solid fa-graduation-cap w-5 text-center"></i>
+        <span>Manage Programs</span>
+      </a>
+      <a href="/admin/events" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600">
+        <i class="fa-solid fa-calendar-days w-5 text-center"></i>
+        <span>Manage Events</span>
+      </a>
+    </nav>
+
+    <div class="px-3 py-4 border-t border-gray-100">
+      <a href="/" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-red-500 hover:bg-red-50 transition">
+        <i class="fa-solid fa-right-from-bracket w-5 text-center"></i>
+        <span class="font-semibold">Logout</span>
+      </a>
+    </div>
+  </aside>
+
+  <div id="main-content" class="min-h-screen flex flex-col">
+    <header class="px-4 py-4 flex items-center justify-between bg-white border-b border-gray-100">
+      <div class="flex items-center gap-3">
+        <button onclick="toggleSidebar()" class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-600">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <h1 class="font-poppins font-bold text-gray-800 text-lg">Navigation</h1>
+      </div>
+      <div class="flex gap-2.5">
+        <button onclick="window.history.back()" class="w-10 h-10 bg-[#1da1f2] rounded-xl shadow-lg border border-[#1da1f2] flex items-center justify-center text-white active:scale-90 transition-transform" title="Go Back">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <a href="/" class="w-10 h-10 bg-[#1da1f2] rounded-xl shadow-lg border border-[#1da1f2] flex items-center justify-center text-white active:scale-90 transition-transform" title="Home">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        </a>
+      </div>
+    </header>
+
+    <main class="flex-1 px-4 py-6 space-y-6">
+      <!-- Search Destination -->
+      <section class="space-y-3">
+        <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Step 1: Choose Destination</label>
+        <div class="relative">
+          <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+          <input type="text" id="dest-search" placeholder="Search department, office, event..." class="w-full pl-11 pr-4 py-3 rounded-2xl bg-white border border-gray-100 focus:outline-none focus:border-primary/30 transition text-sm shadow-sm" />
+          
+          <div id="search-results" class="hidden absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 z-30 max-h-60 overflow-y-auto"></div>
+        </div>
+        
+        <div id="selected-dest" class="hidden bg-primary-light border border-primary/20 p-4 rounded-2xl flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                    <i id="dest-icon" class="fa-solid fa-location-dot"></i>
+                </div>
+                <div>
+                    <p id="dest-name" class="font-bold text-gray-800 text-sm"></p>
+                    <p id="dest-type" class="text-[10px] font-bold text-primary uppercase"></p>
+                </div>
+            </div>
+            <button onclick="clearDestination()" class="text-gray-400 hover:text-red-500 transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+      </section>
+
+      <!-- Steps Section -->
+      <section id="steps-section" class="hidden space-y-4">
+        <div class="flex items-center justify-between">
+            <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Step 2: Navigation Steps</label>
+            <button onclick="openModal()" class="text-xs font-bold text-primary flex items-center gap-1 hover:underline">
+                <i class="fa-solid fa-plus text-[10px]"></i> Add Step
+            </button>
+        </div>
+
+        <div id="steps-list" class="space-y-3">
+            <!-- Steps will be loaded here -->
+        </div>
+      </section>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="flex flex-col items-center justify-center py-20 text-gray-400 text-center">
+          <div class="w-20 h-20 rounded-full bg-gray-50 flex items-center justify-center mb-4">
+            <i class="fa-solid fa-route text-3xl"></i>
+          </div>
+          <p class="text-sm font-semibold">Select a destination to manage<br>its navigation path.</p>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal" class="modal fixed inset-0 flex items-end sm:items-center justify-center p-4">
+     <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeModal()"></div>
+     <div class="modal-content relative w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl">
+        <div class="px-6 py-5 border-b border-gray-50 flex items-center justify-between">
+          <h3 id="modal-title" class="font-poppins font-bold text-gray-800 text-lg">Add Navigation Step</h3>
+          <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <form id="step-form" class="p-6 space-y-4">
+          <input type="hidden" id="step-id" name="id" />
+          <input type="hidden" id="form-node-id" name="node_id" />
+          <input type="hidden" id="form-type" name="type" />
+          
+          <div class="space-y-1">
+            <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Order / Step Number</label>
+            <input type="number" id="step-order" name="step_order" required placeholder="e.g. 1" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-primary/30 transition text-sm outline-none" />
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Directional Text</label>
+            <textarea id="directional-text" name="directional_text" required placeholder="e.g. Turn right after the entrance gate..." rows="3" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-primary/30 transition text-sm outline-none resize-none"></textarea>
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Directional Image</label>
+            <div id="image-preview" class="aspect-video rounded-xl bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden mb-2 group relative">
+                <i class="fa-solid fa-image text-gray-300 text-3xl group-hover:hidden"></i>
+                <img id="preview-img" class="hidden w-full h-full object-cover">
+                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                    <p class="text-white text-xs font-bold">Change Image</p>
+                </div>
+                <input type="file" id="step-image" name="image" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="previewFile(event)" />
+            </div>
+            <p class="text-[10px] text-gray-400">Recommended: Landscape orientation images.</p>
+          </div>
+        </form>
+        <div class="p-6 bg-gray-50 flex gap-3">
+          <button onclick="closeModal()" class="flex-1 py-3.5 rounded-2xl font-bold text-gray-500 text-sm hover:bg-gray-100 transition">Cancel</button>
+          <button type="submit" form="step-form" id="save-btn" class="flex-[2] py-3.5 rounded-2xl bg-primary text-white font-bold text-sm shadow-lg shadow-primary/20 hover:bg-primary-dark transition">Save Step</button>
+        </div>
+     </div>
+  </div>
+
+</div>
+
+<script>
+  let selectedDestination = null;
+  let navigationSteps = [];
+  let currentMode = 'add';
+  let searchTimeout = null;
+
+  // ===== Lifecycle =====
+  document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('dest-search');
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => handleSearch(e.target.value), 300);
+    });
+
+    document.getElementById('step-form').addEventListener('submit', handleFormSubmit);
+  });
+
+  // ===== Search Logic =====
+  async function handleSearch(q) {
+    const resultsContainer = document.getElementById('search-results');
+    if (!q) {
+        resultsContainer.classList.add('hidden');
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/destinations/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        
+        if (data.success && data.data.length > 0) {
+            resultsContainer.innerHTML = data.data.map(item => `
+                <div onclick='selectDestination(${JSON.stringify(item).replace(/'/g, "&apos;")})' class="px-4 py-3 hover:bg-primary-light cursor-pointer flex items-center gap-3 transition border-b border-gray-50 last:border-0">
+                    <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400">
+                        <i class="fa-solid ${getIcon(item.type)}"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-gray-800">${item.name}</p>
+                        <p class="text-[10px] font-bold text-primary uppercase">${item.type}</p>
+                    </div>
+                </div>
+            `).join('');
+            resultsContainer.classList.remove('hidden');
+        } else {
+            resultsContainer.innerHTML = '<p class="p-4 text-center text-xs text-gray-400">No matches found</p>';
+            resultsContainer.classList.remove('hidden');
+        }
+    } catch (err) {
+        console.error('Search failed', err);
+    }
+  }
+
+  function getIcon(type) {
+    switch(type) {
+        case 'department': return 'fa-building-columns';
+        case 'office': return 'fa-door-open';
+        case 'facility': return 'fa-building';
+        case 'event': return 'fa-calendar-days';
+        default: return 'fa-location-dot';
+    }
+  }
+
+  function selectDestination(dest) {
+    selectedDestination = dest;
+    document.getElementById('dest-search').value = '';
+    document.getElementById('search-results').classList.add('hidden');
+    
+    document.getElementById('dest-name').textContent = dest.name;
+    document.getElementById('dest-type').textContent = dest.type;
+    document.getElementById('dest-icon').className = `fa-solid ${getIcon(dest.type)}`;
+    
+    document.getElementById('selected-dest').classList.remove('hidden');
+    document.getElementById('steps-section').classList.remove('hidden');
+    document.getElementById('empty-state').classList.add('hidden');
+    
+    loadNavigationSteps();
+  }
+
+  function clearDestination() {
+    selectedDestination = null;
+    document.getElementById('selected-dest').classList.add('hidden');
+    document.getElementById('steps-section').classList.add('hidden');
+    document.getElementById('empty-state').classList.remove('hidden');
+    navigationSteps = [];
+    renderSteps();
+  }
+
+  // ===== Navigation Logic =====
+  async function loadNavigationSteps() {
+    if (!selectedDestination) return;
+    
+    try {
+        const { type, id } = selectedDestination;
+        const res = await fetch(`/api/navigations/${type}/${id}`);
+        const data = await res.json();
+        
+        if (data.success) {
+            navigationSteps = data.data;
+            renderSteps();
+        }
+    } catch (err) {
+        console.error('Failed to load steps', err);
+    }
+  }
+
+  function renderSteps() {
+    const list = document.getElementById('steps-list');
+    if (navigationSteps.length === 0) {
+        list.innerHTML = `
+            <div class="py-12 border-2 border-dashed border-gray-100 rounded-2xl flex flex-col items-center justify-center text-gray-400">
+                <i class="fa-solid fa-folder-open mb-2 text-xl"></i>
+                <p class="text-xs">No steps added yet.</p>
+            </div>
+        `;
+        return;
+    }
+
+    list.innerHTML = navigationSteps.map(step => `
+        <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm flex flex-col animate-fade-in">
+            <div class="aspect-video w-full bg-gray-50 relative">
+                ${step.image_url ? 
+                    `<img src="${step.image_url}" class="w-full h-full object-cover">` : 
+                    `<div class="w-full h-full flex items-center justify-center text-gray-200"><i class="fa-solid fa-image text-3xl"></i></div>`
+                }
+                <div class="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1.5 rounded-full">
+                    Step ${step.step_order}
+                </div>
+                <div class="absolute top-2 right-2 flex gap-2">
+                    <button onclick="openEditModal(${step.id})" class="w-8 h-8 rounded-lg bg-white/90 text-gray-600 flex items-center justify-center shadow-sm hover:text-primary transition">
+                        <i class="fa-solid fa-pen text-xs"></i>
+                    </button>
+                    <button onclick="confirmDelete(${step.id})" class="w-8 h-8 rounded-lg bg-white/90 text-red-500 flex items-center justify-center shadow-sm hover:bg-red-50 transition">
+                        <i class="fa-solid fa-trash text-xs"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="p-4">
+                <p class="text-sm text-gray-700 leading-relaxed">${step.directional_text}</p>
+            </div>
+        </div>
+    `).join('');
+  }
+
+  // ===== CRUD =====
+  async function handleFormSubmit(e) {
+    e.preventDefault();
+    const btn = document.getElementById('save-btn');
+    const id = document.getElementById('step-id').value;
+    
+    // Use FormData for multipart/form-data
+    const formData = new FormData();
+    formData.append('node_id', document.getElementById('form-node-id').value);
+    formData.append('type', document.getElementById('form-type').value);
+    formData.append('step_order', document.getElementById('step-order').value);
+    formData.append('directional_text', document.getElementById('directional-text').value);
+    
+    const imageFile = document.getElementById('step-image').files[0];
+    if (imageFile) {
+        formData.append('image', imageFile);
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving...';
+
+    const url = currentMode === 'add' ? '/api/navigations' : `/api/navigations/${id}`;
+    const method = currentMode === 'add' ? 'POST' : 'PUT';
+
+    try {
+        const res = await fetch(url, { method, body: formData });
+        const data = await res.json();
+        
+        if (data.success) {
+            closeModal();
+            loadNavigationSteps();
+        } else {
+            alert(data.message || 'Action failed');
+        }
+    } catch (err) {
+        console.error('Save failed', err);
+        alert('Network error or request timed out');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save Step';
+    }
+  }
+
+  async function confirmDelete(id) {
+    if (!confirm('Delete this navigation step?')) return;
+    try {
+        const res = await fetch(`/api/navigations/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) loadNavigationSteps();
+    } catch (err) { console.error(err); }
+  }
+
+  // ===== UI Helpers =====
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('overlay').classList.toggle('open');
+  }
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('open');
+  }
+
+  function openModal(mode = 'add') {
+    currentMode = mode;
+    const modal = document.getElementById('modal');
+    const form = document.getElementById('step-form');
+    const previewImg = document.getElementById('preview-img');
+    const placeholderIcon = document.querySelector('#image-preview i');
+
+    if (form) form.reset();
+    if (previewImg) previewImg.classList.add('hidden');
+    if (placeholderIcon) placeholderIcon.classList.remove('hidden');
+    
+    if (!selectedDestination) {
+        alert('Please select a destination first');
+        return;
+    }
+
+    const stepIdInput = document.getElementById('step-id');
+    const nodeIdInput = document.getElementById('form-node-id');
+    const typeInput = document.getElementById('form-type');
+
+    if (stepIdInput) stepIdInput.value = '';
+    if (nodeIdInput) nodeIdInput.value = selectedDestination.id;
+    if (typeInput) typeInput.value = selectedDestination.type;
+    
+    // Default order to next available
+    if (mode === 'add') {
+        const nextOrder = navigationSteps.length > 0 ? 
+            Math.max(...navigationSteps.map(s => s.step_order)) + 1 : 1;
+        const orderInput = document.getElementById('step-order');
+        if (orderInput) orderInput.value = nextOrder;
+    }
+
+    const modalTitle = document.getElementById('modal-title');
+    if (modalTitle) modalTitle.textContent = mode === 'edit' ? 'Edit Step' : 'Add Step';
+    if (modal) modal.classList.add('open');
+  }
+
+  function openEditModal(id) {
+    const step = navigationSteps.find(s => s.id === id);
+    if (!step) return;
+
+    openModal('edit');
+    document.getElementById('step-id').value = step.id;
+    document.getElementById('step-order').value = step.step_order;
+    document.getElementById('directional-text').value = step.directional_text;
+    
+    if (step.image_url) {
+        const img = document.getElementById('preview-img');
+        img.src = step.image_url;
+        img.classList.remove('hidden');
+        document.querySelector('.group i').classList.add('hidden');
+    }
+  }
+
+  function closeModal() {
+    document.getElementById('modal').classList.remove('open');
+  }
+
+  function previewFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        const img = document.getElementById('preview-img');
+        const icon = document.querySelector('.group i');
+        if (img) {
+            img.src = event.target.result;
+            img.classList.remove('hidden');
+        }
+        if (icon) icon.classList.add('hidden');
+    };
+    reader.readAsDataURL(file);
+  }
+</script>
+
+<style>
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out forwards;
+  }
+</style>
+
+</body>
+</html>
+

@@ -1,0 +1,21 @@
+{
+  "name": "OHH SEE",
+  "short_name": "OHH SEE",
+  "description": "OC Mobile Campus Navigator",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1DA1F2",
+  "icons": [
+    {
+      "src": "/assets/img/oc.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/img/oc.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

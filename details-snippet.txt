@@ -1,7 +1,0 @@
-  
-    <script src="/static/js/events-data.js"></script>
-    <script>
->     const eventId = parseInt(sessionStorage.getItem('currentEventId'), 10);
-      const ev = [...EVENTS, ...ONGOING_EVENTS].find(e => e.id === eventId);
-  
-      if (!ev) {

@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Manage Events - OC Mobile Campus Navigator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/js/all.min.js" defer></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/assets/js/admin-auth.js" defer></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#1DA1F2',
+            'primary-dark': '#0d8fd8',
+            'primary-light': '#e8f5fe',
+          },
+          fontFamily: {
+            poppins: ['Poppins', 'sans-serif'],
+            nunito: ['Nunito', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Nunito', sans-serif; background: #f0f8ff; }
+
+    /* Sidebar */
+    #sidebar {
+      transform: translateX(-100%);
+      transition: transform 0.35s cubic-bezier(.4,0,.2,1);
+      z-index: 50;
+    }
+    #sidebar.open { transform: translateX(0); }
+    #overlay {
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.35s;
+      z-index: 40;
+    }
+    #overlay.open { opacity: 1; pointer-events: all; }
+
+    /* Nav item */
+    .nav-item { transition: background 0.2s, color 0.2s; }
+    .nav-item.active { background: #e8f5fe; color: #1DA1F2; font-weight: 700; }
+    .nav-item:not(.active):hover { background: #f0f8ff; }
+
+    /* Modal */
+    .modal {
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s;
+      z-index: 100;
+    }
+    .modal.open { opacity: 1; pointer-events: all; }
+    .modal-content {
+      transform: translateY(20px);
+      transition: transform 0.3s;
+    }
+    .modal.open .modal-content { transform: translateY(0); }
+
+    /* Mobile-only constraint */
+    @media (min-width: 640px) {
+      body { display: flex; align-items: center; justify-content: center; background: #ccc; min-height: 100vh; }
+      #app { max-width: 390px; width: 100%; min-height: 100vh; background: #f0f8ff; position: relative; overflow: hidden; box-shadow: 0 0 40px rgba(0,0,0,0.2); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- App Shell -->
+<div id="app" class="relative min-h-screen overflow-x-hidden">
+
+  <!-- Overlay -->
+  <div id="overlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm" onclick="closeSidebar()"></div>
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="fixed top-0 left-0 h-full w-72 bg-white shadow-2xl flex flex-col">
+    <!-- Sidebar Header -->
+    <div class="bg-primary px-5 py-6 flex items-center gap-3">
+      <div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center shadow-inner overflow-hidden">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="white" fill-opacity="0.15"/>
+          <path d="M16 4L4 10V22L16 28L28 22V10L16 4Z" fill="white" fill-opacity="0.9"/>
+          <path d="M16 4L28 10L16 16L4 10L16 4Z" fill="white"/>
+          <rect x="14.5" y="16" width="3" height="12" fill="white" fill-opacity="0.7"/>
+        </svg>
+      </div>
+      <div>
+        <p class="text-white font-poppins font-700 text-sm leading-tight font-bold">OC Mobile</p>
+        <p class="text-white/80 text-xs font-nunito">Campus Navigator</p>
+      </div>
+    </div>
+
+    <!-- User Info -->
+    <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+        <i class="fa-solid fa-user-tie text-primary text-sm"></i>
+      </div>
+      <div>
+        <p class="text-gray-800 font-semibold text-sm font-poppins">Admin User</p>
+        <p class="text-gray-400 text-xs">Administrator</p>
+      </div>
+    </div>
+
+    <!-- Nav Items -->
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <p class="text-xs text-gray-400 font-semibold uppercase px-3 pb-2 tracking-widest">General</p>
+      
+      <a href="/admin/dashboard" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600" id="nav-dashboard">
+        <i class="fa-solid fa-chart-line w-5 text-center"></i>
+        <span>Dashboard</span>
+      </a>
+
+      <p class="text-xs text-gray-400 font-semibold uppercase px-3 pt-3 pb-2 tracking-widest">Management</p>
+      <a href="/admin/departments" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600" id="nav-departments">
+        <i class="fa-solid fa-building-columns w-5 text-center"></i>
+        <span>Manage Departments</span>
+      </a>
+      <a href="/admin/offices" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600" id="nav-offices">
+        <i class="fa-solid fa-door-open w-5 text-center"></i>
+        <span>Manage Offices</span>
+      </a>
+      <a href="/admin/facilities" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600" id="nav-facilities">
+        <i class="fa-solid fa-building w-5 text-center"></i>
+        <span>Manage Facilities</span>
+      </a>
+      <a href="/admin/navigation" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600" id="nav-navigation">
+        <i class="fa-solid fa-route w-5 text-center"></i>
+        <span>Manage Navigation</span>
+      </a>
+
+      <!-- Manage Personnel (with sub-menu) -->
+      <div id="nav-personnel-wrapper">
+        <button onclick="togglePersonnelMenu()" id="nav-personnel-btn" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600 bg-transparent border-none text-left cursor-pointer">
+          <i class="fa-solid fa-users w-5 text-center"></i>
+          <span class="flex-1">Manage Personnel</span>
+          <i id="personnel-chevron" class="fa-solid fa-chevron-right text-gray-400 text-xs transition-transform duration-300"></i>
+        </button>
+        <div id="personnel-submenu" class="overflow-hidden transition-all duration-300 max-h-0">
+          <div class="pl-4 pb-1 flex flex-col gap-0.5">
+            <a href="/admin/personnel/head-officer" class="sub-item flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-500 hover:bg-primary-light hover:text-primary transition" id="nav-head-officer">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></span>
+              <i class="fa-solid fa-user-tie text-primary text-xs w-4 text-center"></i>
+              <span>Head / Officer</span>
+            </a>
+            <a href="/admin/personnel/staff" class="sub-item flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-500 hover:bg-primary-light hover:text-primary transition" id="nav-staff">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></span>
+              <i class="fa-solid fa-id-badge text-primary text-xs w-4 text-center"></i>
+              <span>Staff</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <a href="/admin/programs" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600" id="nav-programs">
+        <i class="fa-solid fa-graduation-cap w-5 text-center"></i>
+        <span>Manage Programs</span>
+      </a>
+      <a href="/admin/events" class="nav-item active flex items-center gap-3 px-4 py-3 rounded-xl text-sm" id="nav-events">
+        <i class="fa-solid fa-calendar-days w-5 text-center"></i>
+        <span>Manage Events</span>
+      </a>
+
+      <p class="text-xs text-gray-400 font-semibold uppercase px-3 pt-3 pb-2 tracking-widest">Account</p>
+
+      <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600">
+        <i class="fa-solid fa-circle-user w-5 text-center"></i>
+        <span>Profile</span>
+      </a>
+    </nav>
+
+    <!-- Logout -->
+    <div class="px-3 py-4 border-t border-gray-100">
+      <a href="/" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-red-500 hover:bg-red-50 transition">
+        <i class="fa-solid fa-right-from-bracket w-5 text-center"></i>
+        <span class="font-semibold">Logout</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <div id="main-content" class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="px-4 py-4 flex items-center justify-between bg-white border-b border-gray-100">
+      <div class="flex items-center gap-3">
+        <button onclick="toggleSidebar()" class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-600">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <h1 class="font-poppins font-bold text-gray-800 text-lg">Events</h1>
+      </div>
+      <button onclick="openModal()" class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/20">
+        <i class="fa-solid fa-plus text-sm"></i>
+      </button>
+    </header>
+
+    <!-- Content -->
+    <main class="flex-1 px-4 py-6 space-y-4 overflow-y-auto">
+      
+      <!-- Search -->
+      <div class="relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+        <input type="text" id="search-input" placeholder="Search events..." class="w-full pl-11 pr-4 py-3 rounded-2xl bg-white border border-gray-100 focus:outline-none focus:border-primary/30 transition text-sm shadow-sm" />
+      </div>
+
+      <!-- List -->
+      <div id="event-list" class="space-y-3 pb-20">
+        <div class="flex flex-col items-center justify-center py-12 text-gray-400">
+          <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
+          <p class="text-sm">Loading events...</p>
+        </div>
+      </div>
+
+    </main>
+
+  </div><!-- /main-content -->
+
+  <!-- Modal -->
+  <div id="modal" class="modal fixed inset-0 flex items-end sm:items-center justify-center p-4">
+     <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeModal()"></div>
+     <div class="modal-content relative w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+        <div class="px-6 py-5 border-b border-gray-50 flex items-center justify-between flex-shrink-0">
+          <h3 id="modal-title" class="font-poppins font-bold text-gray-800 text-lg">Add New Event</h3>
+          <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <form id="event-form" class="p-6 space-y-4 overflow-y-auto flex-1">
+          <input type="hidden" id="event-id" name="id" />
+          <div class="space-y-1">
+            <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Event Name</label>
+            <input type="text" id="event-name" name="name" required placeholder="e.g. Foundation Day" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-primary/30 transition text-sm outline-none" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+             <div class="space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Campus</label>
+                <select id="event-campus" required onchange="handleCampusChange(this.value)" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-primary/30 transition text-sm outline-none appearance-none">
+                  <option value="">Select Campus</option>
+                </select>
+             </div>
+             <div class="space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Department</label>
+                <select id="event-department" name="department_id" required class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-primary/30 transition text-sm outline-none appearance-none disabled:opacity-50" disabled>
+                  <option value="">Select Dept</option>
+                </select>
+             </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="space-y-1">
+              <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Start Date</label>
+              <input type="date" id="event-start-date" name="start_date" required class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-primary/30 transition text-sm outline-none" />
+            </div>
+            <div class="space-y-1">
+              <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Start Time</label>
+              <input type="time" id="event-start-time" name="start_time" required class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-primary/30 transition text-sm outline-none" />
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Venue</label>
+            <input type="text" id="event-venue" name="venue" required placeholder="e.g. Campus Gym" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-primary/30 transition text-sm outline-none" />
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Organizer Name</label>
+            <input type="text" id="event-organizer" name="event_organizer_name" placeholder="e.g. CCS Student Council" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-primary/30 transition text-sm outline-none" />
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">About</label>
+            <textarea id="event-about" name="about" placeholder="Event details..." rows="3" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-primary/30 transition text-sm outline-none resize-none"></textarea>
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Organizer Logo / Image</label>
+            <div class="flex items-center gap-4">
+              <div id="image-preview" class="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400 text-xl border-2 border-dashed border-gray-200 overflow-hidden relative">
+                <i class="fa-solid fa-image"></i>
+              </div>
+              <div class="flex flex-col gap-2">
+                <label for="event-image" class="px-4 py-2 rounded-lg bg-primary/10 text-primary text-xs font-bold cursor-pointer hover:bg-primary/20 transition inline-block text-center">
+                  Upload Image
+                </label>
+                <input type="file" id="event-image" name="image" accept="image/*" class="hidden" onchange="previewImage(event)" />
+                <button type="button" onclick="removeImage()" id="remove-img-btn" class="hidden text-[10px] font-bold text-red-400 hover:text-red-500 transition">Remove Image</button>
+              </div>
+            </div>
+          </div>
+        </form>
+        <div class="p-6 bg-gray-50 flex gap-3 flex-shrink-0">
+          <button onclick="closeModal()" class="flex-1 py-3.5 rounded-2xl font-bold text-gray-500 text-sm hover:bg-gray-100 transition">Cancel</button>
+          <button type="submit" form="event-form" id="save-btn" class="flex-[2] py-3.5 rounded-2xl bg-primary text-white font-bold text-sm shadow-lg shadow-primary/20 hover:bg-primary-dark transition">Save Event</button>
+        </div>
+     </div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+  let events = [];
+  let campuses = [];
+  let currentMode = 'add';
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadCampuses();
+    loadEvents();
+    document.getElementById('event-form').addEventListener('submit', handleFormSubmit);
+    document.getElementById('search-input').addEventListener('input', handleSearch);
+  });
+
+  async function loadCampuses() {
+    try {
+      const res = await fetch('/api/campuses');
+      const data = await res.json();
+      if (data.success) {
+        campuses = data.data;
+        const select = document.getElementById('event-campus');
+        select.innerHTML = '<option value="">Select Campus</option>' + 
+          campuses.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      }
+    } catch (err) {
+      console.error('Failed to load campuses', err);
+    }
+  }
+
+  async function handleCampusChange(campusId, selectedDeptId = null) {
+    const deptSelect = document.getElementById('event-department');
+    deptSelect.innerHTML = '<option value="">Select Dept</option>';
+    
+    if (!campusId) {
+      deptSelect.disabled = true;
+      return;
+    }
+
+    deptSelect.disabled = false;
+    deptSelect.innerHTML = '<option value="">...</option>';
+
+    try {
+      const res = await fetch(`/api/departments/by-campus/${campusId}`);
+      const data = await res.json();
+      if (data.success) {
+        deptSelect.innerHTML = '<option value="">Select Dept</option>' + 
+          data.data.map(d => `<option value="${d.id}" ${selectedDeptId == d.id ? 'selected' : ''}>${d.name}</option>`).join('');
+      }
+    } catch (err) {
+      console.error('Failed to load departments', err);
+    }
+  }
+
+  async function loadEvents() {
+    try {
+      const res = await fetch('/api/events');
+      const data = await res.json();
+      if (data.success) {
+        events = data.data;
+        renderEvents(events);
+      }
+    } catch (err) {
+      console.error('Failed to load events', err);
+      document.getElementById('event-list').innerHTML = '<p class="text-center text-red-500 py-4">Error loading data</p>';
+    }
+  }
+
+  function renderEvents(items) {
+    const list = document.getElementById('event-list');
+    if (items.length === 0) {
+      list.innerHTML = '<p class="text-center text-gray-400 py-12">No events found</p>';
+      return;
+    }
+
+    list.innerHTML = items.map(ev => {
+      const date = new Date(ev.start_date);
+      const day = date.getDate();
+      const month = date.toLocaleString('default', { month: 'short' });
+      
+      return `
+        <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-3 animate-fade-in">
+          <div class="flex items-start gap-4">
+            <div class="w-14 h-14 rounded-xl bg-blue-50 flex-shrink-0 flex items-center justify-center overflow-hidden">
+               <div class="text-center">
+                 <p class="text-[10px] font-bold text-primary uppercase">${month}</p>
+                 <p class="text-xl font-bold text-gray-800">${day}</p>
+               </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <h4 class="font-bold text-gray-800 text-sm truncate">${ev.name}</h4>
+              <p class="text-xs text-gray-500 truncate">${ev.Department ? ev.Department.name : 'General Event'}</p>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="text-[10px] bg-orange-50 text-orange-500 px-2 py-0.5 rounded-full font-bold truncate max-w-[100px]">${ev.venue}</span>
+                <span class="text-[10px] text-gray-400"><i class="fa-regular fa-clock mr-1"></i>${ev.start_time}</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 pt-2 border-t border-gray-50">
+            <button class="flex-1 py-2 rounded-lg bg-gray-50 text-gray-600 text-xs font-bold hover:bg-primary/10 hover:text-primary transition" onclick="openEditModal(${ev.id})">Edit</button>
+            <button class="flex-1 py-2 rounded-lg bg-gray-50 text-gray-600 text-xs font-bold hover:bg-red-50 hover:text-red-500 transition" onclick="confirmDelete(${ev.id})">Delete</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function handleFormSubmit(e) {
+    e.preventDefault();
+    const btn = document.getElementById('save-btn');
+    const formData = new FormData(e.target);
+    const id = document.getElementById('event-id').value;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving...';
+
+    const url = currentMode === 'add' ? '/api/events' : `/api/events/${id}`;
+    const method = currentMode === 'add' ? 'POST' : 'PUT';
+
+    try {
+      const res = await fetch(url, {
+        method: method,
+        body: formData
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        closeModal();
+        loadEvents();
+      } else {
+        alert(data.message || 'Action failed');
+      }
+    } catch (err) {
+      console.error('Error saving event', err);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save Event';
+    }
+  }
+
+  async function confirmDelete(id) {
+    if (!confirm('Are you sure you want to delete this event?')) return;
+    try {
+      const res = await fetch(`/api/events/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) loadEvents();
+      else alert(data.message || 'Delete failed');
+    } catch (err) {
+      console.error('Error deleting event', err);
+    }
+  }
+
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('overlay').classList.toggle('open');
+  }
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('open');
+  }
+  
+  function togglePersonnelMenu() {
+    const submenu = document.getElementById('personnel-submenu');
+    const chevron = document.getElementById('personnel-chevron');
+    if (submenu.style.maxHeight === '0px' || !submenu.style.maxHeight) {
+      submenu.style.maxHeight = '200px';
+      chevron.style.transform = 'rotate(90deg)';
+    } else {
+      submenu.style.maxHeight = '0px';
+      chevron.style.transform = 'rotate(0deg)';
+    }
+  }
+
+  function openModal(mode = 'add') {
+    currentMode = mode;
+    const modal = document.getElementById('modal');
+    const title = document.getElementById('modal-title');
+    const form = document.getElementById('event-form');
+    
+    form.reset();
+    document.getElementById('event-id').value = '';
+    document.getElementById('event-department').disabled = true;
+    document.getElementById('image-preview').innerHTML = '<i class="fa-solid fa-image"></i>';
+    document.getElementById('remove-img-btn').classList.add('hidden');
+    
+    title.textContent = mode === 'edit' ? 'Edit Event' : 'Add New Event';
+    modal.classList.add('open');
+  }
+
+  async function openEditModal(id) {
+    const ev = events.find(item => item.id === id);
+    if (!ev) return;
+
+    openModal('edit');
+    document.getElementById('event-id').value = ev.id;
+    document.getElementById('event-name').value = ev.name;
+    document.getElementById('event-start-date').value = ev.start_date;
+    document.getElementById('event-start-time').value = ev.start_time;
+    document.getElementById('event-venue').value = ev.venue;
+    document.getElementById('event-organizer').value = ev.event_organizer_name || '';
+    document.getElementById('event-about').value = ev.about || '';
+    
+    if (ev.Department && ev.Department.Campus) {
+        document.getElementById('event-campus').value = ev.Department.Campus.id;
+        await handleCampusChange(ev.Department.Campus.id, ev.department_id);
+    }
+    
+    if (ev.event_organizer_image_url) {
+      document.getElementById('image-preview').innerHTML = `<img src="${ev.event_organizer_image_url}" class="w-full h-full object-cover">`;
+      document.getElementById('remove-img-btn').classList.remove('hidden');
+    }
+  }
+
+  function closeModal() {
+    document.getElementById('modal').classList.remove('open');
+  }
+
+  function previewImage(event) {
+    const reader = new FileReader();
+    reader.onload = function() {
+      const preview = document.getElementById('image-preview');
+      preview.innerHTML = `<img src="${reader.result}" class="w-full h-full object-cover">`;
+      document.getElementById('remove-img-btn').classList.remove('hidden');
+    };
+    if (event.target.files[0]) {
+      reader.readAsDataURL(event.target.files[0]);
+    }
+  }
+
+  function removeImage() {
+    document.getElementById('event-image').value = '';
+    document.getElementById('image-preview').innerHTML = '<i class="fa-solid fa-image"></i>';
+    document.getElementById('remove-img-btn').classList.add('hidden');
+  }
+
+  function handleSearch(e) {
+    const term = e.target.value.toLowerCase();
+    const filtered = events.filter(ev => 
+      ev.name.toLowerCase().includes(term) || 
+      ev.venue.toLowerCase().includes(term) ||
+      (ev.Department && ev.Department.name.toLowerCase().includes(term))
+    );
+    renderEvents(filtered);
+  }
+</script>
+
+<style>
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out forwards;
+  }
+</style>
+
+</body>
+</html>
+

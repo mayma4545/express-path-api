@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Navigation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @media (min-width: 540px) {
+        body::before {
+          content: "📱 This app is designed for mobile portrait view only.";
+          position: fixed;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #020617;
+          color: #e2e8f0;
+          font-size: 1.1rem;
+          text-align: center;
+          padding: 2rem;
+          z-index: 9999;
+        }
+        body > * {
+          display: none;
+        }
+      }
+
+      /* ── Street View Forward Animation ── */
+      .sv-forward-enter {
+        animation: svForwardEnter 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94)
+          forwards;
+      }
+      .sv-forward-exit {
+        animation: svForwardExit 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94)
+          forwards;
+      }
+
+      @keyframes svForwardEnter {
+        0% { transform: scale(0.85); opacity: 0; }
+        40% { opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+      @keyframes svForwardExit {
+        0% { transform: scale(1); opacity: 1; }
+        100% { transform: scale(1.4); opacity: 0; }
+      }
+
+      /* ── Street View Backward Animation ── */
+      .sv-backward-enter {
+        animation: svBackwardEnter 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94)
+          forwards;
+      }
+      .sv-backward-exit {
+        animation: svBackwardExit 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94)
+          forwards;
+      }
+
+      @keyframes svBackwardEnter {
+        0% { transform: scale(1.4); opacity: 0; }
+        40% { opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+      @keyframes svBackwardExit {
+        0% { transform: scale(1); opacity: 1; }
+        100% { transform: scale(0.85); opacity: 0; }
+      }
+
+      /* ── Popup Panel ── */
+      .popup-panel {
+        transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.45s ease;
+      }
+      .popup-hidden { transform: translateY(100%); opacity: 0; pointer-events: none; }
+      .popup-visible { transform: translateY(0); opacity: 1; pointer-events: auto; }
+
+      /* ── Dot Indicator ── */
+      .dot { transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+      .dot.active { width: 24px; border-radius: 999px; background: #3b82f6; }
+
+      /* ── Button Active State ── */
+      .nav-btn:active { transform: scale(0.88); }
+
+      /* ── Path Number Badge ── */
+      .path-badge { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+
+      /* ── Zoom Ring Effect ── */
+      .zoom-ring {
+        position: absolute; inset: 0; border-radius: 9999px; border: 3px solid rgba(255, 255, 255, 0.2);
+        opacity: 0; pointer-events: none;
+      }
+      .zoom-ring.animate { animation: zoomRingExpand 0.7s ease-out forwards; }
+      @keyframes zoomRingExpand {
+        0% { transform: scale(0.3); opacity: 0.8; }
+        100% { transform: scale(3); opacity: 0; }
+      }
+
+      .progress-fill { transition: width 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+      .sv-image { will-change: transform, opacity; }
+    </style>
+  </head>
+  <body class="bg-black overflow-hidden select-none">
+    <div id="app" class="relative w-screen h-screen overflow-hidden">
+      
+      <div id="loadingOverlay" class="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center text-white">
+        <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p class="text-sm font-bold tracking-widest uppercase opacity-70">Loading Path...</p>
+      </div>
+
+      <div id="noDataOverlay" class="hidden absolute inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center text-center p-8">
+        <div class="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mb-6">
+            <svg class="w-10 h-10 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
+        </div>
+        <h3 class="text-white text-xl font-bold mb-2">No Navigation Path Found</h3>
+        <p class="text-white/50 text-sm mb-8">We haven't added step-by-step directions for this destination yet.</p>
+        <div class="flex gap-2.5 mt-8">
+          <button onclick="window.history.back()" class="w-10 h-10 bg-[#1da1f2] rounded-xl shadow-lg border border-[#1da1f2] flex items-center justify-center text-white active:scale-90 transition-transform" title="Go Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+          <a href="/" class="w-10 h-10 bg-[#1da1f2] rounded-xl shadow-lg border border-[#1da1f2] flex items-center justify-center text-white active:scale-90 transition-transform" title="Home">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════ -->
+      <!-- SLIDES LAYER                       -->
+      <!-- ═══════════════════════════════════ -->
+      <div id="slidesLayer" class="absolute inset-0"></div>
+
+      <!-- ═══════════════════════════════════ -->
+      <!-- ZOOM RING EFFECT                   -->
+      <!-- ═══════════════════════════════════ -->
+      <div id="zoomRing" class="zoom-ring"></div>
+
+      <!-- ═══════════════════════════════════ -->
+      <!-- TOP BAR                            -->
+      <!-- ═══════════════════════════════════ -->
+      <div class="absolute top-0 left-0 right-0 z-30">
+        <div class="bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-4 pb-10 px-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <img src="../../assets/img/oc.png" alt="OC Logo" class="w-8 h-8 object-contain drop-shadow-lg" />
+              <h1 class="text-white text-lg font-bold tracking-wide drop-shadow-lg">OC Mobile Navigator</h1>
+            </div>
+            <div class="flex gap-2.5">
+              <button onclick="window.history.back()" class="w-10 h-10 bg-[#1da1f2] rounded-xl shadow-lg border border-[#1da1f2] flex items-center justify-center text-white active:scale-90 transition-transform" title="Go Back">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+              </button>
+              <a href="/" class="w-10 h-10 bg-[#1da1f2] rounded-xl shadow-lg border border-[#1da1f2] flex items-center justify-center text-white active:scale-90 transition-transform" title="Home">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="absolute top-20 left-0 right-0 z-30 px-5">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="path-badge bg-white/15 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-full font-bold border border-white/20">
+            STEP <span id="currentNum">0</span>
+          </div>
+          <div class="flex-1 h-1 bg-white/15 rounded-full overflow-hidden">
+            <div id="progressBar" class="progress-fill h-full bg-blue-400 rounded-full" style="width: 0%"></div>
+          </div>
+          <div class="text-white/60 text-xs font-mono">
+            <span id="totalNum">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════ -->
+      <!-- BOTTOM INFO CARD                   -->
+      <!-- ═══════════════════════════════════ -->
+      <div id="infoCard" class="absolute bottom-28 left-4 right-4 z-30 path-badge bg-white/10 backdrop-blur-xl rounded-2xl p-5 border border-white/20 transition-all duration-500 opacity-0 translate-y-4">
+        <h2 id="infoTitle" class="text-white text-xl font-bold drop-shadow-lg mb-1">Navigation Step</h2>
+        <p id="infoDesc" class="tracking-wide text-white/80 text-sm leading-relaxed"></p>
+      </div>
+
+      <!-- ═══════════════════════════════════ -->
+      <!-- NAVIGATION BUTTONS                 -->
+      <!-- ═══════════════════════════════════ -->
+      <button id="btnLeft" class="nav-btn absolute left-3 top-1/2 -translate-y-1/2 z-20 path-badge bg-white/15 backdrop-blur-md text-white w-14 h-14 rounded-full flex items-center justify-center border border-white/25 shadow-2xl transition-all duration-200 active:scale-88">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+
+      <button id="btnRight" class="nav-btn absolute right-3 top-1/2 -translate-y-1/2 z-20 path-badge bg-white/15 backdrop-blur-md text-white w-14 h-14 rounded-full flex items-center justify-center border border-white/25 shadow-2xl transition-all duration-200 active:scale-88">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+      </button>
+
+      <!-- ═══════════════════════════════════ -->
+      <!-- DOT INDICATORS                     -->
+      <!-- ═══════════════════════════════════ -->
+      <div id="dotsContainer" class="absolute bottom-12 left-1/2 -translate-x-1/2 z-30 flex gap-2 items-center"></div>
+
+    </div>
+
+    <script>
+      let slides = [];
+      let currentIndex = 0;
+      let isAnimating = false;
+      const ANIM_DURATION = 700;
+
+      const slidesLayer = document.getElementById("slidesLayer");
+      const dotsContainer = document.getElementById("dotsContainer");
+      const currentNumEl = document.getElementById("currentNum");
+      const totalNumEl = document.getElementById("totalNum");
+      const progressBar = document.getElementById("progressBar");
+      const infoTitle = document.getElementById("infoTitle");
+      const infoDesc = document.getElementById("infoDesc");
+      const infoCard = document.getElementById("infoCard");
+      const zoomRing = document.getElementById("zoomRing");
+      const btnLeft = document.getElementById("btnLeft");
+      const btnRight = document.getElementById("btnRight");
+      const loadingOverlay = document.getElementById("loadingOverlay");
+      const noDataOverlay = document.getElementById("noDataOverlay");
+
+      async function init() {
+        const params = new URLSearchParams(window.location.search);
+        const type = params.get('type');
+        const id = params.get('id');
+
+        if (!type || !id) {
+          showNoData();
+          return;
+        }
+
+        try {
+          const res = await fetch(`/api/navigations/${type}/${id}`);
+          const data = await res.json();
+
+          if (data.success && data.data.length > 0) {
+            slides = data.data.map(step => ({
+              id: step.id,
+              src: step.image_url || 'https://images.unsplash.com/photo-1562774053-701939374585?w=800',
+              title: `Step ${step.step_order}`,
+              desc: step.directional_text
+            }));
+            
+            totalNumEl.textContent = slides.length;
+            renderDots();
+            showSlide(0, false);
+            loadingOverlay.classList.add('hidden');
+          } else {
+            showNoData();
+          }
+        } catch (err) {
+          console.error(err);
+          showNoData();
+        }
+      }
+
+      function showNoData() {
+        loadingOverlay.classList.add('hidden');
+        noDataOverlay.classList.remove('hidden');
+      }
+
+      function createSlideElement(slide) {
+        const div = document.createElement("div");
+        div.className = "sv-image absolute inset-0";
+        div.innerHTML = `
+          <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('${slide.src}')"></div>
+          <div class="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/70"></div>
+        `;
+        return div;
+      }
+
+      function renderDots() {
+        dotsContainer.innerHTML = "";
+        slides.forEach((_, i) => {
+          const dot = document.createElement("div");
+          dot.className = `dot w-2 h-2 rounded-full ${i === currentIndex ? "active" : "bg-white/40"}`;
+          dot.addEventListener("click", () => goToSlide(i));
+          dotsContainer.appendChild(dot);
+        });
+      }
+
+      function showSlide(index, animate = true, direction = "forward") {
+        if (isAnimating) return;
+        if (index < 0 || index >= slides.length) return;
+
+        const slide = slides[index];
+
+        if (!animate) {
+          slidesLayer.innerHTML = "";
+          const el = createSlideElement(slide);
+          slidesLayer.appendChild(el);
+          updateUI(index);
+          return;
+        }
+
+        isAnimating = true;
+        const currentEl = slidesLayer.firstElementChild;
+        const newEl = createSlideElement(slide);
+        slidesLayer.appendChild(newEl);
+
+        void newEl.offsetHeight;
+
+        if (direction === "forward") {
+          newEl.classList.add("sv-forward-enter");
+          if (currentEl) {
+            currentEl.style.zIndex = "2";
+            currentEl.classList.add("sv-forward-exit");
+          }
+        } else {
+          newEl.classList.add("sv-backward-enter");
+          if (currentEl) {
+            currentEl.style.zIndex = "2";
+            currentEl.classList.add("sv-backward-exit");
+          }
+        }
+
+        triggerZoomRing();
+
+        setTimeout(() => {
+          if (currentEl && currentEl.parentNode) {
+            currentEl.parentNode.removeChild(currentEl);
+          }
+          newEl.style.zIndex = "";
+          isAnimating = false;
+        }, ANIM_DURATION);
+
+        currentIndex = index;
+        updateUI(index);
+      }
+
+      function updateUI(index) {
+        const slide = slides[index];
+        currentNumEl.textContent = index + 1;
+        progressBar.style.width = `${((index + 1) / slides.length) * 100}%`;
+
+        infoCard.style.opacity = "0";
+        infoCard.style.transform = "translateY(12px)";
+        setTimeout(() => {
+          infoTitle.textContent = slide.title;
+          infoDesc.textContent = slide.desc;
+          infoCard.style.opacity = "1";
+          infoCard.style.transform = "translateY(0)";
+        }, 300);
+
+        document.querySelectorAll(".dot").forEach((dot, i) => {
+          dot.className = `dot w-2 h-2 rounded-full ${i === index ? "active" : "bg-white/40"}`;
+        });
+
+        btnLeft.disabled = index === 0;
+        btnLeft.style.opacity = index === 0 ? "0.3" : "1";
+        btnRight.disabled = index === slides.length - 1;
+        btnRight.style.opacity = index === slides.length - 1 ? "0.3" : "1";
+      }
+
+      function triggerZoomRing() {
+        zoomRing.classList.remove("animate");
+        void zoomRing.offsetWidth;
+        zoomRing.classList.add("animate");
+      }
+
+      function goNext() { if (currentIndex < slides.length - 1) showSlide(currentIndex + 1, true, "forward"); }
+      function goPrev() { if (currentIndex > 0) showSlide(currentIndex - 1, true, "backward"); }
+      function goToSlide(index) {
+        if (index === currentIndex) return;
+        const direction = index > currentIndex ? "forward" : "backward";
+        showSlide(index, true, direction);
+      }
+
+      btnRight.addEventListener("click", goNext);
+      btnLeft.addEventListener("click", goPrev);
+
+      let touchStartX = 0;
+      document.getElementById("app").addEventListener("touchstart", (e) => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+      document.getElementById("app").addEventListener("touchend", (e) => {
+        const diff = touchStartX - e.changedTouches[0].screenX;
+        if (Math.abs(diff) > 50) { diff > 0 ? goNext() : goPrev(); }
+      }, { passive: true });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowRight") goNext();
+        if (e.key === "ArrowLeft") goPrev();
+      });
+
+      init();
+    </script>
+  </body>
+</html>

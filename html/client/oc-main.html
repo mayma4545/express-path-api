@@ -1,0 +1,988 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
+    />
+    <title>OC Mobile Campus Navigator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.1/flowbite.min.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              poppins: ["Poppins", "sans-serif"],
+              inter: ["Inter", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --blue: #1da1f2;
+        --blue-dark: #0d8cda;
+        --blue-light: #e8f5fe;
+        --white: #ffffff;
+        --gray: #f4f6f8;
+        --text: #1a2733;
+        --text-muted: #6b7c93;
+      }
+
+      body {
+        font-family: "Poppins", sans-serif;
+        background: var(--gray);
+        max-width: 430px;
+        margin: 0 auto;
+        min-height: 100vh;
+        overflow-x: hidden;
+        position: relative;
+      }
+
+      /* ── CAROUSEL ── */
+      .carousel-wrapper {
+        height: 30vh;
+        min-height: 130px;
+        position: relative;
+        overflow: hidden;
+        background: #0a1a27;
+      }
+
+      .carousel-track {
+        display: flex;
+        height: 100%;
+        transition: transform 0.6s cubic-bezier(0.77, 0, 0.175, 1);
+      }
+
+      .carousel-slide {
+        min-width: 100%;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .carousel-slide img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        filter: brightness(0.65);
+      }
+
+      .logo {
+        width: 30px;
+        height: 30px;
+        flex-shrink: 0;
+      }
+
+      img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      .carousel-caption {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 8px 14px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+        color: white;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.3px;
+      }
+
+      .carousel-dots {
+        position: absolute;
+        bottom: 8px;
+        right: 12px;
+        display: flex;
+        gap: 5px;
+        z-index: 10;
+      }
+
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.5);
+        transition: all 0.3s;
+        cursor: pointer;
+      }
+
+      .dot.active {
+        background: var(--blue);
+        width: 16px;
+        border-radius: 3px;
+      }
+
+      /* Overlay branding on carousel */
+      .carousel-brand {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 5;
+        padding: 10px 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: linear-gradient(rgba(0, 0, 0, 0.45), transparent);
+      }
+
+      .carousel-brand-logo {
+        width: 30px;
+        height: 30px;
+        flex-shrink: 0;
+      }
+
+      .carousel-brand-text {
+        color: white;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.2;
+        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+        letter-spacing: 0.3px;
+      }
+      .carousel-brand-text span {
+        display: block;
+        font-size: 9px;
+        font-weight: 400;
+        opacity: 0.85;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+
+      /* ── TABS NAV ── */
+      .tab-nav {
+        display: flex;
+        background: var(--white);
+        border-bottom: 2px solid #e5eaf0;
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      }
+
+      .tab-btn {
+        flex: 1;
+        padding: 13px 0;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-muted);
+        background: none;
+        border: none;
+        cursor: pointer;
+        position: relative;
+        letter-spacing: 0.3px;
+        transition: color 0.2s;
+      }
+
+      .tab-btn::after {
+        content: "";
+        position: absolute;
+        bottom: -2px;
+        left: 15%;
+        width: 70%;
+        height: 3px;
+        border-radius: 3px 3px 0 0;
+        background: var(--blue);
+        transform: scaleX(0);
+        transition: transform 0.25s ease;
+      }
+
+      .tab-btn.active {
+        color: var(--blue);
+      }
+
+      .tab-btn.active::after {
+        transform: scaleX(1);
+      }
+
+      /* ── SECTIONS ── */
+      .tab-content {
+        display: none;
+        animation: fadeUp 0.3s ease both;
+      }
+      .tab-content.active {
+        display: block;
+      }
+
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* ── SEARCH SECTION ── */
+      .search-section {
+        padding: 20px 16px 28px;
+        background: var(--gray);
+        min-height: calc(80vh - 44px);
+      }
+
+      .section-label {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--blue);
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+      }
+
+      .search-wrapper {
+        position: relative;
+        margin-bottom: 6px;
+      }
+
+      .search-input {
+        width: 100%;
+        padding: 13px 44px 13px 16px;
+        border: 2px solid #dde4ec;
+        border-radius: 14px;
+        font-family: "Poppins", sans-serif;
+        font-size: 14px;
+        color: var(--text);
+        background: var(--white);
+        outline: none;
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
+      }
+
+      .search-input:focus {
+        border-color: var(--blue);
+        box-shadow: 0 0 0 4px rgba(29, 161, 242, 0.12);
+      }
+
+      .search-icon {
+        position: absolute;
+        right: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--blue);
+        pointer-events: none;
+      }
+
+      .autocomplete-dropdown {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        background: var(--white);
+        border: 1.5px solid #dde4ec;
+        border-radius: 14px;
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+        overflow: hidden;
+        z-index: 100;
+        display: none;
+        animation: dropIn 0.18s ease both;
+      }
+
+      @keyframes dropIn {
+        from {
+          opacity: 0;
+          transform: translateY(-6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .autocomplete-dropdown.open {
+        display: block;
+      }
+
+      .autocomplete-item {
+        padding: 14px 18px;
+        font-size: 14px;
+        color: var(--text);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid #f0f3f7;
+        transition: all 0.2s ease;
+      }
+
+      .autocomplete-item:last-child {
+        border-bottom: none;
+      }
+
+      .autocomplete-item:hover,
+      .autocomplete-item.highlighted {
+        background: #f8fafc;
+        padding-left: 22px;
+      }
+
+      .autocomplete-item .item-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f1f5f9;
+        color: var(--blue);
+        flex-shrink: 0;
+        transition: all 0.2s;
+      }
+
+      .autocomplete-item:hover .item-icon,
+      .autocomplete-item.highlighted .item-icon {
+        background: var(--blue);
+        color: white;
+      }
+
+      .autocomplete-item .item-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .autocomplete-item .item-name {
+        font-weight: 600;
+        line-height: 1.3;
+      }
+
+      .autocomplete-item .item-type {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .type-badge {
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 9px;
+        background: #e2e8f0;
+      }
+
+      .type-office { background: #e0f2fe; color: #0369a1; }
+      .type-department { background: #fef2f2; color: #991b1b; }
+      .type-program { background: #f0fdf4; color: #166534; }
+
+      .autocomplete-item mark {
+        background: rgba(29, 161, 242, 0.1);
+        color: var(--blue);
+        font-weight: 700;
+        padding: 0 2px;
+        border-radius: 2px;
+      }
+
+      .autocomplete-item .item-arrow {
+        opacity: 0;
+        transform: translateX(-10px);
+        transition: all 0.2s;
+        color: var(--blue);
+      }
+
+      .autocomplete-item:hover .item-arrow,
+      .autocomplete-item.highlighted .item-arrow {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      .autocomplete-empty {
+        padding: 14px 16px;
+        font-size: 13px;
+        color: var(--text-muted);
+        text-align: center;
+      }
+
+      /* Big Buttons */
+      .big-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        margin-top: 22px;
+      }
+
+      .big-btn {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 22px;
+        border-radius: 18px;
+        border: none;
+        cursor: pointer;
+        font-family: "Poppins", sans-serif;
+        font-weight: 700;
+        font-size: 20px;
+        letter-spacing: 0.2px;
+        transition:
+          transform 0.15s,
+          box-shadow 0.15s;
+        text-align: left;
+        position: relative;
+        overflow: hidden;
+        text-decoration: none;
+      }
+
+      .big-btn:active {
+        transform: scale(0.97);
+      }
+
+      .big-btn-offices {
+        background: var(--blue);
+        color: var(--white);
+        box-shadow: 0 6px 20px rgba(29, 161, 242, 0.35);
+      }
+
+      .big-btn-departments {
+        background: var(--white);
+        color: var(--blue);
+        border: 2px solid var(--blue);
+        box-shadow: 0 4px 14px rgba(29, 161, 242, 0.12);
+      }
+
+      .big-btn-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .big-btn-offices .big-btn-icon {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      .big-btn-departments .big-btn-icon {
+        background: var(--blue-light);
+      }
+
+      .big-btn-text {
+        flex: 1;
+        padding: 0 14px;
+      }
+      .big-btn-text small {
+        display: block;
+        font-size: 15px;
+        font-weight: 400;
+        opacity: 0.7;
+        margin-top: 2px;
+      }
+
+      .big-btn-arrow {
+        opacity: 0.6;
+      }
+
+      /* ── ABOUT SECTION ── */
+      .about-section {
+        padding: 20px 16px 40px;
+        min-height: calc(80vh - 44px);
+      }
+
+      .about-hero {
+        background: #6b0f1a;
+        border-radius: 18px;
+        padding: 22px;
+        color: white;
+        margin-bottom: 20px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .about-hero::before {
+        content: "";
+        position: absolute;
+        top: -30px;
+        right: -30px;
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .about-hero h2 {
+        font-size: 17px;
+        font-weight: 800;
+        margin-bottom: 8px;
+        line-height: 1.3;
+      }
+
+      .about-hero p {
+        font-size: 12px;
+        line-height: 1.7;
+        opacity: 0.9;
+        font-family: "Inter", sans-serif;
+      }
+
+      .about-card {
+        background: var(--white);
+        border-radius: 16px;
+        padding: 18px;
+        margin-bottom: 14px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      }
+
+      .about-card-title {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--blue);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .about-card-title::before {
+        content: "";
+        display: block;
+        width: 4px;
+        height: 14px;
+        background: var(--blue);
+        border-radius: 2px;
+        flex-shrink: 0;
+      }
+
+      .about-card p {
+        font-size: 12.5px;
+        line-height: 1.75;
+        color: var(--text-muted);
+        font-family: "Inter", sans-serif;
+      }
+
+      .core-values {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 4px;
+      }
+
+      .value-tag {
+        background: var(--blue-light);
+        color: var(--blue);
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ── CAROUSEL ── -->
+    <div class="carousel-wrapper">
+      <div class="carousel-brand flex justify-between items-center w-full">
+        <div class="flex items-center gap-2">
+          <!-- OC Logo SVG -->
+          <div class="logo">
+            <img src="../../assets/img/oc.png" alt="" />
+          </div>
+          <div class="carousel-brand-text">
+            OC Campus Navigator
+            <span id="campus-name-header">Osmena Colleges</span>
+          </div>
+        </div>
+        <div class="flex gap-2.5">
+          <button onclick="window.history.back()" class="w-10 h-10 bg-[#1da1f2] rounded-xl shadow-lg border border-[#1da1f2] flex items-center justify-center text-white active:scale-90 transition-transform" title="Go Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+          <a href="/" class="w-10 h-10 bg-[#1da1f2] rounded-xl shadow-lg border border-[#1da1f2] flex items-center justify-center text-white active:scale-90 transition-transform" title="Home">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          </a>
+        </div>
+      </div>
+
+      <div class="carousel-track" id="carouselTrack">
+        <!-- Slides will be loaded dynamically -->
+        <div class="carousel-slide">
+          <div class="flex items-center justify-center h-full text-white">Loading...</div>
+        </div>
+      </div>
+
+      <div class="carousel-dots" id="carouselDots"></div>
+    </div>
+
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('search', this)">
+        Search
+      </button>
+      <button class="tab-btn" onclick="switchTab('about', this)">About</button>
+    </div>
+
+    <div class="tab-content active" id="tab-search">
+      <div class="search-section">
+        <p class="section-label">Find What You Need</p>
+
+        <div class="search-wrapper">
+          <input
+            class="search-input"
+            id="searchInput"
+            type="text"
+            placeholder="Search courses, offices, rooms…"
+            autocomplete="off"
+            oninput="handleSearch(this.value)"
+            onkeydown="handleKeydown(event)"
+          />
+          <svg
+            class="search-icon"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <div class="autocomplete-dropdown" id="dropdown"></div>
+        </div>
+        <div class="big-buttons">
+          <a href="./list-offices.html" class="big-btn big-btn-offices">
+            <div class="big-btn-text">
+              Offices
+              <small>Find administrative offices</small>
+            </div>
+            <svg class="big-btn-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </a>
+
+          <a href="./list-departments.html" class="big-btn big-btn-departments">
+            <div class="big-btn-text">
+              Departments
+              <small>Explore academic departments</small>
+            </div>
+            <svg class="big-btn-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </a>
+        </div>
+        </div>
+      </div>
+      
+    </div>
+
+    <!-- ── ABOUT TAB ── -->
+    <div class="tab-content" id="tab-about">
+      <div class="about-section">
+        <div class="about-hero">
+          <h2 id="about-campus-name">Osmena Colleges</h2>
+          <p id="about-campus-desc">
+            Loading campus information...
+          </p>
+        </div>
+
+        <div class="about-card">
+          <div class="about-card-title">Location</div>
+          <p id="about-campus-location">
+            Loading...
+          </p>
+        </div>
+
+        <div class="about-card">
+          <div class="about-card-title">Our Vision & Mission</div>
+          <p>
+            Osmena Colleges has been a beacon of academic excellence and holistic
+            education, nurturing generations of professionals committed to
+            serving the community and the nation.
+          </p>
+        </div>
+
+        <div class="about-card">
+          <div class="about-card-title">Core Values</div>
+          <div class="core-values">
+            <span class="value-tag">🎓 Excellence</span>
+            <span class="value-tag">🤝 Integrity</span>
+            <span class="value-tag">💡 Innovation</span>
+            <span class="value-tag">🌿 Service</span>
+            <span class="value-tag">⚖️ Justice</span>
+            <span class="value-tag">🌍 Sustainability</span>
+            <span class="value-tag">❤️ Compassion</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const campusId = localStorage.getItem('selectedCampusId');
+      if (!campusId) {
+        window.location.href = '../index.html';
+      }
+
+      // ── DATA LOADING ──
+      let suggestions = [];
+      let filtered = [];
+
+      async function loadCampusData() {
+        try {
+          const response = await fetch(`/api/campuses/${campusId}`);
+          const result = await response.json();
+          
+          if (result.success) {
+            const campus = result.data;
+            document.getElementById('campus-name-header').textContent = campus.name;
+            document.getElementById('about-campus-name').textContent = campus.name;
+            document.getElementById('about-campus-desc').textContent = campus.about || 'No description available.';
+            document.getElementById('about-campus-location').textContent = campus.location || 'N/A';
+            
+            // Carousel
+            const track = document.getElementById('carouselTrack');
+            const dotsContainer = document.getElementById('carouselDots');
+            track.innerHTML = '';
+            dotsContainer.innerHTML = '';
+            
+            let allSlides = [];
+
+            // Add Campus Photos first
+            if (campus.CampusPhotos && campus.CampusPhotos.length > 0) {
+              campus.CampusPhotos.forEach((photo) => {
+                allSlides.push({
+                  image_url: photo.image_url,
+                  caption: campus.name
+                });
+              });
+            }
+
+            // Add Department Main Images
+            if (campus.Departments && campus.Departments.length > 0) {
+              campus.Departments.forEach((dept) => {
+                if (dept.image_url) {
+                  allSlides.push({
+                    image_url: dept.image_url,
+                    caption: dept.name
+                  });
+                }
+              });
+            }
+
+            if (allSlides.length > 0) {
+              allSlides.forEach((slideData, i) => {
+                const slide = document.createElement('div');
+                slide.className = 'carousel-slide';
+                slide.innerHTML = `
+                  <img src="${slideData.image_url}" alt="${slideData.caption}" onerror="this.src='https://images.unsplash.com/photo-1562774053-701939374585?w=800&auto=format&fit=crop'">
+                  <div class="carousel-caption">${slideData.caption}</div>
+                `;
+                track.appendChild(slide);
+                
+                const dot = document.createElement('div');
+                dot.className = "dot" + (i === 0 ? " active" : "");
+                dot.onclick = () => goTo(i);
+                dotsContainer.appendChild(dot);
+              });
+              startCarousel();
+            } else {
+               track.innerHTML = `
+                <div class="carousel-slide">
+                  <img src="https://images.unsplash.com/photo-1562774053-701939374585?w=800&auto=format&fit=crop" alt="Default">
+                  <div class="carousel-caption">${campus.name}</div>
+                </div>
+              `;
+            }
+          }
+        } catch (error) {
+          console.error('Error loading campus data:', error);
+        }
+      }
+
+      async function loadSearchSuggestions() {
+        try {
+          const [deptRes, officeRes, programRes] = await Promise.all([
+            fetch(`/api/departments/by-campus/${campusId}`),
+            fetch(`/api/offices/by-campus/${campusId}`),
+            fetch(`/api/programs/by-campus/${campusId}`)
+          ]);
+          
+          const depts = await deptRes.json();
+          const offices = await officeRes.json();
+          const programs = await programRes.json();
+          
+          suggestions = [];
+          if (depts.success) {
+            depts.data.forEach(d => suggestions.push({ name: d.name, type: 'department', id: d.id }));
+          }
+          if (offices.success) {
+            offices.data.forEach(o => suggestions.push({ name: o.name, type: 'office', id: o.id }));
+          }
+          if (programs.success) {
+            programs.data.forEach(p => suggestions.push({ 
+              name: p.description_name || p.code_name, 
+              type: 'program', 
+              id: p.department_id 
+            }));
+          }
+        } catch (error) {
+          console.error('Error loading suggestions:', error);
+        }
+      }
+
+      // ── CAROUSEL LOGIC ──
+      let current = 0;
+      let autoSlide;
+
+      function goTo(idx) {
+        const slides = document.querySelectorAll(".carousel-slide");
+        if (slides.length === 0) return;
+        current = idx;
+        const track = document.getElementById('carouselTrack');
+        track.style.transform = `translateX(-${idx * 100}%)`;
+        document
+          .querySelectorAll(".dot")
+          .forEach((d, i) => d.classList.toggle("active", i === idx));
+      }
+
+      function nextSlide() {
+        const slides = document.querySelectorAll(".carousel-slide");
+        if (slides.length === 0) return;
+        goTo((current + 1) % slides.length);
+      }
+
+      function startCarousel() {
+        if (autoSlide) clearInterval(autoSlide);
+        autoSlide = setInterval(nextSlide, 3500);
+      }
+
+      // ── TABS ──
+      function switchTab(name, btn) {
+        document
+          .querySelectorAll(".tab-content")
+          .forEach((el) => el.classList.remove("active"));
+        document
+          .querySelectorAll(".tab-btn")
+          .forEach((el) => el.classList.remove("active"));
+        document.getElementById("tab-" + name).classList.add("active");
+        btn.classList.add("active");
+      }
+
+      // ── AUTOCOMPLETE ──
+      let highlightIdx = -1;
+
+      function handleSearch(val) {
+        const q = val.trim().toLowerCase();
+        const dropdown = document.getElementById("dropdown");
+
+        if (!q) {
+          dropdown.classList.remove("open");
+          dropdown.innerHTML = "";
+          return;
+        }
+
+        filtered = suggestions.filter((s) => s.name.toLowerCase().includes(q));
+        highlightIdx = -1;
+
+        if (filtered.length === 0) {
+          dropdown.innerHTML =
+            '<div class="autocomplete-empty">No results found</div>';
+        } else {
+          dropdown.innerHTML = filtered
+            .map((s, i) => {
+              const re = new RegExp(
+                `(${val.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+                "gi",
+              );
+              const highlighted = s.name.replace(re, "<mark>$1</mark>");
+              
+              let icon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>';
+              if (s.type === 'office') {
+                icon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>';
+              } else if (s.type === 'program') {
+                icon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>';
+              }
+
+              return `
+                <div class="autocomplete-item" onclick="selectSuggestion('${s.type}', ${s.id})" id="ac-${i}">
+                  <div class="item-icon">${icon}</div>
+                  <div class="item-content">
+                    <div class="item-name">${highlighted}</div>
+                    <div class="item-type">
+                      <span class="type-badge type-${s.type}">${s.type}</span>
+                      <span>Osmena Colleges</span>
+                    </div>
+                  </div>
+                  <div class="item-arrow">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                  </div>
+                </div>`;
+            })
+            .join("");
+        }
+
+        dropdown.classList.add("open");
+      }
+
+      function handleKeydown(e) {
+        const dropdown = document.getElementById("dropdown");
+        if (!dropdown.classList.contains("open")) return;
+
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          highlightIdx = Math.min(highlightIdx + 1, filtered.length - 1);
+          updateHighlight();
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          highlightIdx = Math.max(highlightIdx - 1, 0);
+          updateHighlight();
+        } else if (e.key === "Enter") {
+          if (highlightIdx >= 0) selectSuggestion(filtered[highlightIdx].type, filtered[highlightIdx].id);
+        } else if (e.key === "Escape") {
+          dropdown.classList.remove("open");
+        }
+      }
+
+      function updateHighlight() {
+        document.querySelectorAll(".autocomplete-item").forEach((el, i) => {
+          el.classList.toggle("highlighted", i === highlightIdx);
+        });
+      }
+
+      function selectSuggestion(type, id) {
+        if (type === 'program') {
+          window.location.href = `./department.html?id=${id}&tab=programs`;
+        } else {
+          window.location.href = `./${type}.html?id=${id}`;
+        }
+      }
+
+      document.addEventListener("click", (e) => {
+        if (!e.target.closest(".search-wrapper")) {
+          document.getElementById("dropdown").classList.remove("open");
+        }
+      });
+
+      window.onload = () => {
+        loadCampusData();
+        loadSearchSuggestions();
+      };
+    </script>
+  </body>
+</html>

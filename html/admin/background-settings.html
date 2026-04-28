@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
+    />
+    <title>OC Mobile Campus Navigator</title>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/js/all.min.js"
+      defer
+    ></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/assets/js/admin-auth.js" defer></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#1DA1F2",
+              "primary-dark": "#0d8fd8",
+              "primary-light": "#e8f5fe",
+            },
+            fontFamily: {
+              poppins: ["Poppins", "sans-serif"],
+              nunito: ["Nunito", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Nunito", sans-serif;
+        background: #f0f8ff;
+      }
+
+      /* Sidebar */
+      #sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 50;
+      }
+      #sidebar.open {
+        transform: translateX(0);
+      }
+      #overlay {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.35s;
+        z-index: 40;
+      }
+      #overlay.open {
+        opacity: 1;
+        pointer-events: all;
+      }
+
+      /* Carousel */
+      .carousel-track {
+        display: flex;
+        transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .carousel-slide {
+        min-width: 100%;
+        height: 25vh;
+        object-fit: cover;
+        flex-shrink: 0;
+      }
+      .carousel-empty {
+        min-width: 100%;
+        height: 25vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.1);
+      }
+
+      /* Dot indicators */
+      .dot {
+        transition:
+          background 0.3s,
+          width 0.3s;
+      }
+      .dot.active {
+        background: #1da1f2;
+        width: 20px;
+        border-radius: 4px;
+      }
+
+      /* Nav item */
+      .nav-item {
+        transition:
+          background 0.2s,
+          color 0.2s;
+      }
+      .nav-item.active {
+        background: #e8f5fe;
+        color: #1da1f2;
+        font-weight: 700;
+      }
+      .nav-item:not(.active):hover {
+        background: #f0f8ff;
+      }
+
+      /* Photo preview card */
+      .photo-card {
+        animation: fadeUp 0.3s ease;
+      }
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Save button pulse */
+      .save-btn:active {
+        transform: scale(0.97);
+      }
+
+      /* Upload area */
+      .upload-area {
+        border: 2px dashed #1da1f2;
+        transition: background 0.2s;
+      }
+      .upload-area:hover {
+        background: #e8f5fe;
+      }
+
+      /* Mobile-only constraint */
+      @media (min-width: 640px) {
+        body {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #ccc;
+          min-height: 100vh;
+        }
+        #app {
+          max-width: 390px;
+          width: 100%;
+          min-height: 100vh;
+          background: #f0f8ff;
+          position: relative;
+          overflow: hidden;
+          box-shadow: 0 0 40px rgba(0, 0, 0, 0.2);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- App Shell -->
+    <div id="app" class="relative min-h-screen overflow-x-hidden">
+      <!-- Overlay -->
+      <div
+        id="overlay"
+        class="fixed inset-0 bg-black/40 backdrop-blur-sm"
+        onclick="closeSidebar()"
+      ></div>
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="fixed top-0 left-0 h-full w-72 bg-white shadow-2xl flex flex-col">
+    <!-- Sidebar Header -->
+    <div class="bg-primary px-5 py-6 flex items-center gap-3">
+      <div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center shadow-inner overflow-hidden">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="white" fill-opacity="0.15"/>
+          <path d="M16 4L4 10V22L16 28L28 22V10L16 4Z" fill="white" fill-opacity="0.9"/>
+          <path d="M16 4L28 10L16 16L4 10L16 4Z" fill="white"/>
+          <rect x="14.5" y="16" width="3" height="12" fill="white" fill-opacity="0.7"/>
+        </svg>
+      </div>
+      <div>
+        <p class="text-white font-poppins font-700 text-sm leading-tight font-bold">OC Mobile</p>
+        <p class="text-white/80 text-xs font-nunito">Campus Navigator</p>
+      </div>
+    </div>
+
+    <!-- User Info -->
+    <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+        <i class="fa-solid fa-user-tie text-primary text-sm"></i>
+      </div>
+      <div>
+        <p class="text-gray-800 font-semibold text-sm font-poppins">Admin User</p>
+        <p class="text-gray-400 text-xs">Administrator</p>
+      </div>
+    </div>
+
+    <!-- Nav Items -->
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <p class="text-xs text-gray-400 font-semibold uppercase px-3 pb-2 tracking-widest">General</p>
+      
+      <a href="/admin/dashboard" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600" id="nav-dashboard">
+        <i class="fa-solid fa-chart-line w-5 text-center"></i>
+        <span>Dashboard</span>
+      </a>
+
+      <p class="text-xs text-gray-400 font-semibold uppercase px-3 pt-3 pb-2 tracking-widest">Management</p>
+
+      <a href="/admin/departments" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600" id="nav-departments">
+        <i class="fa-solid fa-building-columns w-5 text-center"></i>
+        <span>Manage Departments</span>
+      </a>
+      <a href="/admin/offices" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600" id="nav-offices">
+        <i class="fa-solid fa-door-open w-5 text-center"></i>
+        <span>Manage Offices</span>
+      </a>
+      <a href="/admin/facilities" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600" id="nav-facilities">
+        <i class="fa-solid fa-building w-5 text-center"></i>
+        <span>Manage Facilities</span>
+      </a>
+      <a href="/admin/navigation" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600" id="nav-navigation">
+        <i class="fa-solid fa-route w-5 text-center"></i>
+        <span>Manage Navigation</span>
+      </a>
+
+      <!-- Manage Personnel (with sub-menu) -->
+      <div id="nav-personnel-wrapper">
+        <button onclick="togglePersonnelMenu()" id="nav-personnel-btn" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600 bg-transparent border-none text-left cursor-pointer">
+          <i class="fa-solid fa-users w-5 text-center"></i>
+          <span class="flex-1">Manage Personnel</span>
+          <i id="personnel-chevron" class="fa-solid fa-chevron-right text-gray-400 text-xs transition-transform duration-300"></i>
+        </button>
+        <div id="personnel-submenu" class="overflow-hidden transition-all duration-300 max-h-0">
+          <div class="pl-4 pb-1 flex flex-col gap-0.5">
+            <a href="/admin/personnel/head-officer" class="sub-item flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-500 hover:bg-primary-light hover:text-primary transition" id="nav-head-officer">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></span>
+              <i class="fa-solid fa-user-tie text-primary text-xs w-4 text-center"></i>
+              <span>Head / Officer</span>
+            </a>
+            <a href="/admin/personnel/staff" class="sub-item flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-500 hover:bg-primary-light hover:text-primary transition" id="nav-staff">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></span>
+              <i class="fa-solid fa-id-badge text-primary text-xs w-4 text-center"></i>
+              <span>Staff</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <a href="/admin/programs" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600" id="nav-programs">
+        <i class="fa-solid fa-graduation-cap w-5 text-center"></i>
+        <span>Manage Programs</span>
+      </a>
+      <a href="/admin/events" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600" id="nav-events">
+        <i class="fa-solid fa-calendar-days w-5 text-center"></i>
+        <span>Manage Events</span>
+      </a>
+
+      <p class="text-xs text-gray-400 font-semibold uppercase px-3 pt-3 pb-2 tracking-widest">Account</p>
+
+      <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600">
+        <i class="fa-solid fa-circle-user w-5 text-center"></i>
+        <span>Profile</span>
+      </a>
+    </nav>
+
+    <!-- Logout -->
+    <div class="px-3 py-4 border-t border-gray-100">
+      <a href="/" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-red-500 hover:bg-red-50 transition">
+        <i class="fa-solid fa-right-from-bracket w-5 text-center"></i>
+        <span class="font-semibold">Logout</span>
+      </a>
+    </div>
+  </aside>
+
+      <!-- ===== MAIN CONTENT ===== -->
+      <div id="main-content" class="min-h-screen flex flex-col">
+        <!-- ===== CAROUSEL HEADER ===== -->
+        <div class="relative overflow-hidden bg-gray-100" style="height: 25vh">
+          <div id="carousel-track" class="carousel-track h-full">
+            <!-- Empty state shown by default -->
+            <div
+              id="empty-slide"
+              class="carousel-empty w-full h-full flex-shrink-0"
+            >
+              <div class="flex flex-col items-center gap-2 text-primary/60">
+                <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                  <rect
+                    x="4"
+                    y="10"
+                    width="40"
+                    height="28"
+                    rx="4"
+                    stroke="black"
+                    stroke-width="2.5"
+                    fill="none"
+                    stroke-dasharray="5 3"
+                  />
+                  <circle
+                    cx="16"
+                    cy="20"
+                    r="4"
+                    stroke="black"
+                    stroke-width="2"
+                    fill="none"
+                  />
+                  <path
+                    d="M4 34l10-10 8 8 6-6 16 12"
+                    stroke="black"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    fill="none"
+                  />
+                </svg>
+                <p class="text-sm font-semibold font-poppins text-black">
+                  No Background for now
+                </p>
+                <p class="text-xs text-black">Upload campus photos below</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Carousel Dots -->
+          <div
+            id="carousel-dots"
+            class="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5 hidden"
+          ></div>
+
+          <!-- Top Bar overlaid on carousel -->
+          <div
+            class="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/30 to-transparent"
+          >
+            <button
+              onclick="toggleSidebar()"
+              class="w-9 h-9 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white shadow"
+            >
+              <i class="fa-solid fa-bars text-base"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- ===== SECTIONS ===== -->
+
+        <!-- BG SETTINGS SECTION -->
+        <section id="section-bg-settings" class="flex-1 px-4 py-5 space-y-5">
+          <!-- Section Title -->
+          <div class="flex items-center gap-2">
+            <div class="w-1 h-6 rounded-full bg-primary"></div>
+            <h2 class="font-poppins font-bold text-gray-800 text-lg">
+              Background Settings
+            </h2>
+          </div>
+
+          <!-- Campus Selection -->
+          <div class="space-y-2">
+            <label
+              class="text-xs font-bold text-gray-400 uppercase tracking-wider"
+              >Campus</label
+            >
+            <select
+              class="w-full px-4 py-3 rounded-2xl bg-white border border-gray-100 shadow-sm focus:outline-none focus:border-primary/30 transition text-sm appearance-none cursor-pointer"
+            >
+              <option value="main">Main Campus</option>
+              <option value="mobo">Mobo Branch</option>
+            </select>
+          </div>
+
+          <!-- Upload Card -->
+          <div
+            class="bg-white rounded-2xl shadow-sm border border-primary/10 p-4 space-y-4"
+          >
+            <div>
+              <p class="text-sm font-semibold text-gray-700 mb-1">
+                Campus Photos
+              </p>
+              <p class="text-xs text-gray-400">
+                Add at least
+                <span class="text-primary font-semibold">3 photos</span> for the
+                background carousel.
+              </p>
+            </div>
+
+            <!-- Upload Area -->
+            <label
+              for="photo-input"
+              class="upload-area rounded-xl flex flex-col items-center justify-center gap-2 py-6 cursor-pointer bg-primary-light/30"
+            >
+              <div
+                class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center"
+              >
+                <i class="fa-solid fa-cloud-arrow-up text-primary text-xl"></i>
+              </div>
+              <p class="text-sm font-semibold text-primary">Upload Photo</p>
+              <p class="text-xs text-gray-400">JPG, PNG, WEBP supported</p>
+              <input
+                id="photo-input"
+                type="file"
+                accept="image/*"
+                multiple
+                class="hidden"
+                onchange="handlePhotoUpload(event)"
+              />
+            </label>
+
+            <!-- Photo Count Badge -->
+            <div
+              id="photo-count-bar"
+              class="flex items-center justify-between hidden"
+            >
+              <span class="text-xs text-gray-500" id="photo-count-label"
+                >0 photo(s) added</span
+              >
+              <span
+                id="min-badge"
+                class="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-600"
+                >Need 3 minimum</span
+              >
+            </div>
+
+            <!-- Preview Grid -->
+            <div
+              id="photo-preview-grid"
+              class="grid grid-cols-3 gap-2 hidden"
+            ></div>
+          </div>
+
+          <!-- Save Button -->
+          <button
+            id="save-btn"
+            onclick="saveSettings()"
+            class="save-btn w-full py-3.5 rounded-2xl font-poppins font-bold text-white text-sm transition-all duration-200 shadow-lg"
+            style="
+              background: linear-gradient(135deg, #1da1f2, #0d8fd8);
+              box-shadow: 0 4px 15px rgba(29, 161, 242, 0.35);
+            "
+          >
+            Save Background Settings
+          </button>
+
+          <!-- Save feedback -->
+          <div
+            id="save-feedback"
+            class="hidden text-center py-2 rounded-xl bg-green-50 border border-green-200 text-green-600 text-sm font-semibold"
+          >
+            <i class="fa-solid fa-circle-check mr-1"></i> Settings saved
+            successfully!
+          </div>
+        </section>
+      </div>
+      <!-- /main-content -->
+    </div>
+    <!-- /app -->
+
+    <script>
+      // ===== Sidebar =====
+      function toggleSidebar() {
+        document.getElementById("sidebar").classList.toggle("open");
+        document.getElementById("overlay").classList.toggle("open");
+      }
+      function closeSidebar() {
+        document.getElementById("sidebar").classList.remove("open");
+        document.getElementById("overlay").classList.remove("open");
+      }
+      function togglePersonnelMenu() {
+        const submenu = document.getElementById("personnel-submenu");
+        const chevron = document.getElementById("personnel-chevron");
+        if (submenu.style.maxHeight === "0px" || !submenu.style.maxHeight) {
+          submenu.style.maxHeight = "200px";
+          chevron.style.transform = "rotate(90deg)";
+        } else {
+          submenu.style.maxHeight = "0px";
+          chevron.style.transform = "rotate(0deg)";
+        }
+      }
+
+      // ===== Photo / Carousel =====
+      let photos = []; // { url, name }
+      let carouselIndex = 0;
+      let carouselTimer = null;
+
+      function handlePhotoUpload(event) {
+        const files = Array.from(event.target.files);
+        files.forEach((file) => {
+          if (!file.type.startsWith("image/")) return;
+          const url = URL.createObjectURL(file);
+          photos.push({ url, name: file.name });
+        });
+        event.target.value = "";
+        renderPhotos();
+        renderCarousel();
+      }
+
+      function removePhoto(index) {
+        URL.revokeObjectURL(photos[index].url);
+        photos.splice(index, 1);
+        if (carouselIndex >= photos.length)
+          carouselIndex = Math.max(0, photos.length - 1);
+        renderPhotos();
+        renderCarousel();
+      }
+
+      function renderPhotos() {
+        const grid = document.getElementById("photo-preview-grid");
+        const countBar = document.getElementById("photo-count-bar");
+        const countLabel = document.getElementById("photo-count-label");
+        const minBadge = document.getElementById("min-badge");
+
+        if (photos.length === 0) {
+          grid.classList.add("hidden");
+          countBar.classList.add("hidden");
+          return;
+        }
+
+        grid.classList.remove("hidden");
+        countBar.classList.remove("hidden");
+        countLabel.textContent = photos.length + " photo(s) added";
+
+        if (photos.length >= 3) {
+          minBadge.textContent = "✓ Minimum met";
+          minBadge.className =
+            "text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-600";
+        } else {
+          minBadge.textContent = "Need " + (3 - photos.length) + " more";
+          minBadge.className =
+            "text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-600";
+        }
+
+        grid.innerHTML = photos
+          .map(
+            (p, i) => `
+      <div class="photo-card relative rounded-xl overflow-hidden aspect-square bg-gray-100 group shadow-sm">
+        <img src="${p.url}" alt="${p.name}" class="w-full h-full object-cover" />
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition"></div>
+        <button onclick="removePhoto(${i})" class="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md hover:bg-red-600 transition text-xs">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent px-1 py-1">
+          <p class="text-white text-[9px] truncate">${p.name}</p>
+        </div>
+      </div>
+    `,
+          )
+          .join("");
+      }
+
+      function renderCarousel() {
+        const track = document.getElementById("carousel-track");
+        const dotsContainer = document.getElementById("carousel-dots");
+        const emptySlide = document.getElementById("empty-slide");
+
+        // Stop existing timer
+        clearInterval(carouselTimer);
+
+        if (photos.length === 0) {
+          // Show empty state
+          track.innerHTML = "";
+          track.appendChild(emptySlide);
+          track.style.transform = "translateX(0)";
+          dotsContainer.classList.add("hidden");
+          return;
+        }
+
+        // Build slides
+        track.innerHTML = photos
+          .map(
+            (p) => `
+      <img src="${p.url}" class="carousel-slide" alt="campus" />
+    `,
+          )
+          .join("");
+
+        // Build dots
+        dotsContainer.classList.remove("hidden");
+        dotsContainer.innerHTML = photos
+          .map(
+            (_, i) => `
+      <div class="dot w-2 h-2 rounded-full bg-white/60 cursor-pointer ${i === carouselIndex ? "active" : ""}" onclick="goToSlide(${i})"></div>
+    `,
+          )
+          .join("");
+
+        goToSlide(carouselIndex);
+
+        if (photos.length > 1) {
+          carouselTimer = setInterval(() => {
+            carouselIndex = (carouselIndex + 1) % photos.length;
+            goToSlide(carouselIndex);
+          }, 5000);
+        }
+      }
+
+      function goToSlide(idx) {
+        carouselIndex = idx;
+        const track = document.getElementById("carousel-track");
+        track.style.transform = `translateX(-${idx * 100}%)`;
+        document.querySelectorAll(".dot").forEach((d, i) => {
+          d.classList.toggle("active", i === idx);
+        });
+      }
+
+      function saveSettings() {
+        if (photos.length < 3) {
+          alert("Please add at least 3 photos before saving.");
+          return;
+        }
+        const btn = document.getElementById("save-btn");
+        const feedback = document.getElementById("save-feedback");
+        btn.innerHTML =
+          '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving...';
+        btn.disabled = true;
+        setTimeout(() => {
+          btn.innerHTML =
+            '<i class="fa-solid fa-floppy-disk mr-2"></i> Save Background Settings';
+          btn.disabled = false;
+          feedback.classList.remove("hidden");
+          setTimeout(() => feedback.classList.add("hidden"), 3000);
+        }, 1200);
+      }
+    </script>
+    <script src="../../assets/js/togglePersonnelMenu.js"></script>
+  </body>
+</html>
+

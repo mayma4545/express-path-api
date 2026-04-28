@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1.0,maximum-scale=1.0"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              poppins: ["Poppins", "sans-serif"],
+              inter: ["Inter", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --blue: #1da1f2;
+        --blue-dark: #0d8cda;
+        --blue-light: #e8f5fe;
+        --white: #ffffff;
+        --gray: #f4f6f8;
+        --text: #1a2733;
+        --text-muted: #6b7c93;
+      }
+      body {
+        font-family: "Poppins", sans-serif;
+        background: var(--gray);
+        max-width: 430px;
+        margin: 0 auto;
+      }
+      .carousel-wrapper {
+        height: 30vh;
+        min-height: 130px;
+        position: relative;
+        overflow: hidden;
+        background: #0a1a27;
+      }
+      .carousel-track {
+        display: flex;
+        height: 100%;
+        transition: transform 0.6s cubic-bezier(0.77, 0, 0.175, 1);
+      }
+      .carousel-slide {
+        min-width: 100%;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+      }
+      .carousel-slide img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        filter: brightness(0.35);
+        display: block;
+      }
+      .carousel-caption {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 8px 14px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+        color: white;
+        font-size: 11px;
+        font-weight: 500;
+      }
+      .carousel-dots {
+        position: absolute;
+        bottom: 8px;
+        right: 12px;
+        display: flex;
+        gap: 5px;
+        z-index: 10;
+      }
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.5);
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+      .dot.active {
+        background: var(--blue);
+        width: 16px;
+        border-radius: 3px;
+      }
+      .carousel-brand {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 5;
+        padding: 10px 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: linear-gradient(rgba(0, 0, 0, 0.45), transparent);
+      }
+      .carousel-brand-text {
+        color: white;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.2;
+        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+      }
+      .carousel-brand-text span {
+        display: block;
+        font-size: 9px;
+        font-weight: 400;
+        opacity: 0.85;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+      .carousel-center-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 5;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 40px 16px 16px;
+        pointer-events: none;
+      }
+      .carousel-title {
+        color: white;
+        font-size: 22px;
+        font-weight: 800;
+        line-height: 1.2;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+        margin: 0 0 4px;
+      }
+      .logo-circle {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: var(--blue);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 11px;
+        color: white;
+        flex-shrink: 0;
+      }
+      .sticky-nav {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+      }
+      .tab-nav {
+        display: flex;
+        background: var(--white);
+        border-bottom: 2px solid #e5eaf0;
+      }
+      .tab-btn {
+        flex: 1;
+        padding: 11px 0;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-muted);
+        background: none;
+        border: none;
+        cursor: pointer;
+        position: relative;
+        letter-spacing: 0.3px;
+        transition: color 0.2s;
+        font-family: "Poppins", sans-serif;
+      }
+      .tab-btn::after {
+        content: "";
+        position: absolute;
+        bottom: -2px;
+        left: 10%;
+        width: 80%;
+        height: 3px;
+        border-radius: 3px 3px 0 0;
+        background: var(--blue);
+        transform: scaleX(0);
+        transition: transform 0.25s ease;
+      }
+      .tab-btn.active {
+        color: var(--blue);
+      }
+      .tab-btn.active::after {
+        transform: scaleX(1);
+      }
+      .navigate-bar {
+        padding: 10px 16px;
+        display: flex;
+        justify-content: flex-end;
+        background: transparent;
+        backdrop-filter: blur(8px);
+      }
+      .navigate-btn {
+        max-width: max-content;
+        padding: 13px;
+        background: var(--blue);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-family: "Poppins", sans-serif;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        cursor: pointer;
+        align-self: flex-end;
+        text-decoration: none;
+        transition: background 0.2s, transform 0.15s;
+      }
+      .navigate-btn:active {
+        transform: scale(0.98);
+        background: var(--blue-dark);
+      }
+      .tab-content {
+        display: none;
+        animation: fadeUp 0.3s ease both;
+      }
+      .tab-content.active {
+        display: block;
+      }
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .oic-section {
+        padding: 20px 16px 40px;
+        min-height: calc(80vh - 44px);
+        background: transparent;
+      }
+      .oic-header {
+        font-size: 25px;
+        font-weight: 800;
+        color: #6b0f1a;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-bottom: 20px;
+      }
+      .oic-card {
+        background: transparent;
+        border-radius: 20px;
+        overflow: hidden;
+      }
+      .oic-img-wrap {
+        width: 100%;
+        height: 320px;
+        overflow: hidden;
+        position: relative;
+        background: #1a2733;
+      }
+      .oic-img-wrap img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: top center;
+        display: block;
+      }
+      .oic-img-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(transparent, rgba(10, 26, 39, 0.85));
+        backdrop-filter: blur(2px);
+        padding: 30px 20px 20px;
+        color: white;
+      }
+      .oic-name { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+      .oic-position { font-size: 13px; opacity: 0.8; font-weight: 400; letter-spacing: 0.3px; }
+      .oic-details { padding: 18px 20px; }
+      .oic-detail-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid #f0f3f7;
+        font-size: 13px;
+        color: var(--text-muted);
+      }
+      .oic-detail-row:last-child { border-bottom: none; }
+      .oic-detail-row strong { color: var(--text); font-weight: 600; }
+      .oic-badge {
+        display: inline-block;
+        background: var(--blue-light);
+        color: var(--blue);
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        margin-top: 12px;
+      }
+
+      .staffs-section { padding: 0 16px 40px; }
+      .staffs-header { font-size: 25px; font-weight: 800; color: #6b0f1a; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px; }
+      .staffs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .staff-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07); }
+      .staff-img-wrap { width: 100%; aspect-ratio: 3 / 4; overflow: hidden; background: #1a2733; }
+      .staff-img-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
+      .staff-info { padding: 10px 12px 12px; }
+      .staff-name { font-size: 12px; font-weight: 700; color: var(--text); line-height: 1.3; margin-bottom: 3px; }
+      .staff-position { font-size: 10px; color: var(--text-muted); font-weight: 400; line-height: 1.4; }
+
+      .photos-section { padding: 20px 16px 40px; min-height: calc(80vh - 44px); background: var(--gray); }
+      .photos-header { font-size: 25px; font-weight: 800; color: #6b0f1a; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px; }
+      .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .photo-item { border-radius: 12px; overflow: hidden; cursor: pointer; position: relative; background: #1a2733; }
+      .photo-item img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s; filter: brightness(0.9); }
+      .photo-item:hover img { transform: scale(1.08); filter: brightness(1); }
+      .photo-item .photo-label { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0, 0, 0, 0.65)); color: white; font-size: 9px; font-weight: 600; padding: 10px 6px 5px; letter-spacing: 0.3px; }
+
+      .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.88); z-index: 999; align-items: center; justify-content: center; padding: 20px; }
+      .modal-backdrop.open { display: flex; }
+      .modal-inner { position: relative; max-width: 400px; width: 100%; border-radius: 18px; overflow: hidden; background: #0a1a27; }
+      .modal-img { width: 100%; max-height: 70vh; object-fit: contain; display: block; }
+      .modal-caption { padding: 14px 18px; color: white; font-size: 13px; font-weight: 600; background: #0a1a27; }
+      .modal-close { position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; border-radius: 50%; background: rgba(0, 0, 0, 0.6); border: none; color: white; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; font-family: sans-serif; }
+    </style>
+  </head>
+  <body>
+    <div class="carousel-wrapper">
+      <div class="carousel-center-overlay">
+        <h1 class="carousel-title" id="office-title">Loading Office...</h1>
+      </div>
+      <div class="carousel-brand flex justify-between items-center w-full">
+        <div class="flex items-center gap-2">
+          <div class="logo-circle">OC</div>
+          <div class="carousel-brand-text">
+            OC Campus Navigator
+            <span>Osmena Colleges</span>
+          </div>
+        </div>
+        <div class="flex gap-2.5">
+          <button onclick="window.history.back()" class="w-10 h-10 bg-[#1da1f2] rounded-xl shadow-lg border border-[#1da1f2] flex items-center justify-center text-white active:scale-90 transition-transform" title="Go Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+          <a href="/" class="w-10 h-10 bg-[#1da1f2] rounded-xl shadow-lg border border-[#1da1f2] flex items-center justify-center text-white active:scale-90 transition-transform" title="Home">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          </a>
+        </div>
+      </div>
+      <div class="carousel-track" id="carouselTrack"></div>
+      <div class="carousel-dots" id="carouselDots"></div>
+    </div>
+
+    <div class="sticky-nav" id="stickyNav">
+      <div class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab('oic', this)">Personnel</button>
+        <button class="tab-btn" onclick="switchTab('photos', this)">Photos</button>
+      </div>
+      <div class="navigate-bar">
+        <a id="nav-link" href="./navigation.html" class="navigate-btn">NAVIGATE NOW!</a>
+      </div>
+    </div>
+
+    <div class="tab-content active" id="tab-oic">
+      <div class="oic-section" id="head-section">
+        <div class="oic-header">HEAD</div>
+        <div class="text-center p-4 text-gray-500">No head officer assigned.</div>
+      </div>
+      <div class="staffs-section">
+        <div class="staffs-header">Staffs</div>
+        <div class="staffs-grid" id="staff-grid">
+           <div class="col-span-2 text-center p-4 text-gray-500">No staff members assigned.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-photos">
+      <div class="photos-section">
+        <div class="photos-header">Photos</div>
+        <div class="photo-grid" id="photoGrid"></div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="modal" onclick="closeModal(event)">
+      <div class="modal-inner">
+        <button class="modal-close" onclick="document.getElementById('modal').classList.remove('open')">✕</button>
+        <img class="modal-img" id="modalImg" src="" alt="" />
+        <div class="modal-caption" id="modalCaption"></div>
+      </div>
+    </div>
+
+    <script>
+      const urlParams = new URLSearchParams(window.location.search);
+      const officeId = urlParams.get('id');
+      const DEFAULT_PERSON_IMG = 'https://www.w3schools.com/howto/img_avatar.png';
+
+      if (!officeId) {
+        window.location.href = './list-offices.html';
+      }
+
+      // Update navigation link
+      const navLink = document.getElementById('nav-link');
+      if (navLink) {
+        navLink.href = `./navigation.html?id=${officeId}&type=office`;
+      }
+
+      async function loadOfficeData() {
+        try {
+          const response = await fetch(`/api/offices/${officeId}`);
+          const result = await response.json();
+          if (result.success) {
+            const office = result.data;
+            document.getElementById('office-title').textContent = office.name;
+            
+            const track = document.getElementById('carouselTrack');
+            const dotsContainer = document.getElementById('carouselDots');
+            const grid = document.getElementById('photoGrid');
+            track.innerHTML = ''; dotsContainer.innerHTML = ''; grid.innerHTML = '';
+
+            const allPhotos = office.OfficePhotos || [];
+            if (allPhotos.length > 0) {
+              allPhotos.forEach((photo, i) => {
+                const slide = document.createElement('div');
+                slide.className = 'carousel-slide';
+                slide.innerHTML = `<img src="${photo.image_url}" alt="${office.name}">`;
+                track.appendChild(slide);
+
+                const dot = document.createElement('div');
+                dot.className = "dot" + (i === 0 ? " active" : "");
+                dot.onclick = () => goTo(i);
+                dotsContainer.appendChild(dot);
+
+                const item = document.createElement("div");
+                item.className = "photo-item";
+                if (i === 0) item.style.gridColumn = "1 / -1";
+                item.innerHTML = `<img src="${photo.image_url}" alt="${office.name}" loading="lazy"><div class="photo-label">Photo ${i+1}</div>`;
+                item.onclick = () => openModal(photo.image_url, `Photo ${i+1}`);
+                grid.appendChild(item);
+              });
+              startCarousel();
+            } else {
+              track.innerHTML = `<div class="carousel-slide"><img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&auto=format&fit=crop" alt="Default"></div>`;
+              grid.innerHTML = '<div class="col-span-2 text-center p-10 text-gray-500">No photos available.</div>';
+            }
+
+            // Head Officer
+            const headSection = document.getElementById('head-section');
+            if (office.HeadOfficers && office.HeadOfficers.length > 0) {
+              const head = office.HeadOfficers[0];
+              headSection.innerHTML = `
+                <div class="oic-header">HEAD</div>
+                <div class="oic-card">
+                  <div class="oic-img-wrap">
+                    <img src="${head.image_url || DEFAULT_PERSON_IMG}" alt="${head.fullname}" onerror="this.src='${DEFAULT_PERSON_IMG}'">
+                    <div class="oic-img-overlay">
+                      <div class="oic-name">${head.fullname}</div>
+                      <div class="oic-position">${head.position}</div>
+                    </div>
+                  </div>
+                  <div class="oic-details">
+                    <div class="oic-badge">Officer in Charge</div>
+                    <div class="oic-detail-row">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                      </svg>
+                      <span><strong>Office:</strong> ${office.name}</span>
+                    </div>
+                  </div>
+                </div>`;
+            } else {
+              headSection.innerHTML = `
+                <div class="oic-header">HEAD</div>
+                <div class="bg-white/50 border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center">
+                  <div class="text-3xl mb-2">👤</div>
+                  <div class="text-sm font-semibold text-gray-400">No head officer assigned yet</div>
+                </div>`;
+            }
+
+            // Staff
+            const staffGrid = document.getElementById('staff-grid');
+            const staffSection = document.querySelector('.staffs-section');
+            if (office.Staff && office.Staff.length > 0) {
+              staffGrid.innerHTML = '';
+              office.Staff.forEach(s => {
+                const card = document.createElement('div');
+                card.className = 'staff-card';
+                card.innerHTML = `
+                  <div class="staff-img-wrap">
+                    <img src="${s.image_url || DEFAULT_PERSON_IMG}" alt="${s.fullname}" onerror="this.src='${DEFAULT_PERSON_IMG}'">
+                  </div>
+                  <div class="staff-info">
+                    <div class="staff-name">${s.fullname}</div>
+                    <div class="staff-position">${s.position}</div>
+                  </div>`;
+                staffGrid.appendChild(card);
+              });
+            } else {
+              staffGrid.innerHTML = `
+                <div class="col-span-2 bg-white/50 border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center">
+                  <div class="text-2xl mb-2">👥</div>
+                  <div class="text-xs font-semibold text-gray-400">No staff members listed for this office</div>
+                </div>`;
+            }
+            
+            // If both are empty, hide the tab entirely? Or just let them be hidden.
+            if ((!office.HeadOfficers || office.HeadOfficers.length === 0) && (!office.Staff || office.Staff.length === 0)) {
+               // Optional: switch to photos tab or show a message
+            }
+          }
+        } catch (error) { console.error('Error loading office data:', error); }
+      }
+
+      let current = 0; let autoSlide;
+      function goTo(idx) {
+        const slides = document.querySelectorAll(".carousel-slide");
+        if (slides.length === 0) return;
+        current = idx;
+        document.getElementById('carouselTrack').style.transform = `translateX(-${idx * 100}%)`;
+        document.querySelectorAll(".dot").forEach((d, i) => d.classList.toggle("active", i === idx));
+      }
+      function startCarousel() {
+        const slides = document.querySelectorAll(".carousel-slide");
+        if (slides.length <= 1) return;
+        if (autoSlide) clearInterval(autoSlide);
+        autoSlide = setInterval(() => goTo((current + 1) % slides.length), 3500);
+      }
+      function switchTab(name, btn) {
+        document.querySelectorAll(".tab-content").forEach((el) => el.classList.remove("active"));
+        document.querySelectorAll(".tab-btn").forEach((el) => el.classList.remove("active"));
+        document.getElementById("tab-" + name).classList.add("active");
+        btn.classList.add("active");
+      }
+      function openModal(src, caption) {
+        document.getElementById("modalImg").src = src;
+        document.getElementById("modalCaption").textContent = caption;
+        document.getElementById("modal").classList.add("open");
+      }
+      function closeModal(e) {
+        if (e.target === document.getElementById("modal") || e.target.closest('.modal-close')) {
+          document.getElementById("modal").classList.remove("open");
+        }
+      }
+      window.onload = loadOfficeData;
+    </script>
+  </body>
+</html>

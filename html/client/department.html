@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              poppins: ["Poppins", "sans-serif"],
+              inter: ["Inter", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body { font-family: "Poppins", sans-serif; }
+      .carousel-track { transition: transform 0.6s cubic-bezier(0.77, 0, 0.175, 1); }
+      .tab-btn { position: relative; }
+      .tab-btn::after {
+        content: ""; position: absolute; bottom: -2px; left: 10%; width: 80%; height: 3px; border-radius: 3px 3px 0 0;
+        background: #1da1f2; transform: scaleX(0); transition: transform 0.25s ease;
+      }
+      .tab-btn.active { color: #1da1f2; }
+      .tab-btn.active::after { transform: scaleX(1); }
+      .view { display: none; }
+      .view.active { display: block; }
+
+      #labModal, #eventPosterModal {
+        display: none; position: fixed; inset: 0; z-index: 200; background: rgba(0, 0, 0, 0.9);
+        align-items: center; justify-content: center;
+      }
+      #labModal.open, #eventPosterModal.open { display: flex; }
+      .modal-inner { width: 100%; max-width: 430px; position: relative; animation: modalIn 0.22s ease; }
+      @keyframes modalIn { from { opacity: 0; transform: scale(0.93); } to { opacity: 1; transform: scale(1); } }
+      .close-btn {
+        position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; background: rgba(0, 0, 0, 0.5);
+        border: 1.5px solid rgba(255, 255, 255, 0.25); border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        cursor: pointer; backdrop-filter: blur(4px);
+      }
+      .event-card { transition: box-shadow 0.2s, transform 0.2s; }
+      .event-card:hover { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); transform: translateY(-2px); }
+      .badge-ongoing { background: #dcfce7; color: #16a34a; }
+      .badge-upcoming { background: #e0f2fe; color: #0369a1; }
+      .badge-finished { background: #f3f4f6; color: #6b7280; }
+      .filter-pill {
+        padding: 5px 13px; border-radius: 999px; font-size: 11px; font-weight: 600; border: 1.5px solid #e5e7eb;
+        background: white; color: #6b7c93; cursor: pointer; transition: all 0.18s; white-space: nowrap;
+      }
+      .filter-pill.active { background: #1da1f2; color: white; border-color: #1da1f2; }
+      .page-btn {
+        width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid #e5e7eb; background: white;
+        color: #6b7c93; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center;
+        cursor: pointer;
+      }
+      .page-btn.active { background: #1da1f2; color: white; border-color: #1da1f2; }
+      .navigate-btn {
+        background: linear-gradient(135deg, #1da1f2, #0d5c9e); color: white; border: none; border-radius: 10px;
+        padding: 8px 16px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; cursor: pointer;
+        display: flex; align-items: center; gap: 5px;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 max-w-[430px] mx-auto min-h-screen overflow-x-hidden">
+    <div class="relative h-[30vh] min-h-[130px] overflow-hidden bg-[#0a1a27]">
+      <div class="absolute top-0 left-0 right-0 z-10 px-3.5 py-2.5 flex items-center justify-between" style="background: linear-gradient(rgba(0, 0, 0, 0.45), transparent)">
+        <div class="flex items-center gap-2">
+          <div class="w-[30px] h-[30px] rounded-full bg-[#6b0f1a] border border-white flex items-center justify-center text-white font-bold text-xs">OC</div>
+          <div class="text-white">
+            <p class="text-xs font-bold leading-tight">OC Campus Navigator</p>
+            <p class="text-[9px] font-normal opacity-85 tracking-widest uppercase">Osmena Colleges</p>
+          </div>
+        </div>
+        <div class="flex gap-2.5">
+          <button onclick="window.history.back()" class="w-10 h-10 bg-[#1da1f2] rounded-xl shadow-lg border border-[#1da1f2] flex items-center justify-center text-white active:scale-90 transition-transform" title="Go Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+          <a href="/" class="w-10 h-10 bg-[#1da1f2] rounded-xl shadow-lg border border-[#1da1f2] flex items-center justify-center text-white active:scale-90 transition-transform" title="Home">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          </a>
+        </div>
+      </div>
+      <div class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none px-6 mt-6">
+        <h1 id="dept-title" class="text-2xl font-extrabold text-white leading-tight text-center" style="text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6)">Loading Department...</h1>
+      </div>
+      <div class="flex h-full carousel-track" id="carouselTrack"></div>
+      <div class="absolute bottom-2 right-3 flex gap-1.5 z-10" id="carouselDots"></div>
+    </div>
+
+    <div class="sticky top-0 z-50" id="stickyNav">
+      <div class="flex border-b-2 border-gray-200 bg-white">
+        <button class="tab-btn flex-1 py-[11px] text-[10.5px] font-bold text-[#6b7c93] active" onclick="switchTab('scrollView', 0, 'heads')">Heads</button>
+        <button class="tab-btn flex-1 py-[11px] text-[10.5px] font-bold text-[#6b7c93]" onclick="switchTab('scrollView', 1, 'staffs')">Staffs</button>
+        <button class="tab-btn flex-1 py-[11px] text-[10.5px] font-bold text-[#6b7c93]" onclick="switchTab('scrollView', 2, 'programs')">Programs</button>
+        <button class="tab-btn flex-1 py-[11px] text-[10.5px] font-bold text-[#6b7c93]" onclick="switchTab('labView', 3, null)">Labs</button>
+        <button class="tab-btn flex-1 py-[11px] text-[10.5px] font-bold text-[#6b7c93]" onclick="switchTab('eventView', 4, null)">Events</button>
+      </div>
+      <div class="px-4 py-2.5 flex justify-end backdrop-blur-sm bg-transparent">
+        <a id="nav-link" href="./navigation.html" class="px-3.5 py-3 bg-[#1da1f2] text-white rounded-xl text-sm font-bold tracking-[2px]">NAVIGATE NOW!</a>
+      </div>
+    </div>
+
+    <div id="scrollView" class="view active">
+      <section id="heads" class="px-4 pt-5 pb-8">
+        <p class="text-[25px] font-extrabold text-[#6b0f1a] tracking-[1.5px] uppercase mb-4 pb-2 border-b-2 border-[#e8f5fe]">Heads</p>
+        <div id="headsList" class="flex flex-col gap-3"></div>
+      </section>
+      <section id="staffs" class="px-4 pt-5 pb-8">
+        <p class="text-[25px] font-extrabold text-[#6b0f1a] tracking-[1.5px] uppercase mb-4 pb-2 border-b-2 border-[#e8f5fe]">Staffs</p>
+        <div id="staffsList" class="flex flex-col gap-3"></div>
+      </section>
+      <section id="programs" class="px-4 pt-5 pb-8">
+        <p class="text-[25px] font-extrabold text-[#6b0f1a] tracking-[1.5px] uppercase mb-4 pb-2 border-b-2 border-[#e8f5fe]">Programs</p>
+        <div id="programsList" class="flex flex-col gap-4"></div>
+      </section>
+    </div>
+
+    <div id="labView" class="view">
+      <section class="px-4 pt-5 pb-8">
+        <p class="text-[25px] font-extrabold text-[#6b0f1a] tracking-[1.5px] uppercase mb-4 pb-2 border-b-2 border-[#e8f5fe]">Laboratories</p>
+        <div id="labsList" class="flex flex-col gap-3.5"></div>
+      </section>
+    </div>
+
+    <div id="eventView" class="view">
+      <section class="px-4 pt-5 pb-8">
+        <p class="text-[25px] font-extrabold text-[#6b0f1a] tracking-[1.5px] uppercase mb-1 pb-2 border-b-2 border-[#e8f5fe]">Events</p>
+        <div id="eventsList" class="flex flex-col gap-4 mt-4"></div>
+      </section>
+    </div>
+
+    <!-- Modals -->
+    <div id="labModal" onclick="closeModal(event)">
+      <div class="modal-inner !max-w-[400px]" onclick="event.stopPropagation()">
+        <button class="close-btn" onclick="closeModal(null, true)">✕</button>
+        <div class="relative overflow-hidden rounded-t-2xl bg-black aspect-video flex items-center justify-center">
+          <div id="labCarouselTrack" class="flex transition-transform duration-500 h-full w-full"></div>
+          <div id="labCarouselDots" class="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10"></div>
+        </div>
+        <div class="bg-white p-4 rounded-b-2xl">
+          <p id="modalTitle" class="text-[#1a2733] text-[15px] font-bold"></p>
+          <p id="modalSub" class="text-[#6b7c93] text-[11px] mt-0.5 font-inter"></p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const urlParams = new URLSearchParams(window.location.search);
+      const deptId = urlParams.get('id');
+      const DEFAULT_PERSON_IMG = 'https://www.w3schools.com/howto/img_avatar.png';
+
+      if (!deptId) window.location.href = './list-departments.html';
+      
+      // Update navigation link
+      const navLink = document.getElementById('nav-link');
+      if (navLink) {
+        navLink.href = `./navigation.html?id=${deptId}&type=department`;
+      }
+
+      async function loadDeptData() {
+        try {
+          const response = await fetch(`/api/departments/${deptId}`);
+          const result = await response.json();
+          if (result.success) {
+            const dept = result.data;
+            document.getElementById('dept-title').textContent = dept.name;
+
+            // Carousel
+            const track = document.getElementById('carouselTrack');
+            const dots = document.getElementById('carouselDots');
+            track.innerHTML = ''; dots.innerHTML = '';
+            const photos = dept.Photos || [];
+            if (photos.length > 0) {
+              photos.forEach((p, i) => {
+                const slide = document.createElement('div');
+                slide.className = 'min-w-full h-full relative overflow-hidden flex-shrink-0';
+                slide.innerHTML = `<img src="${p.image_url}" class="w-full h-full object-cover brightness-[0.40]"><div class="absolute bottom-0 left-0 right-0 px-3.5 py-2 text-white text-[11px] font-medium" style="background: linear-gradient(transparent, rgba(0,0,0,0.6))">${dept.name}</div>`;
+                track.appendChild(slide);
+                const dot = document.createElement('div');
+                dot.style.cssText = `width:${i===0?'16px':'6px'};height:6px;border-radius:${i===0?'3px':'50%'};background:${i===0?'#1da1f2':'rgba(255,255,255,0.5)'};cursor:pointer;transition:all 0.3s;`;
+                dot.onclick = () => goTo(i);
+                dots.appendChild(dot);
+              });
+              startCarousel();
+            } else {
+              track.innerHTML = `<div class="min-w-full h-full relative flex-shrink-0"><img src="https://images.unsplash.com/photo-1562774053-701939374585?w=800" class="w-full h-full object-cover brightness-[0.40]"></div>`;
+            }
+
+            // Heads
+            const headsList = document.getElementById('headsList');
+            const headsSection = document.getElementById('heads');
+            if (dept.HeadOfficers && dept.HeadOfficers.length > 0) {
+              headsList.innerHTML = dept.HeadOfficers.map(h => `
+                <div class="bg-white rounded-2xl px-4 py-3.5 flex items-center gap-3.5 shadow-sm">
+                  <img src="${h.image_url || DEFAULT_PERSON_IMG}" class="w-[54px] h-[54px] rounded-full object-cover border-2 border-[#e8f5fe]" onerror="this.src='${DEFAULT_PERSON_IMG}'">
+                  <div>
+                    <div class="text-[13px] font-bold text-[#1a2733]">${h.fullname}</div>
+                    <div class="text-[11px] text-[#6b7c93] font-inter">${h.position}</div>
+                  </div>
+                </div>`).join('');
+            } else {
+              headsList.innerHTML = `
+                <div class="bg-white/50 border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center">
+                  <div class="text-2xl mb-1">👤</div>
+                  <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">No heads assigned yet</div>
+                </div>`;
+            }
+
+            // Staffs
+            const staffsList = document.getElementById('staffsList');
+            const staffsSection = document.getElementById('staffs');
+            if (dept.Staff && dept.Staff.length > 0) {
+              staffsList.innerHTML = dept.Staff.map(s => `
+                <div class="bg-white rounded-2xl px-4 py-3.5 flex items-center gap-3.5 shadow-sm">
+                  <img src="${s.image_url || DEFAULT_PERSON_IMG}" class="w-[54px] h-[54px] rounded-full object-cover border-2 border-[#e8f5fe]" onerror="this.src='${DEFAULT_PERSON_IMG}'">
+                  <div>
+                    <div class="text-[13px] font-bold text-[#1a2733]">${s.fullname}</div>
+                    <div class="text-[11px] text-[#6b7c93] font-inter">${s.position}</div>
+                  </div>
+                </div>`).join('');
+            } else {
+              staffsList.innerHTML = `
+                <div class="bg-white/50 border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center">
+                  <div class="text-2xl mb-1">👥</div>
+                  <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">No staff assigned yet</div>
+                </div>`;
+            }
+
+            // Programs
+            const programsList = document.getElementById('programsList');
+            const NO_DATA_SVG = '../../assets/img/no_data.svg';
+            programsList.innerHTML = (dept.Programs || []).map(p => `
+              <div class="bg-white rounded-2xl overflow-hidden shadow-sm">
+                <img src="${p.image_url || NO_DATA_SVG}" class="w-full h-32 object-cover" onerror="this.src='${NO_DATA_SVG}'">
+                <div class="px-4 py-3">
+                  <div class="text-[15px] font-extrabold text-[#1a2733]">${p.code_name || ''}</div>
+                  <div class="text-xs text-[#6b7c93]">${p.description_name}</div>
+                </div>
+              </div>`).join('') || '<p class="text-center text-gray-500 text-xs">No programs found.</p>';
+
+            // Labs
+            const labsList = document.getElementById('labsList');
+            labsList.innerHTML = (dept.Facilities || []).map(f => {
+              const allPhotos = f.FacilityPhotos && f.FacilityPhotos.length > 0 
+                ? f.FacilityPhotos.map(p => p.image_url) 
+                : [f.image_url || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400'];
+              
+              const photoData = JSON.stringify(allPhotos).replace(/"/g, '&quot;');
+              const escapedName = f.name.replace(/'/g, "\\'");
+              const escapedType = (f.type || '').replace(/'/g, "\\'");
+              
+              return `
+              <div class="bg-white rounded-2xl overflow-hidden shadow-sm" onclick="openLabModal(${photoData},'${escapedName}','${escapedType}')">
+                <img src="${allPhotos[0]}" class="w-full h-40 object-cover">
+                <div class="px-4 py-3">
+                  <p class="text-[13px] font-bold">${f.name}</p>
+                  <p class="text-[10px] text-gray-500">${f.type || ''}</p>
+                </div>
+              </div>`;
+            }).join('') || '<p class="text-center text-gray-500 text-xs">No laboratories found.</p>';
+
+            // Events
+            const eventsList = document.getElementById('eventsList');
+            eventsList.innerHTML = (dept.Events || []).map(e => `
+              <div class="event-card bg-white rounded-2xl overflow-hidden shadow-sm">
+                <img src="${e.event_organizer_image_url || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400'}" class="w-full h-40 object-cover">
+                <div class="px-4 py-3">
+                  <p class="text-[14px] font-extrabold text-[#1a2733]">${e.name}</p>
+                  <p class="text-[11px] text-[#6b7c93] mt-1">${e.about || ''}</p>
+                  <div class="mt-2 text-[10px] font-semibold text-gray-600 flex flex-col gap-0.5">
+                    <span>📅 ${e.start_date}</span>
+                    <span>📍 ${e.venue}</span>
+                  </div>
+                </div>
+              </div>`).join('') || '<p class="text-center text-gray-500 text-xs">No events found.</p>';
+          }
+        } catch (e) { console.error(e); }
+      }
+
+      let current = 0; let autoSlide;
+      function goTo(idx) {
+        current = idx;
+        const track = document.getElementById('carouselTrack');
+        if (!track) return;
+        track.style.transform = `translateX(-${idx * 100}%)`;
+        const dots = document.getElementById('carouselDots').querySelectorAll('div');
+        dots.forEach((d, i) => { d.style.width = i === idx ? '16px' : '6px'; d.style.borderRadius = i === idx ? '3px' : '50%'; d.style.background = i === idx ? '#1da1f2' : 'rgba(255,255,255,0.5)'; });
+      }
+      function startCarousel() { if (autoSlide) clearInterval(autoSlide); autoSlide = setInterval(() => { const len = document.querySelectorAll('#carouselTrack > div').length; if (len > 0) goTo((current + 1) % len); }, 3500); }
+      
+      let labCurrent = 0;
+      function goToLab(idx, total) {
+        labCurrent = idx;
+        const track = document.getElementById('labCarouselTrack');
+        track.style.transform = `translateX(-${idx * 100}%)`;
+        const dots = document.getElementById('labCarouselDots').querySelectorAll('div');
+        dots.forEach((d, i) => {
+          d.style.width = i === idx ? '16px' : '6px';
+          d.style.borderRadius = i === idx ? '3px' : '50%';
+          d.style.background = i === idx ? '#1da1f2' : 'rgba(255,255,255,0.5)';
+        });
+      }
+
+      function switchTab(viewId, idx, scrollToId) {
+        document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === viewId));
+        document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
+        if (scrollToId) { const el = document.getElementById(scrollToId); window.scrollTo({ top: el.offsetTop - 100, behavior: 'smooth' }); }
+        else window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      function openLabModal(photos, title, sub) {
+        const track = document.getElementById('labCarouselTrack');
+        const dots = document.getElementById('labCarouselDots');
+        track.innerHTML = '';
+        dots.innerHTML = '';
+        labCurrent = 0;
+        track.style.transform = 'translateX(0)';
+
+        photos.forEach((src, i) => {
+          const slide = document.createElement('div');
+          slide.className = 'min-w-full h-full flex-shrink-0';
+          slide.innerHTML = `<img src="${src}" class="w-full h-full object-cover">`;
+          track.appendChild(slide);
+
+          if (photos.length > 1) {
+            const dot = document.createElement('div');
+            dot.style.cssText = `width:${i===0?'16px':'6px'};height:6px;border-radius:${i===0?'3px':'50%'};background:${i===0?'#1da1f2':'rgba(255,255,255,0.5)'};cursor:pointer;transition:all 0.3s;`;
+            dot.onclick = () => goToLab(i, photos.length);
+            dots.appendChild(dot);
+          }
+        });
+
+        document.getElementById('modalTitle').textContent = title;
+        document.getElementById('modalSub').textContent = sub;
+        document.getElementById('labModal').classList.add('open');
+      }
+
+      function closeModal(e, force = false) {
+        if (force || e.target === document.getElementById('labModal')) {
+          document.getElementById('labModal').classList.remove('open');
+        }
+      }
+
+      window.onload = async () => {
+        await loadDeptData();
+        const tab = urlParams.get('tab');
+        if (tab === 'programs') {
+          switchTab('scrollView', 2, 'programs');
+        }
+      };
+    </script>
+  </body>
+</html>

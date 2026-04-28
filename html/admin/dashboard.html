@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Admin Dashboard - OC Mobile Campus Navigator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/js/all.min.js" defer></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/assets/js/admin-auth.js" defer></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#1DA1F2',
+            'primary-dark': '#0d8fd8',
+            'primary-light': '#e8f5fe',
+          },
+          fontFamily: {
+            poppins: ['Poppins', 'sans-serif'],
+            nunito: ['Nunito', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Nunito', sans-serif; background: #f0f8ff; }
+
+    /* Sidebar */
+    #sidebar {
+      transform: translateX(-100%);
+      transition: transform 0.35s cubic-bezier(.4,0,.2,1);
+      z-index: 50;
+    }
+    #sidebar.open { transform: translateX(0); }
+    #overlay {
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.35s;
+      z-index: 40;
+    }
+    #overlay.open { opacity: 1; pointer-events: all; }
+
+    /* Nav item */
+    .nav-item { transition: background 0.2s, color 0.2s; }
+    .nav-item.active { background: #e8f5fe; color: #1DA1F2; font-weight: 700; }
+    .nav-item:not(.active):hover { background: #f0f8ff; }
+
+    /* Card hover */
+    .stat-card { transition: transform 0.2s; }
+    .stat-card:hover { transform: translateY(-4px); }
+
+    /* Mobile-only constraint */
+    @media (min-width: 640px) {
+      body { display: flex; align-items: center; justify-content: center; background: #ccc; min-height: 100vh; }
+      #app { max-width: 390px; width: 100%; min-height: 100vh; background: #f0f8ff; position: relative; overflow: hidden; box-shadow: 0 0 40px rgba(0,0,0,0.2); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- App Shell -->
+<div id="app" class="relative min-h-screen overflow-x-hidden">
+
+  <!-- Overlay -->
+  <div id="overlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm" onclick="closeSidebar()"></div>
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="fixed top-0 left-0 h-full w-72 bg-white shadow-2xl flex flex-col">
+    <!-- Sidebar Header -->
+    <div class="bg-primary px-5 py-6 flex items-center gap-3">
+      <div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center shadow-inner overflow-hidden">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="white" fill-opacity="0.15"/>
+          <path d="M16 4L4 10V22L16 28L28 22V10L16 4Z" fill="white" fill-opacity="0.9"/>
+          <path d="M16 4L28 10L16 16L4 10L16 4Z" fill="white"/>
+          <rect x="14.5" y="16" width="3" height="12" fill="white" fill-opacity="0.7"/>
+        </svg>
+      </div>
+      <div>
+        <p class="text-white font-poppins font-700 text-sm leading-tight font-bold">OC Mobile</p>
+        <p class="text-white/80 text-xs font-nunito">Campus Navigator</p>
+      </div>
+    </div>
+
+    <!-- User Info -->
+    <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+        <i class="fa-solid fa-user-tie text-primary text-sm"></i>
+      </div>
+      <div>
+        <p class="text-gray-800 font-semibold text-sm font-poppins">Admin User</p>
+        <p class="text-gray-400 text-xs">Administrator</p>
+      </div>
+    </div>
+
+    <!-- Nav Items -->
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <p class="text-xs text-gray-400 font-semibold uppercase px-3 pb-2 tracking-widest">General</p>
+      
+      <a href="/admin/dashboard" class="nav-item active flex items-center gap-3 px-4 py-3 rounded-xl text-sm" id="nav-dashboard">
+        <i class="fa-solid fa-chart-line w-5 text-center"></i>
+        <span>Dashboard</span>
+      </a>
+
+      <p class="text-xs text-gray-400 font-semibold uppercase px-3 pt-3 pb-2 tracking-widest">Management</p>
+      <a href="/admin/departments" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600" id="nav-departments">
+        <i class="fa-solid fa-building-columns w-5 text-center"></i>
+        <span>Manage Departments</span>
+      </a>
+      <a href="/admin/offices" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600" id="nav-offices">
+        <i class="fa-solid fa-door-open w-5 text-center"></i>
+        <span>Manage Offices</span>
+      </a>
+      <a href="/admin/facilities" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600" id="nav-facilities">
+        <i class="fa-solid fa-building w-5 text-center"></i>
+        <span>Manage Facilities</span>
+      </a>
+      <a href="/admin/navigation" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600" id="nav-navigation">
+        <i class="fa-solid fa-route w-5 text-center"></i>
+        <span>Manage Navigation</span>
+      </a>
+
+      <!-- Manage Personnel (with sub-menu) -->
+      <div id="nav-personnel-wrapper">
+        <button onclick="togglePersonnelMenu()" id="nav-personnel-btn" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600 bg-transparent border-none text-left cursor-pointer">
+          <i class="fa-solid fa-users w-5 text-center"></i>
+          <span class="flex-1">Manage Personnel</span>
+          <i id="personnel-chevron" class="fa-solid fa-chevron-right text-gray-400 text-xs transition-transform duration-300"></i>
+        </button>
+        <div id="personnel-submenu" class="overflow-hidden transition-all duration-300 max-h-0">
+          <div class="pl-4 pb-1 flex flex-col gap-0.5">
+            <a href="/admin/personnel/head-officer" class="sub-item flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-500 hover:bg-primary-light hover:text-primary transition" id="nav-head-officer">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></span>
+              <i class="fa-solid fa-user-tie text-primary text-xs w-4 text-center"></i>
+              <span>Head / Officer</span>
+            </a>
+            <a href="/admin/personnel/staff" class="sub-item flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-500 hover:bg-primary-light hover:text-primary transition" id="nav-staff">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></span>
+              <i class="fa-solid fa-id-badge text-primary text-xs w-4 text-center"></i>
+              <span>Staff</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <a href="/admin/programs" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600" id="nav-programs">
+        <i class="fa-solid fa-graduation-cap w-5 text-center"></i>
+        <span>Manage Programs</span>
+      </a>
+      <a href="/admin/events" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600" id="nav-events">
+        <i class="fa-solid fa-calendar-days w-5 text-center"></i>
+        <span>Manage Events</span>
+      </a>
+
+      <p class="text-xs text-gray-400 font-semibold uppercase px-3 pt-3 pb-2 tracking-widest">Account</p>
+
+      <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600">
+        <i class="fa-solid fa-circle-user w-5 text-center"></i>
+        <span>Profile</span>
+      </a>
+    </nav>
+
+    <!-- Logout -->
+    <div class="px-3 py-4 border-t border-gray-100">
+      <a href="/" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-red-500 hover:bg-red-50 transition">
+        <i class="fa-solid fa-right-from-bracket w-5 text-center"></i>
+        <span class="font-semibold">Logout</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <div id="main-content" class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="px-4 py-4 flex items-center justify-between bg-white border-b border-gray-100">
+      <div class="flex items-center gap-3">
+        <button onclick="toggleSidebar()" class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-600">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <h1 class="font-poppins font-bold text-gray-800 text-lg">Dashboard</h1>
+      </div>
+      <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+        <i class="fa-solid fa-bell text-sm"></i>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main class="flex-1 px-4 py-6 space-y-6">
+      
+      <!-- Welcome -->
+      <div>
+        <h2 class="text-2xl font-poppins font-bold text-gray-800">Hello, Admin!</h2>
+        <p class="text-gray-500 text-sm">Here's what's happening today.</p>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="grid grid-cols-2 gap-4">
+        <div class="stat-card bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-2">
+          <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
+            <i class="fa-solid fa-building-columns"></i>
+          </div>
+          <p id="stat-departments" class="text-2xl font-bold text-gray-800">...</p>
+          <p class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Departments</p>
+        </div>
+        <div class="stat-card bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-2">
+          <div class="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-500">
+            <i class="fa-solid fa-door-open"></i>
+          </div>
+          <p id="stat-offices" class="text-2xl font-bold text-gray-800">...</p>
+          <p class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Offices</p>
+        </div>
+        <div class="stat-card bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-2">
+          <div class="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-green-500">
+            <i class="fa-solid fa-graduation-cap"></i>
+          </div>
+          <p id="stat-programs" class="text-2xl font-bold text-gray-800">...</p>
+          <p class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Programs</p>
+        </div>
+        <div class="stat-card bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-2">
+          <div class="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-500">
+            <i class="fa-solid fa-calendar-days"></i>
+          </div>
+          <p id="stat-events" class="text-2xl font-bold text-gray-800">...</p>
+          <p class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Active Events</p>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="space-y-3">
+        <h3 class="font-poppins font-bold text-gray-800 text-md">Quick Actions</h3>
+        <div class="grid grid-cols-1 gap-3">
+          <button onclick="location.href='/admin/departments'" class="w-full p-4 rounded-2xl bg-primary text-white font-bold flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <i class="fa-solid fa-plus"></i>
+              <span>Add New Department</span>
+            </div>
+            <i class="fa-solid fa-chevron-right text-white/50"></i>
+          </button>
+          <button onclick="location.href='/admin/events'" class="w-full p-4 rounded-2xl bg-white border border-primary text-primary font-bold flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <i class="fa-solid fa-calendar-plus"></i>
+              <span>Schedule Event</span>
+            </div>
+            <i class="fa-solid fa-chevron-right text-primary/50"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- System Overview -->
+      <div class="space-y-3 pb-8">
+        <h3 class="font-poppins font-bold text-gray-800 text-md">System Status</h3>
+        
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-green-500">
+              <i class="fa-solid fa-circle-check text-xs"></i>
+            </div>
+            <div>
+              <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Database</p>
+              <p class="text-xs font-bold text-gray-800">Connected</p>
+            </div>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500">
+              <i class="fa-solid fa-cloud text-xs"></i>
+            </div>
+            <div>
+              <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Storage</p>
+              <p class="text-xs font-bold text-gray-800">Cloudinary</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Info Card -->
+        <div class="bg-gradient-to-br from-primary to-primary-dark p-5 rounded-2xl shadow-md text-white mt-2">
+          <div class="flex items-center justify-between mb-3">
+            <span class="bg-white/20 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider">System Status: Active</span>
+            <i class="fa-solid fa-shield-halved text-white/40 text-sm"></i>
+          </div>
+          <p class="text-[11px] text-white/80 leading-relaxed mb-4">
+            Welcome to the administration portal. You have full control over campus data, navigation paths, and personnel assignments.
+          </p>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-[8px] font-bold">AD</div>
+              <span class="text-[10px] text-white/60 italic">Administrator Access</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+  </div><!-- /main-content -->
+</div><!-- /app -->
+
+<script>
+  document.addEventListener('DOMContentLoaded', loadStats);
+
+  async function loadStats() {
+    try {
+      const res = await fetch('/api/dashboard/stats');
+      const data = await res.json();
+      
+      if (data.success) {
+        const stats = data.data;
+        animateValue("stat-departments", stats.departments);
+        animateValue("stat-offices", stats.offices);
+        animateValue("stat-programs", stats.programs);
+        animateValue("stat-events", stats.events);
+      }
+    } catch (err) {
+      console.error('Failed to load stats', err);
+    }
+  }
+
+  function animateValue(id, end) {
+    const obj = document.getElementById(id);
+    let start = 0;
+    const duration = 1000;
+    const range = end - start;
+    const minTimer = 50;
+    let stepTime = Math.abs(Math.floor(duration / range));
+    stepTime = Math.max(stepTime, minTimer);
+    const startTime = new Date().getTime();
+    const endTime = startTime + duration;
+    let timer;
+
+    function run() {
+      const now = new Date().getTime();
+      const remaining = Math.max((endTime - now) / duration, 0);
+      const value = Math.round(end - (remaining * range));
+      obj.innerHTML = value;
+      if (value == end) {
+        clearInterval(timer);
+      }
+    }
+
+    timer = setInterval(run, stepTime);
+    run();
+  }
+
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('overlay').classList.toggle('open');
+  }
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('open');
+  }
+  function togglePersonnelMenu() {
+    const submenu = document.getElementById('personnel-submenu');
+    const chevron = document.getElementById('personnel-chevron');
+    if (submenu.style.maxHeight === '0px' || !submenu.style.maxHeight) {
+      submenu.style.maxHeight = '200px';
+      chevron.style.transform = 'rotate(90deg)';
+    } else {
+      submenu.style.maxHeight = '0px';
+      chevron.style.transform = 'rotate(0deg)';
+    }
+  }
+</script>
+</body>
+</html>

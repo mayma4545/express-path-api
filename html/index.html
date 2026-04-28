@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OC Mobile Campus Navigator</title>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#1DA1F2" />
+  <link rel="apple-touch-icon" href="/assets/img/oc.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white min-h-screen flex flex-col items-center justify-center px-6">
+
+  <!-- Static SVG Logo -->
+  <div class="mb-6">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="88" height="88">
+      <circle cx="60" cy="60" r="55" fill="#1DA1F2" />
+      <path d="M60 30 C45 30 35 40 35 53 C35 72 52 92 60 92 C68 92 85 72 85 53 C85 40 75 30 60 30 Z" fill="white" />
+      <circle cx="60" cy="50" r="12" fill="#1DA1F2" />
+    </svg>
+  </div>
+
+  <!-- Title -->
+  <h1 class="text-2xl font-bold text-center mb-14 leading-tight" style="color: #1DA1F2;">
+    OC Mobile Campus<br />Navigator
+  </h1>
+
+  <!-- Buttons Container -->
+  <div id="campus-buttons" class="w-full flex flex-col items-center gap-5 max-w-sm">
+    <!-- Buttons will be loaded here -->
+    <div class="animate-pulse w-full h-16 bg-gray-200 rounded-2xl"></div>
+    <div class="animate-pulse w-full h-16 bg-gray-200 rounded-2xl"></div>
+  </div>
+
+  <script>
+    async function loadCampuses() {
+      try {
+        const response = await fetch('/api/campuses');
+        const result = await response.json();
+        
+        if (result.success) {
+          const container = document.getElementById('campus-buttons');
+          container.innerHTML = '';
+          
+          result.data.forEach((campus, index) => {
+            const btn = document.createElement('button');
+            btn.className = index === 0 
+              ? "w-full py-5 px-8 rounded-2xl text-white text-center text-lg font-semibold shadow-md active:scale-95 transition-transform"
+              : "w-full py-5 px-8 rounded-2xl text-center text-lg font-semibold border-2 bg-white active:scale-95 transition-transform";
+            
+            if (index === 0) {
+              btn.style.backgroundColor = "#1DA1F2";
+            } else {
+              btn.style.color = "#1DA1F2";
+              btn.style.borderColor = "#1DA1F2";
+            }
+            
+            btn.textContent = campus.name;
+            btn.onclick = () => {
+              localStorage.setItem('selectedCampusId', campus.id);
+              window.location.href = './client/oc-main.html';
+            };
+            container.appendChild(btn);
+          });
+        }
+      } catch (error) {
+        console.error('Error loading campuses:', error);
+      }
+    }
+    
+    window.onload = loadCampuses;
+  </script>
+
+  <!-- Subtle Admin Link -->
+  <div class="fixed bottom-4 right-4">
+    <a href="/admin/login" class="text-gray-200 hover:text-gray-400 transition-colors" title="Admin Portal">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      </svg>
+    </a>
+  </div>
+
+  <!-- Install PWA Dialog -->
+  <div id="installDialog" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+      <div class="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl">
+          <h2 class="text-xl font-bold text-gray-800 mb-2">Install OHH SEE</h2>
+          <p class="text-gray-600 mb-6">Install our application to your home screen for quick and easy access!</p>
+          <div class="flex justify-end gap-3">
+              <button id="cancelInstallBtn" class="px-4 py-2 text-gray-500 font-medium hover:bg-gray-100 rounded-lg transition-colors">Not Now</button>
+              <button id="confirmInstallBtn" class="px-4 py-2 bg-[#1DA1F2] text-white font-medium rounded-lg hover:bg-blue-500 transition-colors">Install App</button>
+          </div>
+      </div>
+  </div>
+
+  <script>
+    let deferredPrompt;
+    const installDialog = document.getElementById('installDialog');
+    const confirmInstallBtn = document.getElementById('confirmInstallBtn');
+    const cancelInstallBtn = document.getElementById('cancelInstallBtn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      deferredPrompt = e;
+      // Update UI notify the user they can install the PWA
+      installDialog.classList.remove('hidden');
+    });
+
+    confirmInstallBtn.addEventListener('click', async () => {
+        installDialog.classList.add('hidden');
+        if (deferredPrompt) {
+            // Show the install prompt
+            deferredPrompt.prompt();
+            // Wait for the user to respond to the prompt
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User response to the install prompt: ${outcome}`);
+            // We've used the prompt, and can't use it again, throw it away
+            deferredPrompt = null;
+        }
+    });
+
+    cancelInstallBtn.addEventListener('click', () => {
+        installDialog.classList.add('hidden');
+    });
+
+    window.addEventListener('appinstalled', (evt) => {
+      console.log('INSTALL: Success');
+      installDialog.classList.add('hidden');
+    });
+
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then(reg => {
+          console.log('ServiceWorker registration successful with scope: ', reg.scope);
+        }).catch(err => {
+          console.log('ServiceWorker registration failed: ', err);
+        });
+      });
+    }
+  </script>
+
+</body>
+</html>
