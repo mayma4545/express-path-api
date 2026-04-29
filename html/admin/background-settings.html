@@ -17,6 +17,7 @@
     />
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/assets/js/admin-auth.js" defer></script>
+    <script src="/assets/js/togglePersonnelMenu.js" defer></script>
     <script>
       tailwind.config = {
         theme: {
@@ -230,7 +231,7 @@
 
       <!-- Manage Personnel (with sub-menu) -->
       <div id="nav-personnel-wrapper">
-        <button onclick="togglePersonnelMenu()" id="nav-personnel-btn" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600 bg-transparent border-none text-left cursor-pointer">
+        <button onclick="togglePersonnelMenu()" id="nav-personnel-btn" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600 bg-transparent border-none text-left cursor-pointer transition">
           <i class="fa-solid fa-users w-5 text-center"></i>
           <span class="flex-1">Manage Personnel</span>
           <i id="personnel-chevron" class="fa-solid fa-chevron-right text-gray-400 text-xs transition-transform duration-300"></i>
@@ -260,12 +261,6 @@
         <span>Manage Events</span>
       </a>
 
-      <p class="text-xs text-gray-400 font-semibold uppercase px-3 pt-3 pb-2 tracking-widest">Account</p>
-
-      <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600">
-        <i class="fa-solid fa-circle-user w-5 text-center"></i>
-        <span>Profile</span>
-      </a>
     </nav>
 
     <!-- Logout -->
@@ -466,17 +461,6 @@
         document.getElementById("sidebar").classList.remove("open");
         document.getElementById("overlay").classList.remove("open");
       }
-      function togglePersonnelMenu() {
-        const submenu = document.getElementById("personnel-submenu");
-        const chevron = document.getElementById("personnel-chevron");
-        if (submenu.style.maxHeight === "0px" || !submenu.style.maxHeight) {
-          submenu.style.maxHeight = "200px";
-          chevron.style.transform = "rotate(90deg)";
-        } else {
-          submenu.style.maxHeight = "0px";
-          chevron.style.transform = "rotate(0deg)";
-        }
-      }
 
       // ===== Photo / Carousel =====
       let photos = []; // { url, name }
@@ -622,7 +606,6 @@
         }, 1200);
       }
     </script>
-    <script src="../../assets/js/togglePersonnelMenu.js"></script>
   </body>
 </html>
 

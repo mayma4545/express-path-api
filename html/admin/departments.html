@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/assets/js/admin-auth.js" defer></script>
+  <script src="/assets/js/togglePersonnelMenu.js" defer></script>
   <script>
     tailwind.config = {
       theme: {
@@ -143,7 +144,7 @@
 
       <!-- Manage Personnel (with sub-menu) -->
       <div id="nav-personnel-wrapper">
-        <button onclick="togglePersonnelMenu()" id="nav-personnel-btn" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600 bg-transparent border-none text-left cursor-pointer">
+        <button onclick="togglePersonnelMenu()" id="nav-personnel-btn" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600 bg-transparent border-none text-left cursor-pointer transition">
           <i class="fa-solid fa-users w-5 text-center"></i>
           <span class="flex-1">Manage Personnel</span>
           <i id="personnel-chevron" class="fa-solid fa-chevron-right text-gray-400 text-xs transition-transform duration-300"></i>
@@ -171,13 +172,6 @@
       <a href="/admin/events" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600" id="nav-events">
         <i class="fa-solid fa-calendar-days w-5 text-center"></i>
         <span>Manage Events</span>
-      </a>
-
-      <p class="text-xs text-gray-400 font-semibold uppercase px-3 pt-3 pb-2 tracking-widest">Account</p>
-
-      <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-600">
-        <i class="fa-solid fa-circle-user w-5 text-center"></i>
-        <span>Profile</span>
       </a>
     </nav>
 
