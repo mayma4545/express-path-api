@@ -1,0 +1,12 @@
+<%- include('partials/header', { title: 'Error - Campus Navigation' }) %>
+
+<div class="error-page">
+    <h1>😕 Oops! Something went wrong</h1>
+    <p class="error-message"><%= message || 'An unexpected error occurred' %></p>
+    <% if (typeof error !== 'undefined' && error) { %>
+        <pre class="error-stack"><%= error.stack || error %></pre>
+    <% } %>
+    <a href="/" class="btn-primary">← Back to Dashboard</a>
+</div>
+
+<%- include('partials/footer') %>

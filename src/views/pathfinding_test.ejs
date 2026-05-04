@@ -1,0 +1,114 @@
+<%- include('partials/header', { title: 'Pathfinding Test - Campus Navigation' }) %>
+
+<div class="pathfinding-page">
+    <h1>🧪 Pathfinding Test</h1>
+    <p class="subtitle">Test the A* pathfinding algorithm with compass directions</p>
+
+    <div class="pathfinding-container">
+        <div class="pathfinding-form">
+            <form id="pathfindingForm">
+                <div class="form-group">
+                    <label for="start_node">Start Node</label>
+                    <select id="start_node" name="start_node" required>
+                        <option value="">Select starting point...</option>
+                        <% nodes.forEach(function(node) { %>
+                            <option value="<%= node.id %>">
+                                <%= node.name %> (<%= node.building || 'No building' %>, <%= node.floor || 'No floor' %>)
+                            </option>
+                        <% }); %>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="end_node">End Node</label>
+                    <select id="end_node" name="end_node" required>
+                        <option value="">Select destination...</option>
+                        <% nodes.forEach(function(node) { %>
+                            <option value="<%= node.id %>">
+                                <%= node.name %> (<%= node.building || 'No building' %>, <%= node.floor || 'No floor' %>)
+                            </option>
+                        <% }); %>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-primary btn-block">Find Path</button>
+            </form>
+        </div>
+
+        <div class="pathfinding-results" id="results" style="display: none;">
+            <h3>📍 Path Results</h3>
+            <div id="pathStats" class="path-stats"></div>
+            <div id="pathDirections" class="path-directions"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('pathfindingForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const startNode = document.getElementById('start_node').value;
+    const endNode = document.getElementById('end_node').value;
+    
+    if (!startNode || !endNode) {
+        alert('Please select both start and end nodes');
+        return;
+    }
+    
+    if (startNode === endNode) {
+        alert('Start and end nodes must be different');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/find-path', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ start_id: startNode, end_id: endNode })
+        });
+        
+        const data = await response.json();
+        
+        const resultsDiv = document.getElementById('results');
+        const statsDiv = document.getElementById('pathStats');
+        const directionsDiv = document.getElementById('pathDirections');
+        
+        if (data.success && data.path) {
+            resultsDiv.style.display = 'block';
+            
+            statsDiv.innerHTML = `
+                <div class="stat-row">
+                    <span class="stat-label">Total Distance:</span>
+                    <span class="stat-value">${data.total_distance ? data.total_distance.toFixed(2) : 'N/A'} meters</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Path Length:</span>
+                    <span class="stat-value">${data.path.length} nodes</span>
+                </div>
+            `;
+            
+            let directionsHtml = '<ol class="directions-list">';
+            data.path.forEach((step, index) => {
+                directionsHtml += `
+                    <li class="direction-step">
+                        <span class="step-node">${step.name}</span>
+                        ${step.direction ? `<span class="step-direction">→ ${step.direction}</span>` : ''}
+                        ${step.distance ? `<span class="step-distance">(${step.distance.toFixed(1)}m)</span>` : ''}
+                    </li>
+                `;
+            });
+            directionsHtml += '</ol>';
+            directionsDiv.innerHTML = directionsHtml;
+        } else {
+            resultsDiv.style.display = 'block';
+            statsDiv.innerHTML = '<div class="alert alert-error">No path found between selected nodes</div>';
+            directionsDiv.innerHTML = '';
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error finding path. Please try again.');
+    }
+});
+</script>
+
+<%- include('partials/footer') %>
