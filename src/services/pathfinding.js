@@ -338,11 +338,11 @@ class PathFinder {
         const turnDir = diff > 0 ? 'right' : 'left';
 
         if (absDiff <= 45) {
-            return { degrees: roundedDiff, direction: turnDir, instruction: `Slightly turn ${turnDir} (${roundedDiff}°)` };
+            return { degrees: roundedDiff, direction: turnDir, instruction: `Slightly turn ${turnDir}` };
         } else if (absDiff <= 135) {
-            return { degrees: roundedDiff, direction: turnDir, instruction: `Turn ${turnDir} (${roundedDiff}°)` };
+            return { degrees: roundedDiff, direction: turnDir, instruction: `Turn ${turnDir}` };
         } else {
-            return { degrees: roundedDiff, direction: turnDir, instruction: `Turn sharply ${turnDir} (${roundedDiff}°)` };
+            return { degrees: roundedDiff, direction: turnDir, instruction: `Turn sharply ${turnDir}` };
         }
     }
 
